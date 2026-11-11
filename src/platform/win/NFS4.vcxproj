@@ -1,0 +1,407 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32"><Configuration>Debug</Configuration><Platform>Win32</Platform></ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32"><Configuration>Release</Configuration><Platform>Win32</Platform></ProjectConfiguration>
+  <ProjectConfiguration Include="Debug|x64"><Configuration>Debug</Configuration><Platform>x64</Platform></ProjectConfiguration><ProjectConfiguration Include="Release|x64"><Configuration>Release</Configuration><Platform>x64</Platform></ProjectConfiguration></ItemGroup>
+  <PropertyGroup Label="Globals"><VCProjectVersion>17.0</VCProjectVersion><ProjectGuid>{9F40D999-4F24-49F8-A479-D5F158C14A15}</ProjectGuid><RootNamespace>NFS4</RootNamespace><WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion></PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration"><ConfigurationType>Application</ConfigurationType><UseDebugLibraries>true</UseDebugLibraries><PlatformToolset>v143</PlatformToolset><CharacterSet>MultiByte</CharacterSet></PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration"><ConfigurationType>Application</ConfigurationType><UseDebugLibraries>false</UseDebugLibraries><PlatformToolset>v143</PlatformToolset><CharacterSet>MultiByte</CharacterSet><WholeProgramOptimization>true</WholeProgramOptimization></PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings"><Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" /></ImportGroup>
+  <PropertyGroup>
+    <UseXcrt Condition="'$(UseXcrt)'==''">true</UseXcrt>
+    <XcrtEnabled Condition="'$(Configuration)'=='Release' and '$(UseXcrt)'=='true'">true</XcrtEnabled>
+  </PropertyGroup>
+  <PropertyGroup><NativeArch Condition="'$(Platform)'=='Win32'">x86</NativeArch><NativeArch Condition="'$(Platform)'=='x64'">x64</NativeArch><OutDir>$(ProjectDir)..\..\..\bin\</OutDir><IntDir>$(ProjectDir)..\..\..\_build\$(NativeArch)\$(Configuration)\</IntDir><LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory><LocalDebuggerCommand>$(TargetPath)</LocalDebuggerCommand><DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor><LinkIncremental>false</LinkIncremental></PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'"><TargetName>NFS4_debug</TargetName></PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'"><TargetName>NFS4</TargetName></PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <ClCompile><WarningLevel>Level3</WarningLevel><TreatWarningAsError>true</TreatWarningAsError><DisableSpecificWarnings>4100;4244;4554;%(DisableSpecificWarnings)</DisableSpecificWarnings><SDLCheck>true</SDLCheck><PreprocessorDefinitions>GAPI_OGL;XPORT_REGISTERED_GPU_PACKETS;_DEBUG;XPORT_ENABLE_AUDIT;XPORT_MEMORY_DIAGNOSTICS;_CRT_SECURE_NO_WARNINGS;FULL_NAME=&quot;Need for Speed: High Stakes&quot;;WND_TITLE=&quot;Need for Speed: High Stakes (xport)&quot;;WND_WIDTH=960;WND_HEIGHT=720;FIELD_RATE=60;%(PreprocessorDefinitions)</PreprocessorDefinitions><AdditionalIncludeDirectories>$(ProjectDir)..\..;$(ProjectDir)..\..\..\..\xport\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><CompileAs>CompileAsC</CompileAs><Optimization>Disabled</Optimization><RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary><DebugInformationFormat>ProgramDatabase</DebugInformationFormat><ProgramDataBaseFileName>$(IntDir)NFS4-compile.pdb</ProgramDataBaseFileName><MultiProcessorCompilation>true</MultiProcessorCompilation></ClCompile>
+    <Link><SubSystem>Windows</SubSystem><GenerateDebugInformation>true</GenerateDebugInformation><ProgramDatabaseFile>$(IntDir)NFS4_debug.pdb</ProgramDatabaseFile><ImportLibrary>$(IntDir)NFS4_debug.lib</ImportLibrary><AdditionalDependencies>opengl32.lib;user32.lib;gdi32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies></Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+    <ClCompile><WarningLevel>Level3</WarningLevel><TreatWarningAsError>true</TreatWarningAsError><DisableSpecificWarnings>4100;4244;4554;%(DisableSpecificWarnings)</DisableSpecificWarnings><SDLCheck>false</SDLCheck><PreprocessorDefinitions>GAPI_OGL;XPORT_REGISTERED_GPU_PACKETS;NDEBUG;XPORT_DISABLE_FUNCTION_MARKERS;_CRT_SECURE_NO_WARNINGS;FULL_NAME=&quot;Need for Speed: High Stakes&quot;;WND_TITLE=&quot;Need for Speed: High Stakes (xport)&quot;;WND_WIDTH=960;WND_HEIGHT=720;FIELD_RATE=60;%(PreprocessorDefinitions)</PreprocessorDefinitions><AdditionalIncludeDirectories>$(ProjectDir)..\..;$(ProjectDir)..\..\..\..\xport\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><CompileAs>CompileAsC</CompileAs><Optimization>MinSpace</Optimization><RuntimeLibrary>MultiThreaded</RuntimeLibrary><FunctionLevelLinking>true</FunctionLevelLinking><IntrinsicFunctions>true</IntrinsicFunctions><MultiProcessorCompilation>true</MultiProcessorCompilation><AdditionalOptions>/Gw /Gs2147483647 %(AdditionalOptions)</AdditionalOptions><ExceptionHandling>false</ExceptionHandling><BufferSecurityCheck>false</BufferSecurityCheck><OmitFramePointers>true</OmitFramePointers><RuntimeTypeInfo>false</RuntimeTypeInfo><ControlFlowGuard>false</ControlFlowGuard></ClCompile>
+    <Link><SubSystem>Windows</SubSystem><GenerateDebugInformation>false</GenerateDebugInformation><GenerateMapFile>true</GenerateMapFile><MapFileName>$(IntDir)NFS4.map</MapFileName><ImportLibrary>$(IntDir)NFS4.lib</ImportLibrary><EnableCOMDATFolding>true</EnableCOMDATFolding><OptimizeReferences>true</OptimizeReferences><AdditionalDependencies>opengl32.lib;user32.lib;gdi32.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies><RandomizedBaseAddress>false</RandomizedBaseAddress><FixedBaseAddress>true</FixedBaseAddress><ImageHasSafeExceptionHandlers Condition="'$(Platform)'=='Win32'">false</ImageHasSafeExceptionHandlers><GenerateManifest>false</GenerateManifest><DataExecutionPrevention>true</DataExecutionPrevention></Link>
+  </ItemDefinitionGroup>
+  <ItemGroup><ClCompile Include="..\..\game_main.cpp"><CompileAs>CompileAsCpp</CompileAs><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile><ClCompile Include="..\..\..\..\xport\src\psx.c" /><ClCompile Include="..\..\..\..\xport\src\psx_gpu.c" /><ClCompile Include="..\..\..\..\xport\src\vid_ogl.c" /><ClCompile Include="..\..\..\..\xport\src\psx_spu.c" /><ClCompile Include="..\..\..\..\xport\src\psx_xa.c" /><ClCompile Include="..\..\..\..\xport\src\xport_trace.c" /><ClCompile Include="..\..\..\..\xport\src\platform\win\main.c"><PreprocessorDefinitions>SHORT_NAME=&quot;NFS4&quot;;%(PreprocessorDefinitions)</PreprocessorDefinitions><ObjectFileName>$(IntDir)xport_main.obj</ObjectFileName></ClCompile></ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\frontend\common\fecolor.cpp"><CompileAs>CompileAsCpp</CompileAs><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="icon.rc">
+      <AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Image Include="icon.ico" />
+  </ItemGroup>
+  <ItemGroup><ClInclude Include="..\..\..\..\xport\src\xport.h" /><ClInclude Include="..\..\..\..\xport\src\psx.h" /><ClInclude Include="..\..\..\..\xport\src\xport_trace.h" /><ClInclude Include="..\..\..\..\xport\src\psx_gpu.h" /><ClInclude Include="..\..\..\..\xport\src\psx_spu.h" /></ItemGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'"><GenerateManifest>false</GenerateManifest></PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(XcrtEnabled)'=='true'">
+    <ClCompile><PreprocessorDefinitions>GAPI_OGL;XPORT_REGISTERED_GPU_PACKETS;XPORT_XCRT;_NO_CRT_STDIO_INLINE;%(PreprocessorDefinitions)</PreprocessorDefinitions><OmitDefaultLibName>true</OmitDefaultLibName></ClCompile>
+    <Link><AdditionalOptions>/MERGE:.rdata=.text %(AdditionalOptions)</AdditionalOptions><IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries><EntryPointSymbol>WinMainCRTStartup</EntryPointSymbol><AdditionalDependencies>kernel32.lib;opengl32.lib;user32.lib;gdi32.lib;winmm.lib;shlwapi.lib</AdditionalDependencies></Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\..\xport\src\platform\win\xcrt.c">
+      <ExcludedFromBuild Condition="'$(XcrtEnabled)'!='true'">true</ExcludedFromBuild>
+      <WholeProgramOptimization>false</WholeProgramOptimization><IntrinsicFunctions>false</IntrinsicFunctions>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="..\..\..\..\xport\src\platform\win\xcrt_x86.asm">
+      <ExcludedFromBuild Condition="'$(XcrtEnabled)'!='true' or '$(Platform)'!='Win32'">true</ExcludedFromBuild>
+    </MASM>
+    <MASM Include="..\..\..\..\xport\src\platform\win\xcrt_x64.asm">
+      <ExcludedFromBuild Condition="'$(XcrtEnabled)'!='true' or '$(Platform)'!='x64'">true</ExcludedFromBuild>
+    </MASM>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets"><Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" /></ImportGroup>
+<ItemGroup><ClCompile Include="..\..\..\..\xport\src\psx_mdec.c" /><ClCompile Include="..\..\..\..\xport\src\psx_press.c" /><ClCompile Include="..\..\..\..\xport\src\psx_vlc.c" /><ClCompile Include="..\..\..\..\xport\src\psx_stream.c" /><ClCompile Include="..\..\..\..\xport\src\xport_fmv.c" /></ItemGroup>
+
+  <Target Name="XportSelectNativeArch" BeforeTargets="PrepareForBuild">
+    <ReadLinesFromFile File="$(ProjectDir)..\..\..\_build\native-$(Configuration).arch" Condition="Exists('$(ProjectDir)..\..\..\_build\native-$(Configuration).arch')">
+      <Output TaskParameter="Lines" PropertyName="PreviousNativeArch" />
+    </ReadLinesFromFile>
+    <Delete Files="$(TargetPath)" Condition="'$(PreviousNativeArch)'!='$(NativeArch)' And Exists('$(TargetPath)')" />
+  </Target>
+  <Target Name="XportRecordNativeArch" AfterTargets="Link">
+    <WriteLinesToFile File="$(ProjectDir)..\..\..\_build\native-$(Configuration).arch" Lines="$(NativeArch)" Overwrite="true" />
+  </Target>
+  <ItemGroup Label="RecoveredSkeletons">
+    <ClCompile Include="..\..\frontend\common\feapp.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_27ac2aacfe34e82b.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\feaudio.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_263f9367118d8941.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\fememcard.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_be2edb0886d64cf8.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\femenuoptions.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_9c5e631e3057ddc5.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\fetools.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_5f62f0c50dba68f7.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\front.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_d77d8794bdf2ce8b.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\screencontroller.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_5ef772a5820d3fd3.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\statchk.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_3d85599dcd9c0f12.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\psx\movie.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_27459f39168df47d.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\psx\psxfront.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_929944d73a86e88d.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\ai.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_9ee73b0047dce1fd.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aicop.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_40d3ca78d098c38d.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aihigh.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_b562bc4a758ca6f5.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aiinit.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_5187cb98684cfa58.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aiperson.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_42f6b9db9d296ab5.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aiphysic.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_f369805f73ef1e0b.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aiscript.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_0bdcd29bd9197d01.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aispeeds.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_3ddbf0252090401f.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aistate.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_1b649a7a3d6571a6.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aitune.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_84bc619e994e30d7.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\anim.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_cc276a450b308ebe.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\audedit.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_4dd2424d3514ac5d.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\audioclc.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_81747568dd4140dd.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\audiocmn.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_c8706723ebb2885a.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\audioeng.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_76ff452cb7b0e5e5.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\audiomus.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_6c6320facfef451d.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\audiotrk.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_94c6c09a3fbc72b0.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\bworld.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_f4501e75ea89f3a7.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\bworldsm.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_345945dc95fdbf03.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\camera.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_ec0f61198634d242.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\cars.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_232dacae1c5a876c.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\chunk.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_eefcc11b0b06da94.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\clock.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_0bbad6fe897e873d.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\collide.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_7ccf689fcb489876.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\copspeak.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_228b79697bf766c4.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\dashhud.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_8c4adb473ed94395.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\fastrand.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_29d70507cd321685.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\genericpmx.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_0f9bef6269fc051f.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\gmesetup.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_d69bacc89f9d207e.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\hudpmx.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_aa2ee69bd824b6a5.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\input.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_ab47d9a926cf4e48.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\mpause.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_b501822e930634c6.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\nfs3.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_07e958a37858743b.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\object.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_034ff45c85a4c681.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\paths.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_e1012693aaf86a81.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\physics.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_743a709ee1e85728.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\r3dcar.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_0832af80663276f7.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\render.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_dd3f0e1399b1e289.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\replay.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_25ef99c8c2e76282.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\scene.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_28a905222d3dbae9.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\sim.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_955b2a8650440e88.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\simqueue.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_ccec6e43ae7ce4ff.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\souffle.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_8cd19ccf0c0824cf.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\speech.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_a7261dd4826f9c76.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\stats.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_1fe53626b2771d5e.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\textsys.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_1be80dadea0f4a0b.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\track.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_d7d2d7391bf5d8d1.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\trgsfx.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_9f0a576dd1286930.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\audio.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_3649a4846409ddb8.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\cario.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_9791d2c68f2fa6be.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\device.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_aea3d3281cb889df.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\draw.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_bd7dcbd291351bdf.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\drawc.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_5d4996ad8925a1d0.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\draww.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_8936cf626fbdf591.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\fe3dmenu.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_55892e229116c83f.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\flare.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_7a16531e58aecb60.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\font.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_373231aa86204708.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\force.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_92c8e53698817156.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\hrzsku.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_8005fa95d6250a7f.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\hud.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_0a2de46959c8194f.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\loading.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_e5147fc202de1e47.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\night.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_0a88eb42370b4226.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\overlays.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_06f76112d366fbc5.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\platform.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_4733c335710f24fe.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\psxcontroller.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_8c9a2e03c95de51b.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\rpause.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_276a20148c221d0a.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\skidmark.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_0f608f183226e315.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\texture.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_da0d6a6c93c2718c.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\textureprocess.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_5098b16dd7f10cba.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\trackspec.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_9b2c0221256b7f50.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\trsproj.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_555eb8e7ea8a4aaa.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\weather.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_309c5f74fd22920c.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+      <ClCompile Include="..\..\frontend\common\fecheats.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_abf8a3b637ba23a6.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\fefades.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_1b8ca56e641abb4f.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\feinput.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_6dbfc5c54e365411.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\felines.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_5f5f23e28d8f49a9.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\femenu.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_69ed9dd093a7c154.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\femenudefs.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_1f44edd7cffb90e7.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\fetextrender.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_a8f55a1118281c23.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\fetourn.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_e2ba6d880b125234.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\screenpost.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_e850b268434d014d.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\stattool.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_b43a8acf1975eb5d.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\psx\mmeffect.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_c51d4e407942baa8.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aiworld.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_b95203dcbc52353b.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\color.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_7f55168648654042.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\mathnfs.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_e088cd98400845e4.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\newton.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_159380b2233ee44b.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\pausemenu.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_31c227f2037e72d0.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\schedule.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_f8d0b5e1b8ef0622.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aih_basiccop.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_28031fb12cc2cc2a.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\ailife.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_7012dbbc6fdb0e8e.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\control.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_c6a2adf2b7db6435.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\quatern.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_8740999eb78f4a39.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\fetv.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_d87a2a0909846e9a.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\psx\fetexture.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_afd8d768f866839d.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\udff.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_251cdfcbe6da2f20.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\sfx.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_acf555a9fb68da6a.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\fecars.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_1bd41e6bbfdb03d3.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\fecredits.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_36b63d6d2081fcd3.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\fetracks.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_4d648aae6b3b6f5f.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\psx\drawshp.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_a28cc2523c2deb6b.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\new.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_0333f122396d24ce.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\screentournselect.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_25d0f4b954007b0e.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\screentrophyroom.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_c79dbb3d92bbcff6.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aitriger.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_a99294bfe966bce1.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+</ItemGroup>
+  <ItemGroup Label="RecoveredOriginalHeaders">
+    <ClInclude Include="..\..\frontend\common\fedialog.h" />
+    <ClInclude Include="..\..\frontend\common\femenu.h" />
+    <ClInclude Include="..\..\frontend\common\femenuextended.h" />
+    <ClInclude Include="..\..\frontend\common\femenuoptions.h" />
+    <ClInclude Include="..\..\frontend\common\fescreen.h" />
+    <ClInclude Include="..\..\frontend\common\screenaudio.h" />
+    <ClInclude Include="..\..\frontend\common\screencarselect.h" />
+    <ClInclude Include="..\..\frontend\common\screencongrats.h" />
+    <ClInclude Include="..\..\frontend\common\screencontroller.h" />
+    <ClInclude Include="..\..\frontend\common\screendisplay.h" />
+    <ClInclude Include="..\..\frontend\common\screenmain.h" />
+    <ClInclude Include="..\..\frontend\common\screenpinkslips.h" />
+    <ClInclude Include="..\..\frontend\common\screenpost.h" />
+    <ClInclude Include="..\..\frontend\common\screentrackinfo.h" />
+    <ClInclude Include="..\..\frontend\common\screentrackrecords.h" />
+    <ClInclude Include="..\..\frontend\common\screentracks.h" />
+    <ClInclude Include="..\..\frontend\common\screentrophyinfo.h" />
+    <ClInclude Include="..\..\frontend\common\screenusername.h" />
+    <ClInclude Include="..\..\game\common\aidatarecord.h" />
+    <ClInclude Include="..\..\game\common\aihigh.h" />
+    <ClInclude Include="..\..\game\common\aistate.h" />
+    <ClInclude Include="..\..\game\common\object.h" />
+    <ClInclude Include="..\..\game\common\pausemenu.h" />
+    <ClInclude Include="..\..\game\common\speech.h" />
+  </ItemGroup>
+  <ItemGroup Label="RecoveredClassSkeletons">
+    <ClCompile Include="..\..\game\common\group.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_serialized_group.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+      <ClCompile Include="..\..\game\common\simplemem.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_simplemem.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\femission.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_mission_manager.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\fevideowall.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_video_wall.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+</ItemGroup>
+  <ItemGroup Label="RecoveredCOriginSkeletons">
+    <ClCompile Include="..\..\eaclib\psx\pad.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)recovered_966be01e040e6cc2.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\spchevnt.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_8431df746c7ab9c3.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\textpix.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)recovered_d19cf27f6c28cfb7.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\textpsx.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)recovered_da2cbceeb4c2e491.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\psx\unpack.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)recovered_0af44cf34c431164.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+  </ItemGroup>
+  <ItemGroup Label="RecoveredRectSkeletons">
+    <ClCompile Include="..\..\frontend\common\femenuextended.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_d79ca6ef7fb39fb2.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+  </ItemGroup>
+  <ItemGroup Label="RecoveredMissingOriginalModules">
+    <ClCompile Include="..\..\frontend\common\fedialog.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_ba60d13c335ceb4d.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\fescreen.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_2981dc0825b57529.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\screenaudio.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_3a88f283cdd81c6e.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\screencarselect.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_b0fced86d9d1aec7.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\screencongrats.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_30af3ce84552a15f.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\screendisplay.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_d5b0385aa90c44f6.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\screenmain.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_a1921129386865dd.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\frontmovie.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)front_movie.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\screenpinkslips.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_8672917ff487c56a.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\screentrackinfo.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_68ff094acde3d3e4.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\screentrackrecords.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_5dc590a68e3e66e3.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\screentracks.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_a33a4041296c5b8f.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\screentrophyinfo.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_ebd6ab6294aa737c.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\frontend\common\screenusername.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_e74572efd7e1f69f.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aidatarecord.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_b09cb7e3277efdb1.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aidelaycar.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_8eceecbd3fd2a2d3.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aih_basicperp.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_6a533a78b04405c5.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aih_btccop.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_a655d09b2722c69b.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aih_btcperp.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_06db8f367e84eadb.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aih_cop.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_0b6164779dfa62c1.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aih_hum.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_35c8b6a6eb79581d.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aih_opp.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_b8968ba87c167e61.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aih_play.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_7192d65658576c14.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\aih_traf.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_8723ba2f68ce1fbc.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\game\common\minfront.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)recovered_73e6988152170fba.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\lib\psx\blkfill.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)recovered_blockfill.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\lib\psx\blkmov.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)recovered_blockmove.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\lib\psx\crc.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)recovered_crc16.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\lib\psx\fixddiv.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)recovered_fixeddiv.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\lib\psx\fixdinv.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)recovered_fixedinverse.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\lib\psx\fixdmult.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)recovered_fixedmult.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\lib\psx\fixdsqrt.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)recovered_fixedsqrt.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\lib\psx\getm.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)recovered_getm.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\lib\psx\math64.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)recovered_math64.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\lib\psx\nullfunc.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)recovered_nullfunction.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\lib\psx\random.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)recovered_random.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\lib\psx\savegp.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)recovered_savegp.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\lib\psx\shpdepth.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)recovered_shapedepth.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\lib\psx\shpsubs.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)recovered_shapesubs.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\lib\psx\sinfunc.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)recovered_fastintsin.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+  </ItemGroup>
+  <ItemGroup><ClCompile Include="..\..\frontend\psx\address.c"><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile></ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\eaclib\psx\addtimer.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_addtimer.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\asinfunc.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_asinfunc.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\atanfunc.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_atanfunc.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\atantbl.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_atantbl.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\crossprd.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_crossprd.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\exit.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_exit.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\fastmovf.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_fastmovf.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\fatantbl.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_fatantbl.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\fileroot.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_fileroot.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\fixdatan.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_fixdatan.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\fixdsin.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_fixdsin.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\fsincos.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_fsincos.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\fxform.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_fxform.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\inittmr.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_inittmr.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\isincos.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_isincos.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\isqrt.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_isqrt.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\isqrttbl.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_isqrttbl.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\joystkn.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_joystkn.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\loadshp.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_loadshp.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\locatbig.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_locatbig.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\locatshp.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_locatshp.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\matrix.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_matrix.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\meminit.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_meminit.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\memstd.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_memstd.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\movf.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_movf.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\nasync.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_nasync.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\nfile.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_nfile.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\nloadpk.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_nloadpk.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\nsync.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_nsync.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\primate.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_primate.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\resize.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_resize.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\s3dlow.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_s3dlow.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\s3dpos.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_s3dpos.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\saelib.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_saelib.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\saetodv.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_saetodv.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\saetolrv.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_saetolrv.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\salloc.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_salloc.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sautovol.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sautovol.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sbadd.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sbadd.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sballoc.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sballoc.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sbdload.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sbdload.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sbend.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sbend.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sbhdrcpy.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sbhdrcpy.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sbhdrsze.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sbhdrsze.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sbirmpat.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sbirmpat.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sbremove.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sbremove.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sbvalid.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sbvalid.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\scdvol.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_scdvol.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sclcptch.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sclcptch.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sdata.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sdata.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sdcdvol.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sdcdvol.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sdfx.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sdfx.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sdma.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sdma.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sdmemlu.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sdmemlu.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sdmemman.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sdmemman.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sdpacket.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sdpacket.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sdplapat.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sdplapat.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sdresolv.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sdresolv.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sdriver.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_sdriver.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sdspuirq.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sdspuirq.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sdtimrem.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sdtimrem.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\seffect.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_seffect.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sfxlevel.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sfxlevel.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sgetdata.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sgetdata.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sgettag.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sgettag.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sgetvol.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sgetvol.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\shpclut.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_shpclut.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\slib.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_slib.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\slimits.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_slimits.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\smasterv.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_smasterv.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\smath64.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_smath64.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\smemman.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_smemman.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sover.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sover.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\span.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_span.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\spat2hdr.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_spat2hdr.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\spatkey.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_spatkey.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\spchbank.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_spchbank.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\spchdata.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_spchdata.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\spchevnt.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_spchevnt.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\spchinit.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_spchinit.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\spchpick.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_spchpick.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\spchrand.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_spchrand.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\spchrslv.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_spchrslv.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\spchrule.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_spchrule.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\spchsamp.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_spchsamp.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\spitch.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_spitch.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\spktplay.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_spktplay.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\splay.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_splay.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\splysdef.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_splysdef.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\spvtolrv.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_spvtolrv.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\srandom.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_srandom.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\srrange.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_srrange.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sserver.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_sserver.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\ssine.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_ssine.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sst.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_sst.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sstautov.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_sstautov.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sstgetrp.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sstgetrp.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sstgetv.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_sstgetv.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sstop.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sstop.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sstopall.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_sstopall.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sstovrhd.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_sstovrhd.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sstrstat.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_sstrstat.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sstsetgl.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_sstsetgl.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sstsetgs.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_sstsetgs.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sstsetpr.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_sstsetpr.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sststat.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_sststat.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\sstvol.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_sstvol.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\ssysinit.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_ssysinit.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\ssysreal.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_ssysreal.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\ssysserv.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_ssysserv.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\stagpat.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_stagpat.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\stimerem.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_stimerem.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\stream.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_stream.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\svol.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_svol.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\syncfile.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_syncfile.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\systask.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_systask.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\textcode.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_textcode.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\textcrnt.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_textcrnt.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\textfor.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_textfor.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\textset.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_textset.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\threads.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_threads.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\timer.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_timer.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\trnsfrm.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_trnsfrm.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\trnsmult.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_trnsmult.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\trnspos.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_trnspos.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\unbtree.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_unbtree.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\unhuff.cpp"><CompileAs>CompileAsCpp</CompileAs><ObjectFileName>$(IntDir)library_unhuff.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\unref.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_unref.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\vramfxya.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_vramfxya.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\wildcard.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_wildcard.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\window.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_window.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+    <ClCompile Include="..\..\eaclib\psx\xform.c"><CompileAs>CompileAsC</CompileAs><ObjectFileName>$(IntDir)library_xform.obj</ObjectFileName><AdditionalOptions>/J %(AdditionalOptions)</AdditionalOptions></ClCompile>
+  </ItemGroup>
+</Project>
