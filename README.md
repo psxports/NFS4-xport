@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">NeedforSpeed:HighStakes-xport</h1>
+<h1 align="center">NFS4-xport</h1>
 
 <p align="center">
   Need for Speed: High Stakes (PSX) decompilation port via Codex
