@@ -58,11 +58,11 @@ void PauseMenu::FullText(char *sMenuText, sint16 x, sint16 flags, sint16 color)
     char *str = sMenuText;
     sint32 position = x;
     if (flags == 1)
-        position = (sint32)((uint32)position - (uint32)textpixels(str));
+        position = (position - textpixels(str));
     else if (flags == 2)
     {
         sint32 width = textpixels(str);
-        position = (sint32)((uint32)position - (uint32)(width / 2));
+        position = (position - (width / 2));
     }
     Font::TextColor(color);
     Font::TextXY(str, (sint16)position, gPause_CurrentY);
@@ -71,7 +71,6 @@ void PauseMenu::FullText(char *sMenuText, sint16 x, sint16 flags, sint16 color)
 void PauseMenu::MenuTextPositioned(sint16 index, sint16 selected, sint16 disabled, sint16 x)
 {
     FUNCTION_MARKER(0x800A6F14, "NFS4.EXE");
-    (void)disabled;
     sint32 flags = TextSys::WordFlags(index);
     char *str = TextSys::Word(index);
     sint16 color = selected != 0 ? 3 : 4;
@@ -114,10 +113,9 @@ void tPListIterator::Increment(tPlayer)
 {
     FUNCTION_MARKER(0x800A70A4, "NFS4.EXE");
     sint32 *value = fValue;
-    *value = (sint32)((uint32)*value + 1U);
+    *value = (((*value)) + 1);
     value = fValue;
-    if (fSelectionList[*value] == 0)
-        *value = 0;
+    if (fSelectionList[*value] == 0) *value = 0;
     AudioCmn::PlayPauseSound(5);
     gMPauseUpdateNextTime = 1;
 }
@@ -132,13 +130,12 @@ void tPListIterator::Decrement(tPlayer)
         sint16 next = fSelectionList[1];
         while (next > 0)
         {
-            *value = (sint32)((uint32)*value + 1U);
+            *value = (((*value)) + 1);
             value = fValue;
             next = fSelectionList[*value + 1];
         }
     }
-    else
-        *value = (sint32)((uint32)current - 1U);
+    else *value = (current - 1);
     AudioCmn::PlayPauseSound(5);
     gMPauseUpdateNextTime = 1;
 }
@@ -173,11 +170,10 @@ void tPListIteratorIndexed::Increment(tPlayer)
     FUNCTION_MARKER(0x800A7290, "NFS4.EXE");
     uint8 index = (uint8)*fIndex;
     sint32 *value = &fValue[index];
-    *value = (sint32)((uint32)*value + 1U);
+    *value = (((*value)) + 1);
     index = (uint8)*fIndex;
     value = &fValue[index];
-    if (fSelectionList[*value] == 0)
-        *value = 0;
+    if (fSelectionList[*value] == 0) *value = 0;
     AudioCmn::PlayPauseSound(5);
     gMPauseUpdateNextTime = 1;
 }
@@ -195,14 +191,13 @@ void tPListIteratorIndexed::Decrement(tPlayer)
         while (next > 0)
         {
             value = &values[(uint8)*index];
-            *value = (sint32)((uint32)*value + 1U);
+            *value = (((*value)) + 1);
             index = fIndex;
             values = fValue;
             next = fSelectionList[values[(uint8)*index] + 1];
         }
     }
-    else
-        *value = (sint32)((uint32)current - 1U);
+    else *value = (current - 1);
     AudioCmn::PlayPauseSound(5);
     gMPauseUpdateNextTime = 1;
 }
@@ -307,7 +302,7 @@ void tPMenuItemLeftRightChoice::ProcessInput(tInputKeyType &keyval, tPMenuComman
 void tPMenuItemLeftRightChoice::Draw(bool selected)
 {
     FUNCTION_MARKER(0x800A7650, "NFS4.EXE");
-    sint32 position = TextSys::WordX((sint32)fTextDescription);
+    sint32 position = TextSys::WordX(fTextDescription);
     PauseMenu::MenuTextPositioned((sint16)fTextDescription, (sint16)selected, (sint16)(fFlags & 1), (sint16)position);
     sint16 index = fData->TextValue(kPlayerBoth);
     sint16 x = (sint16)TextSys::WordX(index);
@@ -323,15 +318,15 @@ void tPMenuItemLeftRightChoice::Draw(bool selected)
     setaddr(ot, prim);
     char *string = TextSys::Word(index);
     sint32 width = textpixels(string);
-    sint32 left = (sint32)((uint32)(sint32)x - (uint32)width - 8U);
-    y = (sint32)((uint32)y + 5U);
+    sint32 left = ((x - width) - 8);
+    y = (y + 5);
     Hud::BuildGT4(prim, &HudPmx::gShapes[18], left, y, 0xBEBEUL);
     prim = reinterpret_cast<POLY_GT4 *>(cprim->PrimPtr);
     ot = cprim->LastPrim;
     setaddr(prim, getaddr(ot));
     cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
     setaddr(ot, prim);
-    Hud::BuildGT4(prim, &HudPmx::gShapes[19], (sint32)x + 4, y, 0xBEBEUL);
+    Hud::BuildGT4(prim, &HudPmx::gShapes[19], x + 4, y, 0xBEBEUL);
 }
 
 tPMenuItemLeftRightSlider::tPMenuItemLeftRightSlider(uint32 textDescription, sint32 *dataPtr, char maxVal) : tPMenuItemInteractive(textDescription)
@@ -363,7 +358,7 @@ void tPMenuItemLeftRightSlider::ProcessInput(tInputKeyType &keyval, tPMenuComman
             gMPauseUpdateNextTime = 1;
             uint32 maximum = (uint8)fMaxVal;
             sint32 *data = fData;
-            sint32 value = (sint32)((uint32)*data - maximum / 30U);
+            sint32 value = ((*data) - maximum / 30U);
             if (value < 0)
                 value = 0;
             *data = value;
@@ -372,13 +367,13 @@ void tPMenuItemLeftRightSlider::ProcessInput(tInputKeyType &keyval, tPMenuComman
     }
     else if (keyval == kInput_KeyType_Right)
     {
-        if (*fData < (sint32)(uint8)fMaxVal)
+        if (*fData < ((uint8)fMaxVal))
         {
             gMPauseUpdateNextTime = 1;
             uint32 maximum = (uint8)fMaxVal;
             sint32 *data = fData;
-            sint32 value = (sint32)((uint32)*data + maximum / 30U);
-            sint32 result = (sint32)maximum;
+            sint32 value = ((*data) + maximum / 30U);
+            sint32 result = maximum;
             if (value <= result)
                 result = value;
             *data = result;
@@ -395,8 +390,8 @@ void tPMenuItemLeftRightSlider::ProcessInput(tInputKeyType &keyval, tPMenuComman
 void tPMenuItemLeftRightSlider::Draw(bool selected)
 {
     FUNCTION_MARKER(0x800A79C8, "NFS4.EXE");
-    sint16 x = (sint16)TextSys::WordX((sint32)fTextDescription);
-    sint16 y = (sint16)((uint16)gPause_CurrentY + 4U);
+    sint16 x = (sint16)TextSys::WordX(fTextDescription);
+    sint16 y = (sint16)((uint16)gPause_CurrentY + 4);
     PauseMenu::MenuTextPositioned((sint16)fTextDescription, (sint16)selected, (sint16)(fFlags & 1), x);
     for (sint32 i = 0; i < 15; ++i)
     {
@@ -404,9 +399,9 @@ void tPMenuItemLeftRightSlider::Draw(bool selected)
         uint32 maximum = (uint8)fMaxVal;
         if (maximum == 0)
             abort();
-        sint32 scaled = (sint32)((uint32)value * 15U);
+        sint32 scaled = (value * 15);
         sint32 filled = scaled / (sint32)maximum;
-        uint32 col = 0x323232UL;
+        uint32 col = 0x323232;
         if (i < filled)
             col = selected ? 0xBEBEUL : 0x808080UL;
         if (selected && GameSetup::gData.userSetting.language == 0)
@@ -417,18 +412,18 @@ void tPMenuItemLeftRightSlider::Draw(bool selected)
             setaddr(prim, getaddr(ot));
             cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
             setaddr(ot, prim);
-            Hud::BuildGT4(prim, &HudPmx::gShapes[18], (sint32)x + 53, (sint32)y + 2, 0xBEBEUL);
+            Hud::BuildGT4(prim, &HudPmx::gShapes[18], x + 53, y + 2, 0xBEBEUL);
             prim = reinterpret_cast<POLY_GT4 *>(cprim->PrimPtr);
             ot = cprim->LastPrim;
             setaddr(prim, getaddr(ot));
             cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
             setaddr(ot, prim);
-            Hud::BuildGT4(prim, &HudPmx::gShapes[19], (sint32)x + 144, (sint32)y + 2, 0xBEBEUL);
+            Hud::BuildGT4(prim, &HudPmx::gShapes[19], x + 144, y + 2, 0xBEBEUL);
         }
-        sint32 xpos = (sint32)x + 66 + i * 5;
-        Hud::FBuildF4(0, xpos, (sint32)y + 2, 3, 5, col, 0, 0);
+        sint32 xpos = x + 66 + i * 5;
+        Hud::FBuildF4(0, xpos, y + 2, 3, 5, col, 0, 0);
     }
-    Hud::FBuildF4(0, (sint32)x + 63, (sint32)y + 1, 79, 7, 0, 0, 0);
+    Hud::FBuildF4(0, x + 63, y + 1, 79, 7, 0, 0, 0);
 }
 
 tPMenuItemLeftRightSliderIndexed::tPMenuItemLeftRightSliderIndexed(uint32 textDescription, sint32 *dataPtr, char maxVal, char *index) : tPMenuItemLeftRightSlider(textDescription, dataPtr, maxVal)
@@ -696,9 +691,9 @@ void tPMenu::Draw(void)
             break;
         if ((entry->fFlags & 1) == 0)
         {
-            bool selected = fHighlight && (sint32)item == fCurrentItem;
+            bool selected = fHighlight && item == fCurrentItem;
             entry->Draw(selected);
-            gPause_CurrentY = (sint32)((uint32)gPause_CurrentY + 13U);
+            gPause_CurrentY = (gPause_CurrentY + 13);
         }
     }
 }

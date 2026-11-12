@@ -17,9 +17,9 @@ sint32 SNDautovol(sint32 handle, sint32 ticks, sint32 volume)
         while (iSNDpatchkey(channel, &cursor) != 0)
         {
             SoundVoicePrefix *voice = &((SoundVoicePrefix *)(sndgs.voiceMemory))[cursor];
-            sint32 difference = (sint32)(target - ((uint32)(voice->volume)));
+            sint32 difference = (target - ((voice->volume)));
             sint32 ramp = difference / ticks;
-            voice->volumeTarget = (sint32)target;
+            voice->volumeTarget = target;
             voice->volumeRamp = ramp;
         }
     }

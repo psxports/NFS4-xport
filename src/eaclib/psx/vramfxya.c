@@ -29,8 +29,8 @@ void vramfxya(shapetbl *shape, sint32 x, sint32 y, sint32 clutx, sint32 cluty)
         uint32 type = shape->type & 0xF7u;
         if (type >= 0x40 && type <= 0x43)
         {
-            shape->shapex = ((sint32)(((uint32)(x)) & 0xFFFu));
-            shape->shapey = ((sint32)(((uint32)(y)) & 0xFFFu));
+            shape->shapex = ((((x)) & 0xFFFu));
+            shape->shapey = ((((y)) & 0xFFFu));
             shape->type |= 8u;
             PSX_RECT rectangle;
             rectangle.x = (sint16)x;
@@ -64,8 +64,8 @@ void vramfxya(shapetbl *shape, sint32 x, sint32 y, sint32 clutx, sint32 cluty)
                 }
                 pixels = converted.words + (type == 0x24 ? 128 : 0);
             }
-            shape->shapex = ((sint32)(((uint32)(clutx)) & 0xFFFu));
-            shape->shapey = ((sint32)(((uint32)(cluty)) & 0xFFFu));
+            shape->shapex = ((((clutx)) & 0xFFFu));
+            shape->shapey = ((((cluty)) & 0xFFFu));
             shape->type |= 8u;
             PSX_RECT rectangle;
             rectangle.x = (sint16)clutx;

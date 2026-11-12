@@ -130,8 +130,7 @@ void AIHigh::Execute(void)
         if (object) {
             bool execute = object->schedulingOff_ != 0;
             if (!execute)
-                execute = Sched::ExecuteCheck(1, 0, carObj->N.distToPlayer, carObj->N.objID,
-                    &AI::time, &AI::elapsedTime, &AI::iTime, carObj->forceNoSimOptz) != 0;
+                execute = Sched::ExecuteCheck(1, 0, carObj->N.distToPlayer, carObj->N.objID, &AI::time, &AI::elapsedTime, &AI::iTime, carObj->forceNoSimOptz) != 0;
             if (execute)
                 highLevelAIObjs[carLoop]->HighExecute();
         }

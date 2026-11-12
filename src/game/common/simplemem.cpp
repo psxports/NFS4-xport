@@ -6,7 +6,7 @@
 void *SimpleMem::Alloc(sint32 len, sint32 feign)
 {
     FUNCTION_MARKER(0x800B7250, "NFS4.EXE");
-    len = (sint32)(((uint32)len + 3U) & 0xfffffffcU);
+    len = ((len + 3U) & 0xfffffffc);
     if (len > freeMemSize)
         return 0;
     void *ret = freeMem;
@@ -14,7 +14,7 @@ void *SimpleMem::Alloc(sint32 len, sint32 feign)
     {
         sint32 remaining = freeMemSize;
         freeMem = static_cast<uint8 *>(ret) + len;
-        freeMemSize = (sint32)((uint32)remaining - (uint32)len);
+        freeMemSize = (remaining - len);
     }
     return ret;
 }

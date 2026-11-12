@@ -13,19 +13,19 @@ void make64(sint64 *result, sint32 value, sint32 shift)
     if (shift >= 32)
     {
         low = 0;
-        high = (uint32)value << (((uint32)shift - 32U) & 31U);
+        high = (uint32)value << ((shift - 32U) & 31U);
     }
     else if (shift > 0)
     {
-        low = (uint32)value << ((uint32)shift & 31U);
-        high = (uint32)(value >> ((32U - (uint32)shift) & 31U));
+        low = (uint32)value << (shift & 31U);
+        high = (value >> ((32U - shift) & 31U));
     }
     else
     {
-        low = (uint32)value;
-        high = (uint32)(value >> 31);
+        low = value;
+        high = (value >> 31);
     }
-    *result = (sint64)(((uint64)high << 32) | low);
+    *result = (((uint64)high << 32) | low);
 }
 
 uint32 divu64(uint64 dividend, uint32 divisor)

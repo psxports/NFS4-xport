@@ -31,8 +31,8 @@ uint16 sndsintbl[257] =
 sint32 iSNDsin(sint32 angle)
 {
     FUNCTION_MARKER(0x8010CC40, "NFS4.EXE");
-    uint32 quadrant = ((uint32)angle >> 8) & 3;
-    uint32 index = (uint32)angle & 255;
+    uint32 quadrant = (angle >> 8) & 3;
+    uint32 index = angle & 255;
     if (quadrant & 1)
         index = 256 - index;
     sint32 sample = sndsintbl[index];

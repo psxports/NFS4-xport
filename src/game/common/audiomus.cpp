@@ -92,7 +92,7 @@ AudioMus::tCurrentSong * AudioMus::GetCurrentSong(void)
     curr->remaining = g->requeststatus.timetoend;
     sint32 index = g->errorcode;
     if (index == 0)
-        index = (sint32)((uint32)g->requestsong + 1);
+        index = (g->requestsong + 1);
     curr->index = index;
     tSongEntry *info = &curr->info;
     static char bufferError[] = "BUFFER NOT ALLOCATED";
@@ -132,7 +132,7 @@ void AudioMus::SwitchSong(void)
         g->fadetime = 1000;
     }
     state = g;
-    sint32 next = (sint32)((uint32)state->requestsong + 1);
+    sint32 next = (state->requestsong + 1);
     sint32 turnOff = Hud::kTurnSongOffNext;
     state->requestsong = next;
     if (turnOff == 0 && next < state->availablesongs) {
@@ -179,7 +179,7 @@ void AudioMus::QueueRequestedSong(void)
     g->switchsong = 2;
     sint32 tick = gettick();
     tMusicGlobals *state = g;
-    state->failby = (sint32)((uint32)tick + 0x280);
+    state->failby = (tick + 0x280);
     state->current.remaining = 0;
     tSongEntry *info = &state->current.info;
     info->length = 0;
@@ -225,7 +225,7 @@ void AudioMus::SetCurrentSongInfo(void)
     sint32 current = state->requeststatus.currenttime;
     tSongEntry *info = &state->current.info;
     state->current.remaining = remaining;
-    info->length = (sint32)((uint32)remaining + (uint32)current);
+    info->length = (remaining + current);
     info->filename = state->songname;
     SetEntry(info);
 }
@@ -233,8 +233,6 @@ void AudioMus::SetCurrentSongInfo(void)
 sint32 AudioMus::Server(sint32 mode, sint32 ticks)
 {
     FUNCTION_MARKER(0x8007A3D0, "NFS4.EXE");
-    (void)mode;
-    (void)ticks;
     if (SNDSTRM::IsPaused() || g->bigfileheader == 0)
         return 0;
     if (g->bigfilename[0] != '.' && CdDiskReady(1) == 16) {
@@ -260,7 +258,7 @@ sint32 AudioMus::Server(sint32 mode, sint32 ticks)
         state->newswitch = 1;
         state->switchsong = 2;
         sint32 tick = gettick();
-        g->failby = (sint32)((uint32)tick + 0x280);
+        g->failby = (tick + 0x280);
         return 0;
     }
     RefreshStatus();
@@ -288,13 +286,13 @@ sint32 AudioMus::Server(sint32 mode, sint32 ticks)
         sint32 available = state->availablesongs;
         if (available > 1) {
             if (state->randomize == 0) {
-                state->requestsong = (sint32)((uint32)request + 1) % available;
+                state->requestsong = (request + 1) % available;
             } else {
                 sint32 first = GetRCnt(0);
                 sint32 draw = GetRCnt(0);
                 if (first <= 0)
-                    draw = (sint32)(0 - (uint32)draw);
-                sint32 candidate = (sint32)((uint32)request + 1 + (uint32)(draw % (available - 1)));
+                    draw = (-draw);
+                sint32 candidate = ((request + 1) + ((draw % (available - 1))));
                 state->requestsong = candidate % available;
             }
         }
@@ -346,7 +344,7 @@ sint32 AudioMus::Server(sint32 mode, sint32 ticks)
     QueueRequestedSong();
     g->switchsong = 2;
     sint32 tick = gettick();
-    g->failby = (sint32)((uint32)tick + 0x280);
+    g->failby = (tick + 0x280);
     return 0;
 }
 
@@ -354,7 +352,7 @@ AudioMus::tSongList * AudioMus::GetSongList(char *pattern, sint32 memtype)
 {
     FUNCTION_MARKER(0x8007A880, "NFS4.EXE");
     if (g == 0) {
-        tSongList *list = (tSongList *)reservememadr("Song List", 8, (uint32)memtype);
+        tSongList *list = (tSongList *)reservememadr("Song List", sizeof(tSongList), memtype);
         list->numsongs = 0;
         list->currentsong = -1;
         return list;
@@ -363,10 +361,10 @@ AudioMus::tSongList * AudioMus::GetSongList(char *pattern, sint32 memtype)
     for (sint32 i = 0; i < g->totalsongs; ++i) {
         char *name = locatebigentry(g->bigfileheader, 0, i, 0, 0);
         if (wildcard(name, pattern) != 0)
-            numsongs = (sint32)((uint32)numsongs + 1);
+            numsongs = (numsongs + 1);
     }
-    sint32 length = (sint32)(((uint32)numsongs << 6) | 8);
-    tSongList *list = (tSongList *)reservememadr("Song List", length, (uint32)memtype);
+    sint32 length = (sint32)(sizeof(tSongList) + (uint32)numsongs * sizeof(tSongEntry));
+    tSongList *list = (tSongList *)reservememadr("Song List", length, memtype);
     tSongEntry *song = list->song;
     list->numsongs = 0;
     list->currentsong = -1;
@@ -376,13 +374,13 @@ AudioMus::tSongList * AudioMus::GetSongList(char *pattern, sint32 memtype)
         if (wildcard(songname, pattern) != 0) {
             song->filename = songname;
             SetEntry(song);
-            sint32 product = (sint32)((uint32)size * 10);
+            sint32 product = (size * 10);
             song->index = i;
             song->length = product / 252;
             if (songname == g->songname)
                 list->currentsong = i;
             ++song;
-            list->numsongs = (sint32)((uint32)list->numsongs + 1);
+            list->numsongs = (list->numsongs + 1);
         }
     }
     return list;
@@ -432,10 +430,10 @@ void AudioMus::DriverStartUp(sint32 buffersize, sint32 spusize)
         return;
     if (g->driveractive == 0)
         InitDriverGlobals();
-    g->threshold = (sint32)((uint32)buffersize + (uint32)spusize) >> 5;
+    g->threshold = (buffersize + spusize) >> 5;
     if (g->streamhandle < 0 && g->streambuffer != 0) {
         sint32 chunks = buffersize / 1024;
-        sint32 size = (sint32)((uint32)buffersize + (uint32)SNDSTRM::overhead(1, chunks));
+        sint32 size = (buffersize + SNDSTRM::overhead(1, chunks));
         SNDLIMITS sndlimits;
         SNDgetlimits(&sndlimits);
         sndlimits.packetbufsize = spusize;
@@ -468,7 +466,7 @@ void AudioMus::SysStartUp(sint32 buffersize, sint32 spusize, char *songs)
         return;
     InitGlobals();
     sint32 overhead = SNDSTRM::overhead(1, buffersize / 1024);
-    sint32 size = (sint32)((uint32)buffersize + (uint32)overhead);
+    sint32 size = (buffersize + overhead);
     char *buffer = (char *)reservememadr("Music Buffer", size, 0);
     g->streambuffer = buffer;
     DriverStartUp(buffersize, spusize);
@@ -554,7 +552,7 @@ void AudioMus::BuildPlayList(sint32 numplaylistsongs, sint32 *playlist)
         if (entry >= 0 && entry < g->totalsongs) {
             uint8 *bytes = (uint8 *)g;
             bytes[offsetof(tMusicGlobals, playlist) + g->availablesongs] = (uint8)entry;
-            g->availablesongs = (sint32)((uint32)g->availablesongs + 1);
+            g->availablesongs = (g->availablesongs + 1);
         }
     }
 }
@@ -574,7 +572,7 @@ void AudioMus::BuildPattern(char *pattern)
         char *name = locatebigentry(g->bigfileheader, 0, i, 0, 0);
         if (wildcard(name, pattern) != 0) {
             g->playlist[g->availablesongs] = (char)i;
-            g->availablesongs = (sint32)((uint32)g->availablesongs + 1);
+            g->availablesongs = (g->availablesongs + 1);
         }
         if (i + 1 >= g->totalsongs)
             break;
@@ -604,11 +602,11 @@ sint32 AudioMus::PlaySong(char *pattern)
             newsong = 0;
         } else {
             sint32 previous = g->requestsong;
-            sint32 alternatives = (sint32)((uint32)available - 1);
+            sint32 alternatives = (available - 1);
             sint32 first = GetRCnt(0);
             sint32 draw = GetRCnt(0);
             if (first <= 0)
-                draw = (sint32)(0 - (uint32)draw);
+                draw = (-draw);
             if (pattern != 0) {
                 if (available == -1 && draw == INT_MIN)
                     abort();
@@ -616,7 +614,7 @@ sint32 AudioMus::PlaySong(char *pattern)
             } else {
                 if (alternatives == 0 || (alternatives == -1 && draw == INT_MIN))
                     abort();
-                sint32 candidate = (sint32)((uint32)previous + 1 + (uint32)(draw % alternatives));
+                sint32 candidate = ((previous + 1) + ((draw % alternatives)));
                 if (available == -1 && candidate == INT_MIN)
                     abort();
                 newsong = candidate % available;
@@ -662,7 +660,7 @@ void AudioMus::Volume(sint32 volume)
     if (g->fadetime != 0 && g->streamhandle >= 0) {
         sint32 curvol = SNDSTRM::getvol(g->streamhandle);
         if (curvol > 0 && g->volume > 0) {
-            sint32 product = (sint32)((uint32)g->fadetime * (uint32)curvol);
+            sint32 product = (g->fadetime * curvol);
             ticksleft = product / g->volume;
         }
     }
@@ -670,7 +668,7 @@ void AudioMus::Volume(sint32 volume)
         if (g->streamhandle >= 0 && g->switchsong != 2)
             SNDSTRM::vol(g->streamhandle, volume);
     } else {
-        sint32 product = (sint32)((uint32)volume * (uint32)ticksleft);
+        sint32 product = (volume * ticksleft);
         sint32 fade = g->fadetime;
         if (fade == 0 || (fade == -1 && product == INT_MIN))
             abort();

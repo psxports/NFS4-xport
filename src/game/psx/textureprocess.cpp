@@ -79,7 +79,7 @@ sint32 TextureProcess::TransColorCheck(char *data, sint32 numentry)
 {
     FUNCTION_MARKER(0x800E0884, "NFS4.EXE");
     sint32 translucent_flag = 0;
-    uint32 remaining = (uint32)numentry;
+    uint32 remaining = numentry;
     while (remaining != 0)
     {
         uint16 color;
@@ -96,8 +96,8 @@ void TextureProcess::ColorClut(sint32 level, sint32 maxlevel, char *data, sint32
     FUNCTION_MARKER(0x800E08B8, "NFS4.EXE");
     sint16 newdata[256];
     char *sourcedata = data;
-    sint32 numerator = (sint32)((uint32)TrackSpec::gSpec.fogspec.contrast * (uint32)level);
-    sint32 denominator = (sint32)((uint32)maxlevel - 1U);
+    sint32 numerator = (TrackSpec::gSpec.fogspec.contrast * level);
+    sint32 denominator = (maxlevel - 1);
 
     sint32 contrasttemp = numerator / denominator;
     for (sint32 j = 0; j < numentry; ++j)
@@ -112,26 +112,26 @@ void TextureProcess::ColorClut(sint32 level, sint32 maxlevel, char *data, sint32
             sint32 g = (color >> 2) & 0xF8;
             sint32 r = (color & 31) << 3;
             sint32 temp = fixedmult(r - TrackSpec::gSpec.fogspec.color.r, contrasttemp);
-            r = (sint32)((uint32)r - (uint32)temp);
+            r = (r - temp);
             if (r < 0)
                 r = 0;
             else if (r > 255)
                 r = 255;
             temp = fixedmult(g - TrackSpec::gSpec.fogspec.color.g, contrasttemp);
-            g = (sint32)((uint32)g - (uint32)temp);
+            g = (g - temp);
             if (g < 0)
                 g = 0;
             else if (g > 255)
                 g = 255;
             temp = fixedmult(b - TrackSpec::gSpec.fogspec.color.b, contrasttemp);
-            b = (sint32)((uint32)b - (uint32)temp);
+            b = (b - temp);
             if (b < 0)
                 b = 0;
             else if (b > 255)
                 b = 255;
             if (b < 8)
                 b = 8;
-            newdata[j] = (sint16)((color & 0x8000U) | (((uint32)b >> 3) << 10) | (((uint32)g >> 3) << 5) | ((uint32)r >> 3));
+            newdata[j] = (sint16)((color & 0x8000) | (((uint32)b >> 3) << 10) | (((uint32)g >> 3) << 5) | ((uint32)r >> 3));
         }
         sourcedata += 2;
     }
@@ -152,12 +152,12 @@ sint32 TextureProcess::DepthColorCluts(char *data, sint32 numentry)
         sint32 cx;
         sint32 cy;
         Texture::GetClutId(numentry >= 17, &cx, &cy);
-        uint32 id = ((uint32)(uint16)cy << 6) | ((uint32)(cx >> 4) & 63U);
+        uint32 id = (((uint16)cy) << 6) | ((cx >> 4) & 63U);
         gClutDepth[TP::gZPaletteSystem.numdepthclut][i] = (sint16)id;
         ColorClut(i, 16, data, numentry, cx, cy);
     }
     sint32 index = TP::gZPaletteSystem.numdepthclut;
-    TP::gZPaletteSystem.numdepthclut = (sint32)((uint32)index + 1U);
+    TP::gZPaletteSystem.numdepthclut = (index + 1);
     return index;
 }
 
@@ -237,7 +237,7 @@ void Fog::AddKey(sint32 slice, sint32 distance)
         newkey->next = savenextkey;
         savenextkey->prev = newkey;
     }
-    gNumKeys = (sint32)((uint32)gNumKeys + 1U);
+    gNumKeys = (gNumKeys + 1);
 }
 
 void Fog::Update(sint32 player)
@@ -257,17 +257,17 @@ void Fog::Update(sint32 player)
         if (nextslice < key->slice)
         {
             sint32 numslices = gNumSlices;
-            nextslice = (sint32)((uint32)nextslice + (uint32)numslices);
+            nextslice = (nextslice + numslices);
             if (currentslice >= 0 && currentslice < key->slice)
-                currentslice = (sint32)((uint32)currentslice + (uint32)numslices);
+                currentslice = (currentslice + numslices);
         }
         nextkey = key->next;
         sint32 distance = key->distance;
         sint32 diffdistance = nextkey->distance - distance;
-        sint32 delta = (sint32)((uint32)currentslice - (uint32)key->slice);
-        sint32 numerator = (sint32)((uint32)delta * (uint32)diffdistance);
-        sint32 diffslice = (sint32)((uint32)nextslice - (uint32)key->slice);
-        final_dist = (sint32)((uint32)distance + (uint32)(numerator / diffslice));
+        sint32 delta = (currentslice - key->slice);
+        sint32 numerator = (delta * diffdistance);
+        sint32 diffslice = (nextslice - key->slice);
+        final_dist = (distance + (numerator / diffslice));
     }
     TrackSpec::gSpec.fogspec.start = final_dist;
 }

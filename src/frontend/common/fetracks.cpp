@@ -170,8 +170,7 @@ void tListIteratorTrack::Increment(tPlayer atIndex)
         *value = (char)(*value + 1);
         value = fValue + *fIndex;
         uint8 current = *value;
-        if (current >= fTrackManager->fNumTracks)
-            *value = 0;
+        if (current >= fTrackManager->fNumTracks) *value = 0;
     } while (ValidTrack(fValue[*fIndex]) != 1);
 }
 
@@ -182,10 +181,8 @@ void tListIteratorTrack::Decrement(tPlayer atIndex)
     {
         char *value = fValue + *fIndex;
         uint8 current = *value;
-        if (current == 0)
-            *value = (char)(fTrackManager->fNumTracks - 1);
-        else
-            *value = (char)(current - 1);
+        if (current == 0) *value = (char)(fTrackManager->fNumTracks - 1);
+        else *value = (char)(current - 1);
     } while (ValidTrack(fValue[*fIndex]) != 1);
 }
 

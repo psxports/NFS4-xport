@@ -18,7 +18,7 @@ void transform(coorddef *vector, matrixtdef *matrix, coorddef *result)
         uint32 first = fixedmult(vector->x, matrix->m[i]);
         uint32 second = fixedmult(vector->y, matrix->m[i + 3]);
         uint32 third = fixedmult(vector->z, matrix->m[i + 6]);
-        values[i] = (sint32)(first + second + third);
+        values[i] = (first + second + third);
     }
     result->x = values[0];
     result->y = values[1];

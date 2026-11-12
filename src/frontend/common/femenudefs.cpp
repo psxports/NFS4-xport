@@ -187,7 +187,7 @@ void MenuExtended::GoToTwoPlayerSingleRace(tMenuCommand &command)
 {
     FUNCTION_MARKER(0x8002C288, "FRONT.BIN");
     tDialogYesNoTri YesNoDialog;
-    if ((sint16)carManager.GetNumOwnedCars(0) <= 0) {
+    if ((carManager.GetNumOwnedCars(0)) <= 0) {
         YesNoDialog.string = TextSys::Word(0x42);
         YesNoDialog.yesnowords[0] = 0x321;
         YesNoDialog.yesnowords[1] = 0x322;
@@ -416,13 +416,11 @@ void MenuExtended::GoToRace(tMenuCommand &command)
     command.type = kMenu_Command_StartRace;
     tCarInfo carInfo;
     sint32 message = 170;
-    if (frontEnd.carListType != 1 || carManager.GetNumOwnedCars(0) > 0 ||
-        frontEnd.raceType == 1 || frontEnd.raceType == 6)
+    if (frontEnd.carListType != 1 || carManager.GetNumOwnedCars(0) > 0 || frontEnd.raceType == 1 || frontEnd.raceType == 6)
     {
         if (frontEnd.raceType == 2 && carManager.GetNumTourneyCars(0) <= 0)
             message = 241;
-        else if (frontEnd.raceType == 1 &&
-            (carManager.GetStockCar((uint8)frontEnd.playerCar[0], carInfo), carInfo.fPursuitAvailable == 0))
+        else if (frontEnd.raceType == 1 && (carManager.GetStockCar((uint8)frontEnd.playerCar[0], carInfo), carInfo.fPursuitAvailable == 0))
             message = 242;
         else
         {
@@ -504,7 +502,7 @@ void MenuExtended::GoToTournTrackInfo(tMenuCommand &command)
             return;
         AudioCmn::PlayFESFX(26);
         sint32 amount = tourn->fEntranceFee;
-        tournamentManager.fMoney = (sint32)((uint32)tournamentManager.fMoney - (uint32)amount);
+        tournamentManager.fMoney = (tournamentManager.fMoney - amount);
     }
     tournamentManager.StartNewTournament(0, (uint8)frontEnd.tournament);
     tGlobalMenuDefs *defs = menuDefs;
@@ -538,7 +536,7 @@ void MenuExtended::GoToSpecialEventTrackInfo(tMenuCommand &command)
             return;
         AudioCmn::PlayFESFX(26);
         sint32 amount = tourn->fEntranceFee;
-        tournamentManager.fMoney = (sint32)((uint32)tournamentManager.fMoney - (uint32)amount);
+        tournamentManager.fMoney = (tournamentManager.fMoney - amount);
     }
     tournamentManager.StartNewTournament(1, (uint8)frontEnd.specialevent);
     tGlobalMenuDefs *defs = menuDefs;
@@ -620,7 +618,7 @@ void MenuExtended::SellCar(tMenuCommand &)
 
     sint32 money = tournamentManager.fMoney;
     sint32 usedPrice = carManager.CalcUsedPrice((uint8)frontEnd.garageCar[0]);
-    money = (sint32)((uint32)money + (uint32)usedPrice);
+    money = (money + usedPrice);
     bool canSell = carManager.GetNumOwnedCars(0) >= 2;
     if (!canSell)
         canSell = money >= carManager.CheapestCarStockPrice();
@@ -634,7 +632,7 @@ void MenuExtended::SellCar(tMenuCommand &)
         if (popUp.Run() != 0)
         {
             sint32 price = carManager.SellCar((uint8)frontEnd.sellerCar, 0);
-            tournamentManager.fMoney = (sint32)((uint32)tournamentManager.fMoney + (uint32)price);
+            tournamentManager.fMoney = (tournamentManager.fMoney + price);
             menuDefs->iteratorSellerCar.Decrement(kPlayerOne);
             menuDefs->iteratorSellerCar.Increment(kPlayerOne);
             AudioCmn::PlayFESFX(26);
@@ -677,7 +675,7 @@ void MenuExtended::BuyCar(tMenuCommand &)
     {
         sint16 carID = (sint8)carInfo.fCarID;
         sint32 price = carManager.PurchaseCar(carID, (uint8)frontEnd.carColors[carID / 48][carID % 48], 0);
-        tournamentManager.fMoney = (sint32)((uint32)tournamentManager.fMoney - (uint32)price);
+        tournamentManager.fMoney = (tournamentManager.fMoney - price);
         AudioCmn::PlayFESFX(26);
     }
 }
@@ -685,7 +683,7 @@ void MenuExtended::BuyCar(tMenuCommand &)
 void MenuExtended::PurchaseUpgrade(sint32 upgradeNumber)
 {
     FUNCTION_MARKER(0x8002D64C, "FRONT.BIN");
-    uint32 upgradeFlag = 1U << ((uint32)upgradeNumber & 31);
+    uint32 upgradeFlag = 1U << (upgradeNumber & 31);
     tCarInfo carInfo;
     carManager.GetGarageCar((uint8)frontEnd.garageCar[0], carInfo, 0);
     if ((carInfo.fUpgrades & upgradeFlag) != 0)
@@ -702,7 +700,7 @@ void MenuExtended::PurchaseUpgrade(sint32 upgradeNumber)
         popUp.fDefault = 0;
         if (popUp.Run() != 0) {
             sint32 cost = carManager.PurchaseUpgrade((uint8)frontEnd.garageCar[0], (sint16)upgradeFlag, 0);
-            tournamentManager.fMoney = (sint32)((uint32)tournamentManager.fMoney - (uint32)cost);
+            tournamentManager.fMoney = (tournamentManager.fMoney - cost);
             AudioCmn::PlayFESFX(26);
         }
     }
@@ -819,10 +817,10 @@ void MenuExtended::FinishedPlayer1GetName(tMenuCommand &command)
     {
         Car::tStats *dummyCars = Cars::gNewCarStatsList;
         sint16 nBestCarIndex;
-        if (StatChk::IsRecordLapTime(dummyCars, (sint16)Cars::gNumRaceCars, &nBestCarIndex))
-            StatChk::SaveRecordLapTime(dummyCars, (sint16)Cars::gNumRaceCars, nBestCarIndex);
-        if (StatChk::IsTopTime(dummyCars, (sint16)Cars::gNumRaceCars) != 0)
-            StatChk::SaveTopTime(dummyCars, (sint16)Cars::gNumRaceCars);
+        if (StatChk::IsRecordLapTime(dummyCars, Cars::gNumRaceCars, &nBestCarIndex))
+            StatChk::SaveRecordLapTime(dummyCars, Cars::gNumRaceCars, nBestCarIndex);
+        if (StatChk::IsTopTime(dummyCars, Cars::gNumRaceCars) != 0)
+            StatChk::SaveTopTime(dummyCars, Cars::gNumRaceCars);
         command.nextMenu = &menuDefs->menuPostGameTrackRecords;
     }
 }
@@ -832,10 +830,10 @@ void MenuExtended::FinishedPlayer2GetName(tMenuCommand &command)
     FUNCTION_MARKER(0x8002DD14, "FRONT.BIN");
     Car::tStats *dummyCars = Cars::gNewCarStatsList;
     sint16 nBestCarIndex;
-    if (StatChk::IsRecordLapTime(dummyCars, (sint16)Cars::gNumRaceCars, &nBestCarIndex))
-        StatChk::SaveRecordLapTime(dummyCars, (sint16)Cars::gNumRaceCars, nBestCarIndex);
-    if (StatChk::IsTopTime(dummyCars, (sint16)Cars::gNumRaceCars) != 0)
-        StatChk::SaveTopTime(dummyCars, (sint16)Cars::gNumRaceCars);
+    if (StatChk::IsRecordLapTime(dummyCars, Cars::gNumRaceCars, &nBestCarIndex))
+        StatChk::SaveRecordLapTime(dummyCars, Cars::gNumRaceCars, nBestCarIndex);
+    if (StatChk::IsTopTime(dummyCars, Cars::gNumRaceCars) != 0)
+        StatChk::SaveTopTime(dummyCars, Cars::gNumRaceCars);
     command.type = kMenu_Command_GoToMenuOneWay;
     command.nextMenu = &menuDefs->menuPostGameTrackRecords;
 }
@@ -961,8 +959,7 @@ void MenuExtended::PinkSlipsContinue(tMenuCommand &command)
     FUNCTION_MARKER(0x8002E34C, "FRONT.BIN");
 
     sint32 winsNeeded = ((uint8)frontEnd.pinkSlipsNumTracks >> 1) + 1;
-    if ((uint8)frontEnd.pinkSlipsWins[0] < winsNeeded &&
-        (uint8)frontEnd.pinkSlipsWins[1] < winsNeeded)
+    if ((uint8)frontEnd.pinkSlipsWins[0] < winsNeeded && (uint8)frontEnd.pinkSlipsWins[1] < winsNeeded)
     {
         frontEnd.pinkSlipsTrackIndex = (char)((uint8)frontEnd.pinkSlipsTrackIndex + 1);
         command.type = kMenu_Command_StartRace;

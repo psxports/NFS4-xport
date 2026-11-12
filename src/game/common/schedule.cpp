@@ -37,8 +37,8 @@ sint32 Sched::ExecuteCheck(sint32 staggered, sint32 module, sint32 distance, sin
     *iTime = ExecuteiTimes[index];
     *elapsedTime = ExecuteElapsedTimes[index];
     sint32 mask = ExecuteMasks[index];
-    uint32 phase = (uint32)(simGlobal.gameTicks / 2) + (uint32)carId * staggered;
-    return (phase & (uint32)mask) == (uint32)mask;
+    uint32 phase = (simGlobal.gameTicks / 2) + (uint32)carId * staggered;
+    return (phase & mask) == (uint32)mask;
 }
 
 Sched::tSchedule * Sched::CreateNewSchedule(char *scheduleName, sint32 maxFunctions)
@@ -69,7 +69,7 @@ void Sched::AddFunction(Sched::tSchedule *schedule, void (*function)(void *), vo
     FUNCTION_MARKER(0x800B6380, "NFS4.EXE");
 
     sint32 n = 0;
-    schedule->numFunctions = (sint32)((uint32)schedule->numFunctions + 1);
+    schedule->numFunctions = (schedule->numFunctions + 1);
     for (sint32 i = 0; i < schedule->numFunctions; ++i)
     {
         n = i;
@@ -99,7 +99,7 @@ void Sched::DeleteFunction(Sched::tSchedule *schedule, void (*function)(void *),
                 break;
             }
         schedule->func[schedule->numFunctions].priority = 0x7ffe;
-        schedule->numFunctions = (sint32)((uint32)schedule->numFunctions - 1);
+        schedule->numFunctions = (schedule->numFunctions - 1);
     }
 }
 

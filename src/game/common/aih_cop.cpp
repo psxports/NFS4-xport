@@ -91,7 +91,7 @@ static void InstallCopState(AIHigh_Cop &cop, AIState_Base *newState, stateType_t
 
 static sint32 CopAbs(sint32 value)
 {
-    return value < 0 ? (sint32)(0U - (uint32)value) : value;
+    return value < 0 ? -value : value;
 }
 
 static bool CopIsSettingBlockade(blockadeMode_t mode)
@@ -107,10 +107,7 @@ static void AimCopAway(Car::tObj *car)
 
 static void StartCopChase(AIHigh_Cop &cop, coorddef &pos)
 {
-    InstallCopState(cop, new AIState_Chase(cop.carObj_, cop.perpTarget_->carObj_, &pos,
-        AIHigh_Cop::AggressionData[cop.aggressionLevel_].nitrousTicks,
-        NitroDistanceMeters[cop.type_][0], NitroDistanceMeters[cop.type_][1],
-        cop.aggressionLevel_, AICop::skillDelay[GameSetup::gData.skill]), STATE_CHASE);
+    InstallCopState(cop, new AIState_Chase(cop.carObj_, cop.perpTarget_->carObj_, &pos, AIHigh_Cop::AggressionData[cop.aggressionLevel_].nitrousTicks, NitroDistanceMeters[cop.type_][0], NitroDistanceMeters[cop.type_][1], cop.aggressionLevel_, AICop::skillDelay[GameSetup::gData.skill]), STATE_CHASE);
 }
 
 void AIHigh_Cop::SetTuningLevers(void)
@@ -159,8 +156,7 @@ void AIHigh_Cop::HighExecute(void)
         {
             AssignToPlayer(static_cast<AIHigh_Player *>(blockade_.target));
             InstallCopState(*this, new AIState_Idle(carObj_), STATE_IDLE);
-            AILife::ReencarnateCopByLatPosAndRotation(carObj_, blockade_.slice, blockade_.direction,
-                blockade_.latPos, blockade_.rotation);
+            AILife::ReencarnateCopByLatPosAndRotation(carObj_, blockade_.slice, blockade_.direction, blockade_.latPos, blockade_.rotation);
             requestSpikeBeltAtSlice_ = blockade_.requestSpikeBeltAtSlice;
             break;
         }
@@ -170,8 +166,7 @@ void AIHigh_Cop::HighExecute(void)
         if (!pNewTrigger)
             break;
         trigger::trigger_t newTrigger;
-        const bool forceForwardTrigger = Cars::gNumHumanRaceCars == 2 &&
-            CopAbs(AIWorld::ApxSplineDistance(Cars::gHumanRaceCarList[0], Cars::gHumanRaceCarList[1])) < 0x12C0000;
+        const bool forceForwardTrigger = Cars::gNumHumanRaceCars == 2 && CopAbs(AIWorld::ApxSplineDistance(Cars::gHumanRaceCarList[0], Cars::gHumanRaceCarList[1])) < 0x12C0000;
         if (forceForwardTrigger)
         {
             const trigger::simple_t forward = { TRIGGER_COP_SIMPLE, pNewTrigger->any.slice, 1, 1, 1 };
@@ -191,15 +186,14 @@ void AIHigh_Cop::HighExecute(void)
         if (newTrigger.any.type == TRIGGER_COP_SIMPLE)
         {
             randtemp = fastRandom * randSeed;
-            fastRandom = randtemp & 0xFFFFU;
+            fastRandom = randtemp & 0xFFFF;
             sint32 direction = GameSetup::gData.reverseTrack == 0 ? 1 : -1;
             AssignToPlayer(0);
             if (newTrigger.simple.moving == 0)
                 InstallCopState(*this, new AIState_Idle(carObj_), STATE_IDLE);
             else
                 InstallCopState(*this, new AIState_Normal(carObj_), STATE_NORMAL);
-            AILife::ReencarnateCopBySlice(carObj_, newTrigger.simple.slice, direction, direction,
-                newTrigger.simple.moving);
+            AILife::ReencarnateCopBySlice(carObj_, newTrigger.simple.slice, direction, direction, newTrigger.simple.moving);
         }
         else if (newTrigger.any.type == TRIGGER_COP_OFFROAD)
         {
@@ -208,8 +202,7 @@ void AIHigh_Cop::HighExecute(void)
             if (offroad.dir == 0 || offroad.dir == direction)
             {
                 AssignToPlayer(0);
-                InstallCopState(*this, new AIState_Offroad(carObj_, offroad.slice, &offroad.position,
-                    &offroad.orientation, offroad.maxSpeed, offroad.releaseTime, offroad.endSlice), STATE_OFFROAD);
+                InstallCopState(*this, new AIState_Offroad(carObj_, offroad.slice, &offroad.position, &offroad.orientation, offroad.maxSpeed, offroad.releaseTime, offroad.endSlice), STATE_OFFROAD);
                 AILife::ReencarnateCopByPosition(carObj_, offroad.slice, 1, &offroad.position, &offroad.orientation);
             }
         }
@@ -257,7 +250,7 @@ void AIHigh_Cop::HighExecute(void)
         }
         requestSpikeBeltAtSlice_ = -1;
         if (!leavingChase && chaseState->slowDownEndTime_ <= simGlobal.gameTicks && CheckForNeedyPlayers() != -1)
-            chaseState->slowDownEndTime_ = (sint32)((uint32)simGlobal.gameTicks + 0x3C0);
+            chaseState->slowDownEndTime_ = (simGlobal.gameTicks + 0x3C0);
         HandleBlockadeSpeech();
         if (perpTarget_)
         {
@@ -267,9 +260,7 @@ void AIHigh_Cop::HighExecute(void)
             if (!leavingChase)
             {
                 const AggressionEntry &aggression = AggressionData[aggressionLevel_];
-                if (chaseState->inTargetRegion_ > aggression.ticksInChaseRegionForMurder &&
-                    CopAbs(chaseState->latMetersBetween_) < aggression.minLatMetersDistanceForMurder &&
-                    CopAbs(chaseState->longMetersBetween_) < aggression.minLongMetersDistanceForMurder)
+                if (chaseState->inTargetRegion_ > aggression.ticksInChaseRegionForMurder && CopAbs(chaseState->latMetersBetween_) < aggression.minLatMetersDistanceForMurder && CopAbs(chaseState->longMetersBetween_) < aggression.minLongMetersDistanceForMurder)
                     chaseState->SetMurderMode(1, aggression.murderTicks);
             }
             if (ShouldIPerformCutOffBlock(0x4000, perpTarget_->carObj_) && !leavingChase && chaseState->murderMode_ == 0)
@@ -384,10 +375,9 @@ void AIHigh_Cop::HighExecute(void)
             }
 
             AICop::PerpChaseInfo &chase = perpTarget_->perpChaseInfo_;
-            const sint32 seconds = (sint32)((uint32)chase.chaseLevel_->engagementLapFraction *
-                (uint32)AITune::gRoughLapTime) / 65536;
+            const sint32 seconds = (chase.chaseLevel_->engagementLapFraction * AITune::gRoughLapTime) / 65536;
             sint32 increase = 65536 / (seconds * 32);
-            chase.engagementTime_ = (sint32)((uint32)seconds << 21);
+            chase.engagementTime_ = ((uint32)seconds << 21);
             if (GameSetup::gData.numLaps == 2)
                 increase = fixedmult(increase, 0x13333);
             else if (GameSetup::gData.numLaps == 4)
@@ -411,7 +401,7 @@ void AIHigh_Cop::HighExecute(void)
             if (!release)
             {
                 sint32 distanceMeters = AIWorld::ApxSplineDistance(perpTarget_->carObj_, blockade_.slice) / 65536;
-                if ((sint32)((uint32)blockade_.initialPlayerDistanceMetersInt * (uint32)distanceMeters) <= 0)
+                if ((blockade_.initialPlayerDistanceMetersInt * distanceMeters) <= 0)
                     break;
             }
             requestSpikeBeltAtSlice_ = -1;
@@ -480,7 +470,7 @@ sint32 AIHigh_Cop::CheckForNeedyPlayers(void)
         if (thisPlayer->perpChaseInfo_.copFreeTicks_ > 800) {
             sint32 speed = thisPlayerObj->currentSpeed;
             if (speed < 0)
-                speed = (sint32)(0 - (uint32)speed);
+                speed = (-speed);
             if (speed > 0x140000)
                 needy = carIndex;
         }
@@ -504,7 +494,7 @@ void AIHigh_Cop::CheckForWipeOut(void)
     sint32 elapsed = AI::elapsedTime;
     sint32 numHumans = Cars::gNumHumanRaceCars;
     sint32 thisTargetLevel = perpTarget_->perpChaseInfo_.chaseLevelIndex_;
-    sint32 perTickProb = (sint32)((uint32)elapsed * 89);
+    sint32 perTickProb = (elapsed * 89);
     sint32 randVal = (product >> 8) & 0xFFFF;
     randtemp = product;
     fastRandom = product & 0xFFFF;
@@ -512,7 +502,7 @@ void AIHigh_Cop::CheckForWipeOut(void)
         Car::tObj *thisPlayerObj = Cars::gHumanRaceCarList[hLoop];
         AIHigh_Player *thisPlayer = static_cast<AIHigh_Player *>(highLevelAIObjs[thisPlayerObj->carIndex]);
         if (thisTargetLevel < thisPlayer->perpChaseInfo_.chaseLevelIndex_ && randVal < perTickProb)
-            carObj_->wipeOutEndTick = (uint32)simGlobal.gameTicks + 640;
+            carObj_->wipeOutEndTick = simGlobal.gameTicks + 640;
     }
 }
 
@@ -533,11 +523,11 @@ sint32 AIHigh_Cop::CheckForNewTarget(void)
             needs = thisPlayer->perpChaseInfo_.chaseLevel_->copChasers[type_];
         sint32 got = thisPlayer->basicPerpInfo_.copsAssigned_[type_];
         if (perpTarget_ && perpTarget_ == thisPlayer)
-            got = (sint32)((uint32)got - 1);
+            got = (got - 1);
         if (got < needs) {
             sint32 copToTargetDistanceMeters = AIWorld::ApxSplineDistance(carObj_, thisPlayer->carObj_);
             if (copToTargetDistanceMeters < 0)
-                copToTargetDistanceMeters = (sint32)(0 - (uint32)copToTargetDistanceMeters);
+                copToTargetDistanceMeters = (-copToTargetDistanceMeters);
             if (copToTargetDistanceMeters < newTargetDistance) {
                 newTargetDistance = copToTargetDistanceMeters;
                 newTarget = thisPlayer;
@@ -550,7 +540,7 @@ sint32 AIHigh_Cop::CheckForNewTarget(void)
             AIHigh_Player *thisPlayer = static_cast<AIHigh_Player *>(highLevelAIObjs[thisCarIndex]);
             sint32 copToTargetDistanceMeters = AIWorld::ApxSplineDistance(carObj_, thisPlayer->carObj_);
             if (copToTargetDistanceMeters < 0)
-                copToTargetDistanceMeters = (sint32)(0 - (uint32)copToTargetDistanceMeters);
+                copToTargetDistanceMeters = (-copToTargetDistanceMeters);
             if (copToTargetDistanceMeters < newTargetDistance && thisPlayer->basicPerpInfo_.crime_ != CRIME_NONE) {
                 newTargetDistance = copToTargetDistanceMeters;
                 newTarget = thisPlayer;
@@ -613,15 +603,14 @@ trigger::trigger_t *AIHigh_Cop::CheckForNewTriggers(void)
         if (thisPlayer->basicPerpInfo_.crime_ == CRIME_NONE) {
             fRandomChance = (uint32)fRandomChance << 1;
             needs = 0;
-            if (pLevel->copChasers[type] > 0 &&
-                AICop::NoCopsInArea(thisPlayer->carObj_->N.simRoadInfo.slice, 0x1F40000))
+            if (pLevel->copChasers[type] > 0 && AICop::NoCopsInArea(thisPlayer->carObj_->N.simRoadInfo.slice, 0x1F40000))
                 needs = 1;
         } else {
             needs = pLevel->copChasers[type];
         }
         if (GameSetup::gData.skill == 2)
             fRandomChance = 0x10000;
-        sint32 elapsed = (sint32)((uint32)simGlobal.gameTicks - (uint32)thisPlayer->lastPullOverTime_);
+        sint32 elapsed = (simGlobal.gameTicks - thisPlayer->lastPullOverTime_);
         if (elapsed < 448 || got >= needs)
             continue;
         sint32 dir = testCar->currentSpeed < 0 ? -1 : 1;
@@ -629,9 +618,9 @@ trigger::trigger_t *AIHigh_Cop::CheckForNewTriggers(void)
         sint32 thisSlice = testCar->N.simRoadInfo.slice + offset;
         if (offset < 0) {
             if (thisSlice < 0)
-                thisSlice = (sint32)((uint32)thisSlice + (uint32)gNumSlices);
+                thisSlice = (thisSlice + gNumSlices);
         } else if (thisSlice >= gNumSlices) {
-            thisSlice = (sint32)((uint32)thisSlice - (uint32)gNumSlices);
+            thisSlice = (thisSlice - gNumSlices);
         }
         sint32 startSlice = thisPlayer->lastTriggerCheckSlice_;
         thisPlayer->lastTriggerCheckSlice_ = thisSlice;
@@ -641,14 +630,14 @@ trigger::trigger_t *AIHigh_Cop::CheckForNewTriggers(void)
             startSlice = endSlice;
             endSlice = temp;
         }
-        sint32 gap = (sint32)((uint32)endSlice - (uint32)startSlice);
+        sint32 gap = (endSlice - startSlice);
         if (gap >= 6)
             continue;
         for (sint32 sliceLoop = startSlice; sliceLoop < endSlice; ++sliceLoop) {
             sint32 triggerHere = triggerManagerCops->CheckForTriggerAtSlice(testCar->carIndex, sliceLoop);
             if (triggerHere == -1)
                 continue;
-            sint32 scaledChance = (sint32)((uint32)fRandomChance * 100);
+            sint32 scaledChance = (fRandomChance * 100);
             sint32 iRandomChance = scaledChance / 65536;
             uint32 product = fastRandom * randSeed;
             randtemp = product;

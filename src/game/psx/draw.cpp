@@ -44,7 +44,7 @@ sint32 Draw::SetView(sint32 x0, sint32 y0, sint32 x1, sint32 y1, sint32 w, sint3
     sint32 viewid = gNumView;
     newview->otsize = otsize;
     newview->membudget = 0;
-    gNumView = (sint32)((uint32)viewid + 1);
+    gNumView = (viewid + 1);
     return viewid;
 }
 
@@ -95,14 +95,14 @@ void AllocatePrimitivesBuffer(void)
     if (GameSetup::gData.commMode == 1)
     {
         Draw::tView *view0 = &Draw::gView[Draw::gPlayer1View];
-        view0->membudget = (sint32)((uint32)(gTotalMem >> 1) - 0x1a00);
+        view0->membudget = ((gTotalMem >> 1) - 0x1a00);
         Draw::tView *view1 = &Draw::gView[Draw::gPlayer2View];
-        view1->membudget = (sint32)((uint32)(gTotalMem >> 1) - 0x1a00);
+        view1->membudget = ((gTotalMem >> 1) - 0x1a00);
     }
     else
     {
         Draw::tView *view = &Draw::gView[Draw::gPlayer1View];
-        view->membudget = (sint32)((uint32)gTotalMem - 0x1a00);
+        view->membudget = (gTotalMem - 0x1a00);
     }
 }
 
@@ -198,13 +198,13 @@ void Draw::StartRenderingView(sint32 viewid)
     Draw::tCacheHeader *head = &DrawC::carCache.head;
     Draw::tView *view = &gView[viewid];
     gViewOtSize = view->otsize;
-    sint32 midGround = (sint32)((uint32)view->otsize * 7U);
+    sint32 midGround = (view->otsize * 7);
     if (midGround < 0)
-        midGround = (sint32)((uint32)midGround + 7U);
+        midGround = (midGround + 7);
     head->clipW = view->drawenv[0].clip.w;
     head->clipH = view->drawenv[0].clip.h;
     gMidGroundOtz = midGround >> 3;
-    head->cprim.LastPrim = (uint32 *)view->ot[gFlip];
+    head->cprim.LastPrim = view->ot[gFlip];
     if (viewid == gPlayer1View || viewid == gPlayer2View)
         head->cprim.MPrimPtr = head->cprim.PrimPtr + view->membudget;
     else
@@ -261,7 +261,7 @@ void Draw::StopFrameRender(void)
     FUNCTION_MARKER(0x800BE36C, "NFS4.EXE");
 
     DrawSync(0);
-    gLoop = (sint32)((uint32)gLoop + 1);
+    gLoop = (gLoop + 1);
     if (gSyncCallback != 0)
         gSyncCallback();
     if (gDoVSync != 0)
@@ -269,14 +269,14 @@ void Draw::StopFrameRender(void)
     PutDispEnv(&gEnviro[gFlip].disp);
     for (sint32 i = 0; i < gNumView; ++i)
         DrawOTag(gView[i].ot[gFlip] + gView[i].otsize - 1);
-    gFlip = (sint32)(1 - (uint32)gFlip);
+    gFlip = (1 - gFlip);
 }
 
 void Draw::DrawDirectScreen(shapetbl *tile, sint32 x, sint32 y)
 {
     FUNCTION_MARKER(0x800BE450, "NFS4.EXE");
 
-    Texture::Vramcf(tile, x, (sint32)((uint32)y + 256), 0, 0);
+    Texture::Vramcf(tile, x, (y + 256), 0, 0);
 }
 
 void Draw::DirectSetEnvironment(sint32 x, sint32 y, sint32 w, sint32 h, sint32 edraw, sint32 edisplay, sint32 erase, sint32 r, sint32 g, sint32 b)

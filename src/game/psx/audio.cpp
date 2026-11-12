@@ -2,6 +2,8 @@
 #include <string.h>
 #include "xport.h"
 #include "eaclib/psx/eaclib.h"
+#include "eaclib/psx/salloc.h"
+#include "eaclib/psx/sdata.h"
 #include "eaclib/psx/ssysinit.h"
 #include "game/common/audioclc.h"
 #include "game/common/audiocmn.h"
@@ -26,8 +28,9 @@ void Audio::InitDriver(sint32 buffersize, sint32 spusize)
         opts.set.maxbanks = 48;
         SNDSYS::setopts(&opts);
         SNDSYS::vectortoreal();
-        gHeap = reservememadr("audio heap", 4096, 0);
-        SNDSYS::init(gHeap, 4096);
+        sint32 heapSize = (sint32)(4096 + opts.set.inputvoices * (sizeof(SoundVoicePrefix) - 100) + opts.set.maxbanks * (sizeof(NativeSoundBank) - 12));
+        gHeap = reservememadr("audio heap", heapSize, 0);
+        SNDSYS::init(gHeap, heapSize);
         AudioCmn::InitReverb();
     }
     if (buffersize > 0) {
@@ -84,7 +87,7 @@ sint32 AudioCmn::AddBank(char *filename, sint32 size, char *pdata, sint32 BankNu
         ptemp = static_cast<char *>(reservememadr(p, headerSize, 0));
         SNDbankheadercopy(ptemp, bhandle);
         headerSize = SNDbankheadersize(bhandle);
-        size = (sint32)((uint32)size - (uint32)headerSize);
+        size = (size - headerSize);
     } else {
         AudioClc::SndError(check);
     }

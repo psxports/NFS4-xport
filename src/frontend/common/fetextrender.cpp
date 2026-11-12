@@ -49,9 +49,9 @@ void FETextRender::FullTextRGB(char *sMenuText, sint16 x, sint16 y, sint32 col, 
     }
     sint32 drawX = x;
     if (justify == 1 || justify == 4 || justify == 6)
-        drawX = (sint32)((uint32)drawX - (uint32)textpixels(str));
+        drawX = (drawX - textpixels(str));
     else if (justify == 2 || justify == 5)
-        drawX = (sint32)((uint32)x - (uint32)(textpixels(str) / 2));
+        drawX = (x - (textpixels(str) / 2));
     Font::TextColor(gSemiTransText != 0 ? 15 : 1);
     Font::TextTint(col);
     sint16 finalX = (sint16)drawX;
@@ -60,7 +60,7 @@ void FETextRender::FullTextRGB(char *sMenuText, sint16 x, sint16 y, sint32 col, 
     if (justify >= 3 && justify <= 5)
     {
         Font::TextTint(0);
-        Font::TextXY(str, (sint32)finalX + 2, (sint32)finalY + 1);
+        Font::TextXY(str, finalX + 2, finalY + 1);
     }
 }
 
@@ -132,7 +132,7 @@ sint32 FETextRender::WordWrapTextRGBJustify(char *str, PSX_RECT &r, sint32 col, 
     Font::TextTint(col);
     char buffer[128];
     char source[512];
-    memcpy(source, str, (uint32)strLength + 1U);
+    memcpy(source, str, strLength + 1U);
     if (size == 0)
         s_lower(source);
     if (strLength > 0)
@@ -144,8 +144,8 @@ sint32 FETextRender::WordWrapTextRGBJustify(char *str, PSX_RECT &r, sint32 col, 
             uint16 index2 = (uint16)(index1 + (sint32(r.w) >> 3) + 10);
             if (index2 > strLength)
                 index2 = (uint16)strLength;
-            sint32 count = sint32(index2) - sint32(index1);
-            memcpy(buffer, source + index1, (uint32)count + 1U);
+            sint32 count = index2 - index1;
+            memcpy(buffer, source + index1, count + 1U);
             buffer[count] = 0;
             sint16 width = (sint16)textpixels(buffer);
             if (r.w < width)
@@ -182,14 +182,14 @@ sint32 FETextRender::WordWrapTextRGBJustify(char *str, PSX_RECT &r, sint32 col, 
             sint32 finalWidth = textpixels(buffer);
             sint16 x = r.x;
             if (justify == 1 || justify == 4)
-                x = (sint16)((uint32)(uint16)x - (uint32)finalWidth);
+                x = (sint16)(((uint16)x) - (uint32)finalWidth);
             else if (justify == 2 || justify == 5)
                 x = (sint16)(sint32(x) - (sint32((sint16)finalWidth) >> 1));
             index1 = index2;
             if (!JustGrabHeight)
             {
                 Font::TextXY(buffer, x, r.y);
-                if ((uint32)justify - 3U < 3)
+                if (justify - 3U < 3)
                 {
                     Font::TextTint(0);
                     Font::TextXY(buffer, sint32(x) + 2, sint32(r.y) + 1);
@@ -199,7 +199,7 @@ sint32 FETextRender::WordWrapTextRGBJustify(char *str, PSX_RECT &r, sint32 col, 
             r.y = (sint16)((uint16)r.y + (uint16)spacing);
         } while (index1 < strLength);
     }
-    return sint32(r.y) - OriginalY;
+    return r.y - OriginalY;
 }
 
 void FETextRender::WordWrapTextRGB(char *str, PSX_RECT &r, sint32 Col)
@@ -259,7 +259,7 @@ void FETextRender::Title(sint16 index)
     PSX_RECT r;
     r.x = 43;
     r.y = (sint16)(offset + 18);
-    r.w = (sint16)((uint32)textpixels(upstr) + 10U);
+    r.w = (sint16)(textpixels(upstr) + 10U);
     r.h = 12;
     PSXDrawTransSquare(0, r.x, r.y, r.w, 12, 2);
     FeDraw_SetABRMode(0);

@@ -1,8 +1,7 @@
 #include "xport.h"
 #include "eaclib/psx/internal.h"
 
-sint32 iSNDplatformplay(uint8 *sample, sint32 channel, sint32 volume, sint32 pitch,
-    sint32 unused0, sint32 effectVolume, sint32 azimuth, sint32 unused1)
+sint32 iSNDplatformplay(uint8 *sample, sint32 channel, sint32 volume, sint32 pitch, sint32 unused0, sint32 effectVolume, sint32 azimuth, sint32 unused1)
 {
     FUNCTION_MARKER(0x8010BA48, "NFS4.EXE");
     SoundPlatformChannel *voice = &sndpd.channels[channel];
@@ -37,11 +36,11 @@ sint32 iSNDplatformplay(uint8 *sample, sint32 channel, sint32 volume, sint32 pit
     voice->unknown0C = 0;
     voice->unknown10 = 0;
     voice->unknown14 = sampleLength << 12;
-    voice->basePitch = (uint16)((sampleRate * 0x17C7u) >> 16);
+    voice->basePitch = (uint16)((sampleRate * 0x17C7) >> 16);
     if (voice->channelCount >= 2)
     {
         SoundVoicePrefix *logical = ((SoundVoicePrefix *)(sndgs.voiceMemory));
-        voice->partner = (sint8)logical[channel].unknown04[0];
+        voice->partner = logical[channel].unknown04[0];
         sndpd.channels[voice->partner].unknown21 = 1;
         sndpd.channels[voice->partner].unknown0C = 0;
         sndpd.channels[voice->partner].unknown10 = 0;

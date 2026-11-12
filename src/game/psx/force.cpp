@@ -84,9 +84,9 @@ void Force::Update(Car::tObj *car)
     }
     sint32 skids = GameSetup::gData.controllerData.shockMode[car->carIndex];
     sint32 impacts = GameSetup::gData.controllerData.shockImpact[car->carIndex];
-    sint32 frontmultiplier = skids == 0 ? 0 : (sint32)(((uint32)skids + 16) * 0x2DA6);
-    sint32 rearmultiplier = skids == 0 ? 0 : (sint32)(((uint32)skids + 16) * 0x1E6E);
-    sint32 impactmultiplier = impacts == 0 ? 0 : (sint32)(((uint32)impacts + 16) * 0xB699);
+    sint32 frontmultiplier = skids == 0 ? 0 : ((skids + 16) * 0x2DA6);
+    sint32 rearmultiplier = skids == 0 ? 0 : ((skids + 16) * 0x1E6E);
+    sint32 impactmultiplier = impacts == 0 ? 0 : ((impacts + 16) * 0xB699);
     sint32 v0 = 0;
     sint32 v1 = 0;
     if (car->N.flightTime == 0)
@@ -97,7 +97,7 @@ void Force::Update(Car::tObj *car)
         {
             sint32 speed = car->linearVel_ch.z;
             if (speed < 0)
-                speed = (sint32)(0 - (uint32)speed);
+                speed = (-speed);
             speed >>= 2;
             v1 = speed > 0x78000 ? 0x78000 : speed;
             break;
@@ -106,7 +106,7 @@ void Force::Update(Car::tObj *car)
         {
             sint32 speed = car->linearVel_ch.z;
             if (speed < 0)
-                speed = (sint32)(0 - (uint32)speed);
+                speed = (-speed);
             speed >>= 1;
             v0 = speed > 0x58000 ? 0x58000 : speed;
             break;
@@ -115,18 +115,18 @@ void Force::Update(Car::tObj *car)
             break;
         }
     }
-    for (sint32 c = (sint32)((uint32)car->audioCount - 1); c >= 0; --c)
+    for (sint32 c = (car->audioCount - 1); c >= 0; --c)
     {
         Cars::tAudio *audio = &car->audio[c];
         if (audio->channel == 18)
         {
-            sint32 force = (sint32)((uint32)audio->force << 1);
+            sint32 force = ((uint32)audio->force << 1);
             if (force > v0)
                 v0 = force;
         }
         else if (audio->channel == 20)
         {
-            sint32 force = (sint32)((uint32)audio->force << 1);
+            sint32 force = ((uint32)audio->force << 1);
             if (force > v1)
                 v1 = force;
         }
@@ -137,10 +137,10 @@ void Force::Update(Car::tObj *car)
             if (force > 0x28000)
             {
                 force = 0x28000;
-                sint32 scaledTime = (sint32)((uint32)fixeddiv(audio->force, 0x28000) << 5);
+                sint32 scaledTime = ((uint32)fixeddiv(audio->force, 0x28000) << 5);
                 if (scaledTime / 65536 < 97)
                 {
-                    scaledTime = (sint32)((uint32)fixeddiv(audio->force, 0x28000) << 5);
+                    scaledTime = ((uint32)fixeddiv(audio->force, 0x28000) << 5);
                     time = scaledTime / 65536;
                 }
                 else
@@ -241,12 +241,10 @@ void Force::HitSign(Car::tObj *car)
 {
     FUNCTION_MARKER(0x800CB1FC, "NFS4.EXE");
 
-    (void)car;
 }
 
 void Force::HitWall(sint32 impulse)
 {
     FUNCTION_MARKER(0x800CB204, "NFS4.EXE");
 
-    (void)impulse;
 }

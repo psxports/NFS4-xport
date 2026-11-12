@@ -2,6 +2,7 @@
 #define AUDIOENG_H
 
 #include "xport.h"
+#include "eaclib/psx/nfile.h"
 #include "game/common/car.h"
 
 class AudioEng
@@ -70,7 +71,7 @@ public:
 
     static void Set(sint32 player, sint32 vol, sint32 esp, sint32 gas, sint32 cam, sint32 dop, sint32 azi, sint32 dir);
     static void Update(void);
-    static void LoadDef(char *filename, char *name, sint32 handle, sint32 offset, sint32 size, tDef **ed);
+    static void LoadDef(char *filename, char *name, NativeFileSlot *handle, sint32 offset, sint32 size, tDef **ed);
     static sint32 StartUp(sint32 player, char *carname);
     static void StartServer(void);
     static void StopServer(void);

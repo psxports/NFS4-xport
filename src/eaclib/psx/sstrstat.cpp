@@ -37,13 +37,13 @@ sint32 SNDSTRM::requeststatus(sint32 handle, SNDREQUESTSTATUS *result)
         }
         uint32 product[2];
         iSNDmulu64(product, request->consumed, 1000);
-        result->currenttime = (sint32)iSNDdivu64(product[0], product[1], rate);
+        result->currenttime = iSNDdivu64(product[0], product[1], rate);
         iSNDmulu64(product, request->total - request->consumed, 1000);
-        result->timetoend = (sint32)iSNDdivu64(product[0], product[1], rate);
-        uint32 buffered = request->queued * 1000u;
+        result->timetoend = iSNDdivu64(product[0], product[1], rate);
+        uint32 buffered = request->queued * 1000;
         if (rate == 0)
             abort();
-        result->timebuffered = (sint32)(buffered / rate);
+        result->timebuffered = (buffered / rate);
     }
     iSNDleaveaudio();
     return 0;

@@ -34,8 +34,8 @@ sint32 AIPerson::gripLossMinFactor[4] = { 19660, 26214, 32768, 64880 };
 sint32 AIPerson::gripLossRecoveryPerTick[4] = { 71, 61, 40, 65536 };
 sint32 AIPerson::minimumWipeOutTicks[5] = { 65536, 4096, 2048, 1024, 1024 };
 sint32 AIPerson::randomWipeOutTicks[5] = { 65535, 8191, 4095, 2047, 2047 };
-uint32 AIPerson::rearEndProbMask[4] = { 65535U, 768U, 1792U, 512U };
-uint32 AIPerson::smackProbMask[4] = { 65535U, 768U, 1792U, 1536U };
+uint32 AIPerson::rearEndProbMask[4] = { 65535, 768, 1792, 512 };
+uint32 AIPerson::smackProbMask[4] = { 65535, 768, 1792, 1536 };
 sint32 AIPerson::bestLineAbilities[4] = { 19660, 32768, 52428, 65536 };
 AIPerson::AIPerson_t AIPerson::PersonalityData[9];
 AIScript::tReactionDetails AIPerson::ScriptData[9][7];
@@ -133,10 +133,7 @@ void AIPerson::LoadGlue(Udff::tInfo *handle)
     FUNCTION_MARKER(0x80068F80, "NFS4.EXE");
     Udff::GetInt(handle);
     Udff::GetBuffer(handle, (char *)glueTable, sizeof(glueTable));
-    if (Cars::gNumCopCars != 0 &&
-        ((GameSetup::gData.raceType != 1 && GameSetup::gData.raceType != 5) ||
-         ((Cars::gHumanRaceCarList[0]->carFlags & 0x200) == 0 &&
-          (Cars::gNumHumanRaceCars != 2 || (Cars::gHumanRaceCarList[1]->carFlags & 0x200) == 0))))
+    if (Cars::gNumCopCars != 0 && ((GameSetup::gData.raceType != 1 && GameSetup::gData.raceType != 5) || ((Cars::gHumanRaceCarList[0]->carFlags & 0x200) == 0 && (Cars::gNumHumanRaceCars != 2 || (Cars::gHumanRaceCarList[1]->carFlags & 0x200) == 0))))
     {
         for (sint32 glueLoop = 0; glueLoop < 21; ++glueLoop)
         {
@@ -164,9 +161,7 @@ void AIPerson::Startup(void)
     LoadScriptData(handle);
     Udff::Close(handle);
     const char *format;
-    if ((GameSetup::gData.raceType == 1 || GameSetup::gData.raceType == 5) &&
-        ((Cars::gHumanRaceCarList[0]->carFlags & 0x200) != 0 ||
-         (Cars::gNumHumanRaceCars == 2 && (Cars::gHumanRaceCarList[1]->carFlags & 0x200) != 0)))
+    if ((GameSetup::gData.raceType == 1 || GameSetup::gData.raceType == 5) && ((Cars::gHumanRaceCarList[0]->carFlags & 0x200) != 0 || (Cars::gNumHumanRaceCars == 2 && (Cars::gHumanRaceCarList[1]->carFlags & 0x200) != 0)))
         format = "%sbtcglue.bin";
     else if ((uint32)GameSetup::gData.raceType < 2 && Cars::gNumAIRaceCars == 1)
         format = "%shhglue.bin";

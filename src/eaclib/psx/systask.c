@@ -32,7 +32,7 @@ void addsystemtask(sint32 (*callback)(sint32 unused0, sint32 unused1), sint32 in
         task->callback = callback;
         task->interval = interval;
         task->running = 0;
-        task->nextTick = (sint32)(((uint32)(now)) + ((uint32)(delay)));
+        task->nextTick = ((now)) + (delay);
     }
     systemTaskAddDepth = systemTaskAddDepth - 1u;
 }
@@ -69,13 +69,13 @@ uint32 systemtask(sint32 context)
             if (now < due || task->running != 0)
                 continue;
             task->running = 1;
-            sint32 lateness = (sint32)(((uint32)(libticks)) - ((uint32)(due)));
+            sint32 lateness = (sint32)(((uint32)(libticks)) - ((due)));
             sint32 value = callback(context, lateness);
             sint32 after = libticks;
             sint32 interval = task->interval;
             result |= ((uint32)(value));
             task->running = 0;
-            task->nextTick = (sint32)(((uint32)(after)) + ((uint32)(interval)));
+            task->nextTick = ((after)) + (interval);
         }
     }
     return result;

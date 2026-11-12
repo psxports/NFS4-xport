@@ -110,8 +110,7 @@ void tPauseMenuDefs::operator delete(void *memory) throw()
     purgememadr(memory);
 }
 
-tPauseMenuDefs::tPauseMenuDefs(void)
-    : itemGamePaused(0),
+tPauseMenuDefs::tPauseMenuDefs(void) : itemGamePaused(0),
       itemContinue(1, kMPause_Continue),
       itemRestart(2, kMPause_Restart),
       itemOptions(3, &menuOptions, 0),
@@ -226,10 +225,10 @@ void MPause::MusicLogic(char active)
             if (playingSFX == 0)
                 playingSFX = 1;
             else
-                sndover = (sint32)SNDover(SFXHandle);
+                sndover = SNDover(SFXHandle);
             if (sndover != 0)
             {
-                sint32 elapsed = (sint32)((uint32)ticks - (uint32)lastplaytick);
+                sint32 elapsed = (sint32)((uint32)ticks - lastplaytick);
                 if (elapsed >= 193)
                 {
                     sint32 bank = gSndBnk[3].bnkID;
@@ -266,14 +265,14 @@ void MPause::ControllerLogic(void)
         {
             uint32 flags = defs->itemControllerShockMode.fFlags;
             ChangedEnabling = 1;
-            defs->itemControllerShockMode.fFlags = flags | 1U;
+            defs->itemControllerShockMode.fFlags = flags | 1;
         }
         defs = gPauseMenuDefs;
         if (!defs->itemControllerShockImpact.IsEnabled())
             return;
         uint32 flags = defs->itemControllerShockImpact.fFlags;
         ChangedEnabling = 1;
-        defs->itemControllerShockImpact.fFlags = flags | 1U;
+        defs->itemControllerShockImpact.fFlags = flags | 1;
     }
     else
     {
@@ -405,11 +404,11 @@ void MPause::Render(void)
     sint32 currentItem = menu->fCurrentItem;
     bool moving = kMovingHighlight != 0;
     sint32 enabled = menu->ItemEnabledNum(currentItem);
-    uint32 y = (uint32)enabled * 13U + 106U;
+    uint32 y = enabled * 13U + 106U;
     if (moving)
         y += (uint32)(sint32)kMovingHighlight;
-    Hud::FBuildF4(1, 80, (sint32)y, 160, 13, 0, 0, 0);
-    sint32 height = (sint32)(((uint32)numItems + 1U) * 13U + 20U);
+    Hud::FBuildF4(1, 80, y, 160, 13, 0, 0, 0);
+    sint32 height = (((numItems + 1) * 13) + 20);
     Hud::RenderPauseBox(80, 100, 160, height);
 }
 
@@ -435,7 +434,7 @@ void MPause::StartPauseMenu(void)
         {
             uint32 flags = defs->itemRestart.fFlags;
             ChangedEnabling = 1;
-            defs->itemRestart.fFlags = flags | 1U;
+            defs->itemRestart.fFlags = flags | 1;
         }
     }
     else if (defs->itemRestart.IsDisabled())
@@ -457,7 +456,7 @@ void MPause::StartPauseMenu(void)
         {
             uint32 flags = defs->itemQuitRace.fFlags;
             ChangedEnabling = 1;
-            defs->itemQuitRace.fFlags = flags | 1U;
+            defs->itemQuitRace.fFlags = flags | 1;
         }
     }
     else
@@ -466,7 +465,7 @@ void MPause::StartPauseMenu(void)
         {
             uint32 flags = defs->itemForfeitRace.fFlags;
             ChangedEnabling = 1;
-            defs->itemForfeitRace.fFlags = flags | 1U;
+            defs->itemForfeitRace.fFlags = flags | 1;
         }
         defs = gPauseMenuDefs;
         if (defs->itemQuitRace.IsDisabled())

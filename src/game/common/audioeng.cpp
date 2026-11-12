@@ -60,8 +60,7 @@ static AudioEng::AudioEng_t *WritableEngine(sint32 player)
     if ((uint32)player >= 2)
         return 0;
     AudioEng::AudioEng_t *engine = AudioEng::g[player];
-    if (engine != 0 && (uint8)engine->plypos == 15 &&
-        (((uint8)engine->setpos + 1) & 1) != 0)
+    if (engine != 0 && (uint8)engine->plypos == 15 && (((uint8)engine->setpos + 1) & 1) != 0)
         return 0;
     return engine;
 }
@@ -74,18 +73,18 @@ void AudioEng::Set(sint32 player, sint32 vol, sint32 esp, sint32 gas, sint32 cam
         return;
     tAdjustments *a = &g->adjust;
     tState *s = &g->queue[(uint8)g->setpos];
-    sint32 timbre = (sint32)((uint32)a->timbreScale * (uint32)esp) >> 14;
+    sint32 timbre = (a->timbreScale * esp) >> 14;
     if (timbre >= 512)
         timbre = 511;
     s->esp = (uint16)timbre;
     sint32 speed;
     if (Cars::gList[player]->carInfo->carType == 28)
-        speed = (sint32)((uint32)(esp >> 2) + 0xc000);
+        speed = ((esp >> 2) + 0xc000);
     else
-        speed = (sint32)((uint32)esp + 0x3333);
+        speed = (esp + 0x3333);
     sint32 pitch = fixedmult(speed, dop);
-    s->dop = (uint16)((sint32)((uint32)a->pitchScale * (uint32)pitch) >> 10);
-    sint32 throttle = (sint32)((uint32)gas + (uint32)(gas >> 5) + (uint32)(gas >> 6));
+    s->dop = (uint16)((a->pitchScale * pitch) >> 10);
+    sint32 throttle = ((gas + (gas >> 5)) + (gas >> 6));
     s->gas = throttle < 129 ? (uint8)throttle : 128;
     uint8 boost;
     if (cam == 0) {
@@ -103,16 +102,16 @@ void AudioEng::Set(sint32 player, sint32 vol, sint32 esp, sint32 gas, sint32 cam
         uint8 exhaust = s->exh;
         sint32 product;
         if (dir < 0)
-            product = (sint32)((uint32)dir * a->fwdEngBoost * exhaust);
+            product = ((dir * a->fwdEngBoost) * exhaust);
         else
-            product = (sint32)((uint32)dir * a->rwdExhBoost * (128u - exhaust));
+            product = ((dir * a->rwdExhBoost) * (128 - exhaust));
         sint32 modulation = (product >> 7) / 0x10000;
         s->exh = (uint8)(exhaust + modulation);
         s->azi = (uint16)azi;
         s->sep = 0;
         boost = a->outCarBoost;
     }
-    sint32 volume = (sint32)((uint32)vol * boost) >> 6;
+    sint32 volume = (vol * boost) >> 6;
     if (volume >= 2048)
         volume = 2047;
     s->vol = (uint16)volume;
@@ -131,7 +130,7 @@ void AudioEng::Update(void)
         if ((uint8)g->plypos != (uint8)g->setpos) {
             sint32 now = gettick();
             if (g->tick < now) {
-                g->tick = (sint32)((uint32)tick + 2);
+                g->tick = (tick + 2);
                 for (sint32 n = 0; n < 16; ++n) {
                     if ((sint8)g->chan[n].patchnum < 0)
                         continue;
@@ -182,8 +181,8 @@ void AudioEng::Update(void)
                 leftazim = (uint16)g->azi;
                 rightazim = leftazim;
             } else {
-                leftazim = (uint16)((uint32)(uint16)g->azi - (uint16)g->sep);
-                rightazim = (uint16)((uint32)(uint16)g->azi + (uint16)g->sep);
+                leftazim = (uint16)(((uint16)g->azi) - (uint16)g->sep);
+                rightazim = (uint16)(((uint16)g->azi) + (uint16)g->sep);
             }
             SNDPLAYOPTS playopts;
             SNDplaysetdef(&playopts);
@@ -271,13 +270,25 @@ void AudioEng::Update(void)
     }
 }
 
-void AudioEng::LoadDef(char *filename, char *name, sint32 handle, sint32 offset, sint32 size, AudioEng::tDef **ed)
+void AudioEng::LoadDef(char *filename, char *name, NativeFileSlot *handle, sint32 offset, sint32 size, AudioEng::tDef **ed)
 {
     FUNCTION_MARKER(0x8007BDDC, "NFS4.EXE");
-    (void)filename;
-    *ed = static_cast<tDef *>(reservememadr(name, size, 16));
-    if (*ed != 0)
-        XPORT_UNPLACED::FILE::readsync(handle, offset, *ed, size, 100);
+    *ed = 0;
+    if (size < 360)
+        return;
+    tDef *definition = static_cast<tDef *>(reservememadr(name, (sint32)(sizeof(tDef) + size), 16));
+    if (definition != 0)
+    {
+        char *serialized = reinterpret_cast<char *>(definition + 1);
+        XPORT_UNPLACED::FILE::readsync(handle, offset, serialized, size, 100);
+        memcpy(definition, serialized, 296);
+        for (sint32 i = 0; i < 8; ++i)
+        {
+            definition->pvoltable[i] = 0;
+            definition->pbendtable[i] = 0;
+        }
+        *ed = definition;
+    }
 }
 
 sint32 AudioEng::StartUp(sint32 player, char *carname)
@@ -324,7 +335,7 @@ sint32 AudioEng::StartUp(sint32 player, char *carname)
         header = loadbigfileheader(filename, 16);
     }
     if (header != 0) {
-        sint32 handle;
+        NativeFileSlot *handle;
         XPORT_UNPLACED::FILE::opensync(filename, 1, 100, &handle);
         static char bankPattern[] = "*.bnk";
         static char loadPattern[] = "*.ltb";
@@ -359,12 +370,11 @@ sint32 AudioEng::StartUp(sint32 player, char *carname)
                 if ((sint8)ed->patchnum[i] >= 0) {
                     sint32 volumeOffset;
                     sint32 bendOffset;
-                    memcpy(&volumeOffset, &ed->pvoltable[i], sizeof(volumeOffset));
-                    memcpy(&bendOffset, &ed->pbendtable[i], sizeof(bendOffset));
-                    char *definition = reinterpret_cast<char *>(ed);
-
-                    ed->pvoltable[i] = reinterpret_cast<tTable *>(definition + offsetof(tDef, pvoltable) + i * 4 + volumeOffset);
-                    ed->pbendtable[i] = reinterpret_cast<tTable *>(definition + offsetof(tDef, pbendtable) + i * 4 + bendOffset);
+                    char *definition = reinterpret_cast<char *>(ed + 1);
+                    memcpy(&volumeOffset, definition + 296 + i * 4, sizeof(volumeOffset));
+                    memcpy(&bendOffset, definition + 328 + i * 4, sizeof(bendOffset));
+                    ed->pvoltable[i] = reinterpret_cast<tTable *>(definition + 296 + i * 4 + volumeOffset);
+                    ed->pbendtable[i] = reinterpret_cast<tTable *>(definition + 328 + i * 4 + bendOffset);
                     tChanAttr *chan = &g->chan[c * 8 + i];
                     chan->patchnum = ed->patchnum[i];
                     sint32 j = 0;
@@ -374,7 +384,7 @@ sint32 AudioEng::StartUp(sint32 player, char *carname)
                     while (j < 512 && ed->pvoltable[i]->xlate[j] != 0)
                         ++j;
                     chan->max = (sint16)j;
-                    tablesize = (sint32)((uint32)tablesize + (uint32)(chan->max - chan->min));
+                    tablesize = (tablesize + (chan->max - chan->min));
                 }
                 ed->resolved = 1;
             }

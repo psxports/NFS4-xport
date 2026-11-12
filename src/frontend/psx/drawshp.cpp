@@ -58,7 +58,7 @@ void DrawShape::NFS4RoundRectangle(sint32 textID, PSX_RECT &position, sint16 sel
     tTexture::ShapeInfo *left = &gHelpShapes[41];
     tDrawShapeExtended drawFlags;
     if (textID >= 0)
-        FETextRender::MenuTextPositionedJustify((sint16)textID, (sint16)((uint16)position.x + (sint32(position.w) >> 1)), (sint16)((uint16)position.y + 4), 2, textState_Selected, textType_FramedInfo);
+        FETextRender::MenuTextPositionedJustify(textID, ((uint16)position.x + (sint32(position.w) >> 1)), ((uint16)position.y + 4), 2, textState_Selected, textType_FramedInfo);
     sint16 flags = selected == 0 ? 1 : 0;
     DrawShapeExtended(41, flags | 8, position.x, position.y, 0, 0, &drawFlags);
     DrawShapeExtended(41, flags | 12, position.x + position.w - left->width, position.y, 0, 0, &drawFlags);

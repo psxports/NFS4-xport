@@ -101,39 +101,39 @@ sint32 InGame::GetPSXPadValue(sint32 value, sint32 player)
     if (type == 0x23)
     {
         if (c == 0x4000)
-            return (sint32)(analogPlayer | ((uint32)data.ImaxRange[player] << 8) | 0x1000001U);
+            return (analogPlayer | ((uint32)data.ImaxRange[player] << 8) | 0x1000001U);
         if (c == 0x8000)
-            return (sint32)(analogPlayer | ((uint32)data.IImaxRange[player] << 8) | 0x2000001U);
+            return (analogPlayer | ((uint32)data.IImaxRange[player] << 8) | 0x2000001U);
         if (c == 0x400)
-            return (sint32)(analogPlayer | 0x30aff01U);
+            return (analogPlayer | 0x30aff01U);
         if (c == 0x800000)
-            return (sint32)(analogPlayer | ((128U - (uint32)data.deadSpot[player]) << 16) | ((128U - (uint32)data.steeringRange[player]) << 8) | 1U);
+            return (analogPlayer | ((128U - data.deadSpot[player]) << 16) | ((128U - data.steeringRange[player]) << 8) | 1U);
         if (c == 0x200000)
-            return (sint32)(analogPlayer | (((uint32)data.deadSpot[player] + 128U) << 16) | (((uint32)data.steeringRange[player] + 128U) << 8) | 1U);
+            return (analogPlayer | ((data.deadSpot[player] + 128U) << 16) | ((data.steeringRange[player] + 128U) << 8) | 1U);
     }
     else if (type == 0x53 || type == 0x73)
     {
         switch ((uint32)c)
         {
         case 0x800000U:
-            return (sint32)(analogPlayer | ((128U - (uint32)data.J1MIN[player]) << 16) | ((128U - (uint32)data.J1MAX[player]) << 8) | 1U);
+            return (analogPlayer | ((128U - data.J1MIN[player]) << 16) | ((128U - data.J1MAX[player]) << 8) | 1U);
         case 0x200000U:
-            return (sint32)(analogPlayer | (((uint32)data.J1MIN[player] + 128U) << 16) | (((uint32)data.J1MAX[player] + 128U) << 8) | 1U);
+            return (analogPlayer | ((data.J1MIN[player] + 128U) << 16) | ((data.J1MAX[player] + 128U) << 8) | 1U);
         case 0x100000U:
-            return (sint32)(analogPlayer | ((128U - (uint32)data.J1MIN[player]) << 16) | ((128U - (uint32)data.J1MAX[player]) << 8) | 0x1000001U);
+            return (analogPlayer | ((128U - data.J1MIN[player]) << 16) | ((128U - data.J1MAX[player]) << 8) | 0x1000001U);
         case 0x400000U:
-            return (sint32)(analogPlayer | (((uint32)data.J1MIN[player] + 128U) << 16) | (((uint32)data.J1MAX[player] + 128U) << 8) | 0x1000001U);
-        case 0x80000000U:
-            return (sint32)(analogPlayer | ((128U - (uint32)data.J2MIN[player]) << 16) | ((128U - (uint32)data.J2MAX[player]) << 8) | 0x2000001U);
+            return (analogPlayer | ((data.J1MIN[player] + 128U) << 16) | ((data.J1MAX[player] + 128U) << 8) | 0x1000001U);
+        case 0x80000000:
+            return (analogPlayer | ((128U - data.J2MIN[player]) << 16) | ((128U - data.J2MAX[player]) << 8) | 0x2000001U);
         case 0x20000000U:
-            return (sint32)(analogPlayer | (((uint32)data.J2MIN[player] + 128U) << 16) | (((uint32)data.J2MAX[player] + 128U) << 8) | 0x2000001U);
+            return (analogPlayer | ((data.J2MIN[player] + 128U) << 16) | ((data.J2MAX[player] + 128U) << 8) | 0x2000001U);
         case 0x10000000U:
-            return (sint32)(analogPlayer | ((128U - (uint32)data.J2MIN[player]) << 16) | ((128U - (uint32)data.J2MAX[player]) << 8) | 0x3000001U);
+            return (analogPlayer | ((128U - data.J2MIN[player]) << 16) | ((128U - data.J2MAX[player]) << 8) | 0x3000001U);
         case 0x40000000U:
-            return (sint32)(analogPlayer | (((uint32)data.J2MIN[player] + 128U) << 16) | (((uint32)data.J2MAX[player] + 128U) << 8) | 0x3000001U);
+            return (analogPlayer | ((data.J2MIN[player] + 128U) << 16) | ((data.J2MAX[player] + 128U) << 8) | 0x3000001U);
         }
     }
-    sint32 newControl = (sint32)(((uint32)player << 26) | ((uint32)value << 8) | 2U);
+    sint32 newControl = (((uint32)player << 26) | ((uint32)value << 8) | 2U);
     return newControl;
 }
 

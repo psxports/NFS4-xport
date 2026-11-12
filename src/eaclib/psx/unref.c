@@ -10,7 +10,7 @@ uint8 *memcpyl(uint8 *destination, const uint8 *source, sint32 length)
         uint32 word = geti(source, 4);
         puti(destination, word, 4);
         destination += 4;
-        length = (sint32)(((uint32)(length)) - 4u);
+        length = (((length)) - 4);
         source += 4;
     } while (length > 0);
     return end;
@@ -36,7 +36,7 @@ uint8 *refcpy(uint8 *destination, uint32 distance, sint32 length)
         if (distance == 1)
             memset(destination, destination[-1], ((uint32)(length)));
         else
-            memcpyb(destination, destination - distance, ((uint32)(length)));
+            memcpyb(destination, destination - distance, ((length)));
         return end;
     }
     return memcpyl(destination, destination - distance, length);
@@ -63,45 +63,45 @@ sint32 unrefpack(const uint8 *data, uint8 *destination, sint32 unpack)
         if ((token & 0x80u) == 0)
         {
             cursor += 2;
-            sint32 literals = token & 3u;
+            sint32 literals = token & 3;
             puti(destination, geti(cursor, 4), 4);
             destination += literals;
             cursor += literals;
-            distance = ((token << 3) & 0x300u) + ((token >> 8) & 0xFFu) + 1u;
-            length = ((sint32)((token >> 2) & 7u)) + 3;
+            distance = ((token << 3) & 0x300) + ((token >> 8) & 0xFFu) + 1u;
+            length = (((token >> 2) & 7u)) + 3;
         }
         else if ((token & 0x40u) == 0)
         {
             cursor += 3;
-            sint32 literals = (token >> 14) & 3u;
+            sint32 literals = (token >> 14) & 3;
             puti(destination, geti(cursor, 4), 4);
             destination += literals;
             cursor += literals;
-            distance = (token & 0x3F00u) + ((token >> 16) & 0xFFu) + 1u;
-            length = ((sint32)(token & 0x3Fu)) + 4;
+            distance = (token & 0x3F00) + ((token >> 16) & 0xFFu) + 1u;
+            length = ((token & 0x3Fu)) + 4;
         }
         else if ((token & 0x20u) == 0)
         {
             cursor += 4;
-            sint32 literals = token & 3u;
+            sint32 literals = token & 3;
             puti(destination, geti(cursor, 4), 4);
             destination += literals;
             cursor += literals;
-            distance = ((token << 12) & 0x10000u) + (token & 0xFF00u) + 1u + ((token >> 16) & 0xFFu);
-            length = ((sint32)(((token << 6) & 0x300u) + (token >> 24))) + 5;
+            distance = ((token << 12) & 0x10000u) + (token & 0xFF00) + 1u + ((token >> 16) & 0xFFu);
+            length = ((((token << 6) & 0x300u) + (token >> 24))) + 5;
         }
         else
         {
             ++cursor;
             if ((token & 0xFFu) < 0xFCu)
             {
-                sint32 literals = ((sint32)(((token & 0x1Fu) + 1u) << 2));
+                sint32 literals = ((((token & 0x1Fu) + 1u) << 2));
                 memcpyl(destination, cursor, literals);
                 destination += literals;
                 cursor += literals;
                 continue;
             }
-            sint32 literals = token & 3u;
+            sint32 literals = token & 3;
             while (literals != 0)
             {
                 uint8 value = *cursor++;

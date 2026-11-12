@@ -261,17 +261,15 @@ sint32 GetPSXPadValue(sint32 value, sint32 player)
         switch ((uint32)value)
         {
         case 0x8000U:
-            return (sint32)(analogPlayer | ((uint32)(uint8)frontEnd.IImaxRange[player] << 8) | 0x02000001U);
+            return (analogPlayer | ((uint32)(uint8)frontEnd.IImaxRange[player] << 8) | 0x02000001U);
         case 0x4000U:
-            return (sint32)(analogPlayer | ((uint32)(uint8)frontEnd.ImaxRange[player] << 8) | 0x01000001U);
+            return (analogPlayer | ((uint32)(uint8)frontEnd.ImaxRange[player] << 8) | 0x01000001U);
         case 0x400U:
-            return (sint32)(analogPlayer | 0x030AFF01U);
+            return (analogPlayer | 0x030AFF01U);
         case 0x800000U:
-            return (sint32)(analogPlayer | ((127U - (uint8)frontEnd.deadSpot[player]) << 16) |
-                ((127U - (uint8)frontEnd.steeringRange[player]) << 8) | 1U);
+            return (analogPlayer | ((127U - (uint8)frontEnd.deadSpot[player]) << 16) | ((127U - (uint8)frontEnd.steeringRange[player]) << 8) | 1U);
         case 0x200000U:
-            return (sint32)(analogPlayer | (((uint8)frontEnd.deadSpot[player] + 128U) << 16) |
-                (((uint8)frontEnd.steeringRange[player] + 128U) << 8) | 1U);
+            return (analogPlayer | (((uint8)frontEnd.deadSpot[player] + 128U) << 16) | (((uint8)frontEnd.steeringRange[player] + 128U) << 8) | 1U);
         }
     }
     else if (type == 0x53 || type == 0x73)
@@ -280,31 +278,29 @@ sint32 GetPSXPadValue(sint32 value, sint32 player)
         {
         case 0x400000U:
             newControl = (((uint8)frontEnd.J1MIN[player] + 128U) << 16) | 0x01000000U;
-            return (sint32)(analogPlayer | newControl | (((uint8)frontEnd.J1MAX[player] + 128U) << 8) | 1U);
+            return (analogPlayer | newControl | (((uint8)frontEnd.J1MAX[player] + 128U) << 8) | 1U);
         case 0x100000U:
             newControl = ((127U - (uint8)frontEnd.J1MIN[player]) << 16) | 0x01000000U;
-            return (sint32)(analogPlayer | newControl | ((127U - (uint8)frontEnd.J1MAX[player]) << 8) | 1U);
+            return (analogPlayer | newControl | ((127U - (uint8)frontEnd.J1MAX[player]) << 8) | 1U);
         case 0x200000U:
-            return (sint32)(analogPlayer | (((uint8)frontEnd.J1MIN[player] + 128U) << 16) |
-                (((uint8)frontEnd.J1MAX[player] + 128U) << 8) | 1U);
-        case 0x80000000U:
+            return (analogPlayer | (((uint8)frontEnd.J1MIN[player] + 128U) << 16) | (((uint8)frontEnd.J1MAX[player] + 128U) << 8) | 1U);
+        case 0x80000000:
             newControl = ((127U - (uint8)frontEnd.J2MIN[player]) << 16) | 0x02000000U;
-            return (sint32)(analogPlayer | newControl | ((127U - (uint8)frontEnd.J2MAX[player]) << 8) | 1U);
+            return (analogPlayer | newControl | ((127U - (uint8)frontEnd.J2MAX[player]) << 8) | 1U);
         case 0x10000000U:
             newControl = ((127U - (uint8)frontEnd.J2MIN[player]) << 16) | 0x03000000U;
-            return (sint32)(analogPlayer | newControl | ((127U - (uint8)frontEnd.J2MAX[player]) << 8) | 1U);
+            return (analogPlayer | newControl | ((127U - (uint8)frontEnd.J2MAX[player]) << 8) | 1U);
         case 0x20000000U:
             newControl = (((uint8)frontEnd.J2MIN[player] + 128U) << 16) | 0x02000000U;
-            return (sint32)(analogPlayer | newControl | (((uint8)frontEnd.J2MAX[player] + 128U) << 8) | 1U);
+            return (analogPlayer | newControl | (((uint8)frontEnd.J2MAX[player] + 128U) << 8) | 1U);
         case 0x40000000U:
             newControl = (((uint8)frontEnd.J2MIN[player] + 128U) << 16) | 0x03000000U;
-            return (sint32)(analogPlayer | newControl | (((uint8)frontEnd.J2MAX[player] + 128U) << 8) | 1U);
+            return (analogPlayer | newControl | (((uint8)frontEnd.J2MAX[player] + 128U) << 8) | 1U);
         case 0x800000U:
-            return (sint32)(analogPlayer | ((127U - (uint8)frontEnd.J1MIN[player]) << 16) |
-                ((127U - (uint8)frontEnd.J2MAX[player]) << 8) | 1U);
+            return (analogPlayer | ((127U - (uint8)frontEnd.J1MIN[player]) << 16) | ((127U - (uint8)frontEnd.J2MAX[player]) << 8) | 1U);
         }
     }
-    return (sint32)(((uint32)player << 26) | ((uint32)value << 8) | 2U);
+    return (((uint32)player << 26) | ((uint32)value << 8) | 2U);
 }
 
 void SetPads(void)
@@ -315,7 +311,7 @@ void SetPads(void)
         sint32 pad = j << 4;
         sint32 LookingFor = frontEnd.AnalogOn[j] != 0 ? 7 : 4;
         sint32 starttick = ticks;
-        while ((sint32)((uint32)ticks - (uint32)starttick) < 128 && PadGetState(pad) != 6)
+        while ((sint32)((uint32)ticks - starttick) < 128 && PadGetState(pad) != 6)
         {
         }
         if (PadGetState(pad) == 6)
@@ -460,8 +456,7 @@ void Front::ResetOverlayMenuState(void)
 void Front::ResetSettingsForCar(sint32 player, sint32 car)
 {
     FUNCTION_MARKER(0x8002704C, "FRONT.BIN");
-    frontEnd.settingsActive[player] = (sint16)((uint16)frontEnd.settingsActive[player] &
-        ~(1U << ((uint32)car & 31)));
+    frontEnd.settingsActive[player] = (sint16)((uint16)frontEnd.settingsActive[player] & ~(1U << (car & 31)));
     frontEnd.carDownforce[player][car] = 50;
     frontEnd.suspension[player][car] = 50;
     frontEnd.engineTuning[player][car] = 3;
@@ -705,14 +700,14 @@ sint32 Front::Menu(tFront::ProcessingType role)
     FUNCTION_MARKER(0x80027AF4, "FRONT.BIN");
     sint32 result = kApp_Command_StartRace;
     tScreen::fSuppressLoadingText = 1;
-    gLargestUnused = (uint32)largestunused();
+    gLargestUnused = largestunused();
     FeAudio::InitCommentary((uint8)frontEnd.language, 0);
     InitializeSpinningCars();
     ConstructAll();
     if (carManager.GetNumOwnedCars(0) <= 0 && tournamentManager.fMoney < 1)
     {
         sint32 extraMoney = carManager.CheapestCarStockPrice();
-        tournamentManager.fMoney = (sint32)((uint32)tournamentManager.fMoney + (uint32)extraMoney + 1U);
+        tournamentManager.fMoney = ((tournamentManager.fMoney + extraMoney) + 1);
     }
     if (role == tFront::kFront_InitialLoad || role == tFront::kFront_QuitToGameSetup)
     {
@@ -735,11 +730,9 @@ sint32 Front::Menu(tFront::ProcessingType role)
         }
         else if ((uint8)frontEnd.raceType == 6 && GameSetup::gData.replayMode == 0)
         {
-            sint16 winner = ((Cars::gNewCarStatsList[0].finalPosition < 2 && frontEnd.pinkSlipsForfeit != 0) ||
-                frontEnd.pinkSlipsForfeit == 1) ? 0 : 1;
+            sint16 winner = ((Cars::gNewCarStatsList[0].finalPosition < 2 && frontEnd.pinkSlipsForfeit != 0) || frontEnd.pinkSlipsForfeit == 1) ? 0 : 1;
             uint32 index = (uint8)frontEnd.pinkSlipsTrackIndex;
-            memcpy(reinterpret_cast<char *>(&frontEnd) + offsetof(tfrontEnd, pinkSlipsWinner) + index * 2U,
-                &winner, sizeof(winner));
+            memcpy(reinterpret_cast<char *>(&frontEnd) + offsetof(tfrontEnd, pinkSlipsWinner) + index * 2U, &winner, sizeof(winner));
             frontEnd.pinkSlipsWins[winner] = (char)((uint8)frontEnd.pinkSlipsWins[winner] + 1U);
         }
         result = FEApp->RunPostGame();
@@ -754,7 +747,7 @@ sint32 Front::Menu(tFront::ProcessingType role)
     sint16 track = (uint8)frontEnd.track[0];
     gFEBigHandle = 0;
     frontEnd.recordlaptime = Stattool::ReturnRecordLapTime(track);
-    gLargestUnused = (uint32)largestunused();
+    gLargestUnused = largestunused();
     return result;
 }
 
@@ -864,27 +857,20 @@ void Front::InitOpponentCars(tFEStream &streamData)
 {
     FUNCTION_MARKER(0x800285D0, "FRONT.BIN");
     streamData.numOpponents = 0;
-    if ((uint8)frontEnd.raceType == 2 ||
-        ((uint8)frontEnd.raceType == 0 && (uint8)frontEnd.oppNumber == 2))
+    if ((uint8)frontEnd.raceType == 2 || ((uint8)frontEnd.raceType == 0 && (uint8)frontEnd.oppNumber == 2))
     {
         tCarClassType opponentClass = cct_OpenClass;
         if ((uint8)frontEnd.raceType == 2)
-            opponentClass = (tCarClassType)tournamentManager.fDefinition->fTournaments[
-                tournamentManager.fDefinition->fTiers[tournamentManager.fTier].fTournOffset +
-                tournamentManager.fTournament].fOpponentCarClass;
+            opponentClass = (tCarClassType)tournamentManager.fDefinition->fTournaments[ tournamentManager.fDefinition->fTiers[tournamentManager.fTier].fTournOffset + tournamentManager.fTournament].fOpponentCarClass;
         bool usePlayerUpgrades = opponentClass == cct_OpenClass;
         tTourneyInfo *tourn;
         if (usePlayerUpgrades)
-            tourn = &tournamentManager.fDefinition->fTournaments[
-                tournamentManager.fDefinition->fTiers[2].fTournOffset +
-                (uint8)streamData.playerCars[0].fCarID];
+            tourn = &tournamentManager.fDefinition->fTournaments[ tournamentManager.fDefinition->fTiers[2].fTournOffset + (uint8)streamData.playerCars[0].fCarID];
         else
-            tourn = &tournamentManager.fDefinition->fTournaments[
-                tournamentManager.fDefinition->fTiers[tournamentManager.fTier].fTournOffset +
-                tournamentManager.fTournament];
+            tourn = &tournamentManager.fDefinition->fTournaments[ tournamentManager.fDefinition->fTiers[tournamentManager.fTier].fTournOffset + tournamentManager.fTournament];
         sint16 numOpponents = 5;
         if ((uint8)frontEnd.raceType == 2)
-            numOpponents = (sint16)((uint32)tournamentManager.fNumRacers - 1U);
+            numOpponents = (sint16)(tournamentManager.fNumRacers - 1U);
         for (sint16 i = 0; i < numOpponents; ++i)
         {
             tCarModels carModel = (tCarModels)tourn->fOpponentCar[i];
@@ -915,8 +901,8 @@ void Front::InitOpponentCars(tFEStream &streamData)
         if ((uint8)frontEnd.raceType == 2)
         {
             tournamentManager.UpdateCarLineup();
-            streamData.numOpponents = (sint16)((uint32)tournamentManager.fNumRacers - 1U);
-            for (sint16 i = 0; i < (sint32)numOpponents + 1; ++i)
+            streamData.numOpponents = (sint16)(tournamentManager.fNumRacers - 1U);
+            for (sint16 i = 0; i < numOpponents + 1; ++i)
             {
                 streamData.carLineup[i].personality = tournamentManager.fCarLineup[i].personality;
                 streamData.carLineup[i].position = tournamentManager.fCarLineup[i].position;
@@ -988,8 +974,7 @@ void Front::InitMissions(tFEStream &streamData)
         frontEnd.policeMission = 0;
         missionManager.LoadDescription(true);
         missionManager.GetMissionToRace(&streamData.pMission);
-        missionManager.GetMissionStages((uint8)frontEnd.policeTier,
-            (uint8)frontEnd.policeMission, &streamData.pStages);
+        missionManager.GetMissionStages((uint8)frontEnd.policeTier, (uint8)frontEnd.policeMission, &streamData.pStages);
         frontEnd.policeTier = oldTier;
         frontEnd.policeMission = oldMission;
     }
@@ -1009,8 +994,7 @@ static void PutStreamPad(sint32 *&d, sint32 command, sint32 value, sint32 player
 
 static void PutStreamPlayerControls(sint32 *&d, sint32 player, bool night, bool copCar)
 {
-    const sint32 type = frontEnd.controlType[player] == 0x23 ? 0 :
-        (frontEnd.controlType[player] == 0x53 || frontEnd.controlType[player] == 0x73 ? 1 : 2);
+    const sint32 type = frontEnd.controlType[player] == 0x23 ? 0 : (frontEnd.controlType[player] == 0x53 || frontEnd.controlType[player] == 0x73 ? 1 : 2);
     const sint32 config = (uint8)frontEnd.controlConfig[player];
     const sint32 (&mapping)[13][3] = mappings[config];
     static const sint32 commands[2][9] = {
@@ -1107,7 +1091,7 @@ char *PlayerName(sint32 player)
     }
     sint32 word = 0x4E;
     if ((uint8)frontEnd.gameMode == 1)
-        word = (sint32)((uint32)player + 0x50);
+        word = (player + 0x50);
     return TextSys::Word(word);
 }
 
@@ -1119,7 +1103,7 @@ char *PlayerNameMixedCase(sint32 player)
         return string;
     sint32 word = 0x4E;
     if ((uint8)frontEnd.gameMode == 1)
-        word = (sint32)((uint32)player + 0x50);
+        word = (player + 0x50);
     return TextSys::Word(word);
 }
 
@@ -1355,10 +1339,10 @@ sint32 * Front::AppendPlayerCarData(sint32 *stream, tFEStream &streamData)
         stream[33] = 0x122;
         stream[34] = streamData.currentCar;
         uint32 color = carInfo->fColorList[carInfo->fColor];
-        stream[35] = (sint32)(((color >> 16) & 0xFF) | (color & 0xFF00) | ((color & 0xFF) << 16));
+        stream[35] = (((color >> 16) & 0xFF) | (color & 0xFF00) | ((color & 0xFF) << 16));
         stream[36] = 0x123;
         stream[37] = streamData.currentCar;
-        stream[38] = (sint32)carInfo->fHudColor[streamData.track.fTimeOfDay];
+        stream[38] = carInfo->fHudColor[streamData.track.fTimeOfDay];
         stream[39] = 0x124;
         stream[40] = streamData.currentCar;
         stream[41] = carInfo->fSpeechColors[carInfo->fColor];
@@ -1441,10 +1425,10 @@ sint32 * Front::AppendOpponentData(sint32 *stream, tFEStream &streamData)
         stream[39] = 0x122;
         stream[40] = streamData.currentCar;
         uint32 color = carInfo->fColorList[(uint8)carLineup->carColor];
-        stream[41] = (sint32)(((color >> 16) & 0xFF) | (color & 0xFF00) | ((color & 0xFF) << 16));
+        stream[41] = (((color >> 16) & 0xFF) | (color & 0xFF00) | ((color & 0xFF) << 16));
         stream[42] = 0x123;
         stream[43] = streamData.currentCar;
-        stream[44] = (sint32)carInfo->fHudColor[streamData.track.fTimeOfDay];
+        stream[44] = carInfo->fHudColor[streamData.track.fTimeOfDay];
         stream[45] = 0x124;
         stream[46] = streamData.currentCar;
         stream[47] = carInfo->fSpeechColors[(uint8)carLineup->carColor];
@@ -1642,7 +1626,7 @@ sint32 * Front::AppendTrackData(sint32 *stream, tFEStream &streamData)
     stream[10] = 0x12;
     stream[11] = streamData.trackInfo.fSimNumber;
     stream[12] = 0x0B;
-    stream[13] = (sint32)streamData.track.fDifficulty;
+    stream[13] = streamData.track.fDifficulty;
     return stream + 14;
 }
 
@@ -1655,8 +1639,7 @@ bool Front::EnableLocalSpeech(void)
         tTrackInformation trackInfo;
         trackManager.GetTrack((uint8)frontEnd.track[(uint8)frontEnd.pinkSlipsTrackIndex], trackInfo);
         uint8 trackLanguage = (uint8)trackInfo.fLanguage;
-        result = trackLanguage != (uint8)frontEnd.language &&
-            (trackLanguage < 3 || trackLanguage == 6);
+        result = trackLanguage != (uint8)frontEnd.language && (trackLanguage < 3 || trackLanguage == 6);
     }
     return result;
 }
@@ -1723,8 +1706,7 @@ sint32 *Front::BuildStream(sint32 *stream)
     PutStreamPair(d, 0x2D, (uint8)frontEnd.engineVolume);
     PutStreamPair(d, 0x2E, (uint8)frontEnd.narrationVolume);
     PutStreamPair(d, 0x2F, (uint8)frontEnd.ambientVolume);
-    sint32 damage = streamData.playerCars[0].fCarID == 0x1C ? 0 :
-        (frontEnd.raceType == 2 ? 1 : (uint8)frontEnd.damage);
+    sint32 damage = streamData.playerCars[0].fCarID == 0x1C ? 0 : (frontEnd.raceType == 2 ? 1 : (uint8)frontEnd.damage);
     PutStreamPair(d, 0x16, damage);
 
     sint32 numplaylistsongs = 0;
@@ -1734,15 +1716,13 @@ sint32 *Front::BuildStream(sint32 *stream)
     PutStreamPair(d, 0x30, numplaylistsongs);
     PutStreamPair(d, 0x4C, numplaylistsongs);
     for (sint32 j = 0; j < 40; ++j)
-        if (frontEnd.FEPlayList[j] != 0)
-            *d++ = j;
+        if (frontEnd.FEPlayList[j] != 0) *d++ = j;
     PutStreamPair(d, 0x29, Stattool::ReturnRecordLapTime((sint8)streamData.track.fTrackNumber));
     PutStreamPair(d, 0x08, frontEnd.raceType != 0 || frontEnd.carListType != 0 ? GetLapsForType() : 1);
 
     const bool firstCopCar = streamData.playerCars[0].fCarClass == cct_CopCar;
     const bool secondCopCar = streamData.numPlayers > 1 && streamData.playerCars[1].fCarClass == cct_CopCar;
-    if (firstCopCar || secondCopCar ||
-        (frontEnd.raceType == 0 && frontEnd.oppNumber == 0 && frontEnd.gameMode == 0))
+    if (firstCopCar || secondCopCar || (frontEnd.raceType == 0 && frontEnd.oppNumber == 0 && frontEnd.gameMode == 0))
     {
         PutStreamPair(d, 0x20, 0);
         PutStreamPair(d, 0x32, 0);
@@ -1765,8 +1745,7 @@ sint32 *Front::BuildStream(sint32 *stream)
     d = AppendPerpData(d, streamData);
     d = AppendCopData(d, streamData);
     d = AppendTrafficData(d, streamData);
-    PutStreamPair(d, 0x1C, streamData.numPlayers + streamData.numOpponents + streamData.numCops +
-        streamData.numSuperCops + streamData.numPerpObjects + streamData.numTraffic);
+    PutStreamPair(d, 0x1C, streamData.numPlayers + streamData.numOpponents + streamData.numCops + streamData.numSuperCops + streamData.numPerpObjects + streamData.numTraffic);
     PutStreamPad(d, 0xE5, 1, 0);
     PutStreamPad(d, 0xEB, 8, 0);
     PutStreamPad(d, 0xE8, 0x80, 0);
@@ -1793,7 +1772,7 @@ void Front::GetInGameVars(void)
     frontEnd.engineVolume = (char)gMasterEngineLevel;
     frontEnd.narrationVolume = (char)gMasterFENarrationLevel;
     frontEnd.ambientVolume = (char)gMasterAmbientLevel;
-    frontEnd.pinkSlipsForfeit = (sint16)(uint32)GameSetup::gData.pinkSlipsForfeit;
+    frontEnd.pinkSlipsForfeit = (sint16)GameSetup::gData.pinkSlipsForfeit;
     for (sint32 i = 0; i < 2; ++i)
     {
         frontEnd.controlConfig[i] = (char)GameSetup::gData.controllerData.controllerConfig[i];

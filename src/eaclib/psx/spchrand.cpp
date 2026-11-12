@@ -1,7 +1,7 @@
 #include "xport.h"
 #include "eaclib/psx/internal.h"
 
-uint32 seedX[6] = { 0xF22D0E56u, 0x883126E9u, 0xC624DD2Fu, 0x0702C49Cu, 0x9E353F7Du, 0x6FDF3B64u };
+uint32 seedX[6] = { 0xF22D0E56, 0x883126E9, 0xC624DD2F, 0x0702C49C, 0x9E353F7D, 0x6FDF3B64 };
 
 uint32 iSPCH::EACrandom(void)
 {
@@ -48,17 +48,17 @@ uint32 iSPCH::EACrandom(void)
 void iSPCH::EACseedrandom(uint32 seed)
 {
     FUNCTION_MARKER(0x800EBAC4, "NFS4.EXE");
-    uint32 value = seed + 0xF22D0E56u;
+    uint32 value = seed + 0xF22D0E56;
     seedX[0] = value;
-    value += 0x96041893u;
+    value += 0x96041893;
     seedX[1] = value;
     value += 0x3DF3B646u;
     seedX[2] = value;
     value += 0x40DDE76Du;
     seedX[3] = value;
-    value += 0x97327AE1u;
+    value += 0x97327AE1;
     seedX[4] = value;
-    value += 0xD1A9FBE7u;
+    value += 0xD1A9FBE7;
     seedX[5] = value;
 }
 

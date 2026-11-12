@@ -112,40 +112,40 @@ SVECTOR Flare::gLensOct[8] =
 
 Flare::tInfo Flare::gType[34] =
 {
-    {8421504UL, 8421504UL, 1024, 0},
-    {3158064UL, 8421504UL, 0, 3},
-    {526440UL, 394792UL, 1, 13},
-    {8421504UL, 3158064UL, 0, 13},
-    {4222912UL, 526528UL, 0, 13},
-    {4222912UL, 526528UL, 0, 13},
-    {7368816UL, 1052696UL, 0, 13},
-    {526464UL, 526376UL, 0, 13},
-    {526464UL, 526376UL, 0, 12},
-    {557184UL, 534568UL, 0, 12},
-    {8390664UL, 2623496UL, 0, 12},
-    {3158064UL, 8421504UL, 0, 3},
-    {526440UL, 394792UL, 2, 13},
-    {8421504UL, 3158064UL, 1, 13},
-    {4222912UL, 526528UL, 1, 13},
-    {4222912UL, 526528UL, 1, 13},
-    {7368816UL, 1052696UL, 1, 13},
-    {526464UL, 526376UL, 1, 13},
-    {526464UL, 526376UL, 1, 12},
-    {557184UL, 534568UL, 1, 12},
-    {8390664UL, 2623496UL, 1, 12},
-    {526464UL, 526376UL, 0, 0},
-    {662658UL, 132116UL, 675, 136},
-    {48830UL, 17990UL, 0, 0},
-    {12632256UL, 0UL, 770, 4},
-    {3688552UL, 2105376UL, 1795, 12},
-    {6314040UL, 1579032UL, 3594, 12},
-    {2123920UL, 1581088UL, 3594, 12},
-    {2123920UL, 1581088UL, 1281, 8},
-    {6318248UL, 2105376UL, 734, 8},
-    {13158600UL, 2105376UL, 16384, 9},
-    {2123920UL, 1581088UL, 1281, 24},
-    {7572224UL, 0UL, 1024, 12},
-    {16711680UL, 0UL, 256, 8},
+    {8421504, 8421504, 1024, 0},
+    {3158064, 8421504, 0, 3},
+    {526440, 394792, 1, 13},
+    {8421504, 3158064, 0, 13},
+    {4222912, 526528, 0, 13},
+    {4222912, 526528, 0, 13},
+    {7368816, 1052696, 0, 13},
+    {526464, 526376, 0, 13},
+    {526464, 526376, 0, 12},
+    {557184, 534568, 0, 12},
+    {8390664, 2623496, 0, 12},
+    {3158064, 8421504, 0, 3},
+    {526440, 394792, 2, 13},
+    {8421504, 3158064, 1, 13},
+    {4222912, 526528, 1, 13},
+    {4222912, 526528, 1, 13},
+    {7368816, 1052696, 1, 13},
+    {526464, 526376, 1, 13},
+    {526464, 526376, 1, 12},
+    {557184, 534568, 1, 12},
+    {8390664, 2623496, 1, 12},
+    {526464, 526376, 0, 0},
+    {662658, 132116, 675, 136},
+    {48830, 17990, 0, 0},
+    {12632256, 0, 770, 4},
+    {3688552, 2105376, 1795, 12},
+    {6314040, 1579032, 3594, 12},
+    {2123920, 1581088, 3594, 12},
+    {2123920, 1581088, 1281, 8},
+    {6318248, 2105376, 734, 8},
+    {13158600, 2105376, 16384, 9},
+    {2123920, 1581088, 1281, 24},
+    {7572224, 0, 1024, 12},
+    {16711680, 0, 256, 8},
 };
 
 FLARE_PIECE_DEF Flare::SunFlarePieces[9] =
@@ -225,7 +225,7 @@ void Flare::OctFlare(sint32 *center, sint32 otz)
         setaddr(prim, getaddr(ot));
         cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
         setaddr(ot, prim);
-        prim->p[0].rgbc.rgbc = 0x32000000U;
+        prim->p[0].rgbc.rgbc = 0x32000000;
         prim->p[1].rgbc.rgbc = rgb1;
         prim->p[2].rgbc.rgbc = 0;
         setlen(prim, 6);
@@ -318,7 +318,7 @@ void Flare::Spikes(sint32 *center, sint32 otz)
         setaddr(prim, getaddr(ot));
         cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
         setaddr(ot, prim);
-        prim->p[0].rgbc.rgbc = 0x3A000000U;
+        prim->p[0].rgbc.rgbc = 0x3A000000;
         uint32 rgb;
         memcpy(&rgb, &gfrgb2, 4);
         prim->p[2].rgbc.rgbc = 0;
@@ -394,9 +394,9 @@ void Flare::CarShapedHalo(sint32 type, COORD16 *ptCenter, COORD16 *pt1, COORD16 
     vec2.x = (sint16)(pt2->x - ptCenter->x);
     vec2.y = (sint16)(pt2->y - ptCenter->y);
     vec2.z = (sint16)(pt2->z - ptCenter->z);
-    crossprod.x = (sint16)((uint32)vec2.y * (uint32)vec1.z - (uint32)vec2.z * (uint32)vec1.y);
-    crossprod.y = (sint16)((uint32)vec2.z * (uint32)vec1.x - (uint32)vec2.x * (uint32)vec1.z);
-    crossprod.z = (sint16)((uint32)vec2.x * (uint32)vec1.y - (uint32)vec2.y * (uint32)vec1.x);
+    crossprod.x = (sint16)(vec2.y * (uint32)vec1.z - vec2.z * (uint32)vec1.y);
+    crossprod.y = (sint16)(vec2.z * (uint32)vec1.x - vec2.x * (uint32)vec1.z);
+    crossprod.z = (sint16)(vec2.x * (uint32)vec1.y - vec2.y * (uint32)vec1.x);
     COORD16 *ptEdge = flag < 0 ? pt1 : pt2;
     sint32 tableIndex = (type & 0x7F) + (R3DCar::InMenu == 0 ? 11 : 1);
     if ((type & 0x100) != 0)
@@ -419,7 +419,7 @@ void Flare::CarShapedHalo(sint32 type, COORD16 *ptCenter, COORD16 *pt1, COORD16 
         }
     VECTOR diff;
     gte_stlvnl(&diff);
-    if (diff.vx > diff.vz || (sint32)(0U - (uint32)diff.vx) > diff.vz || diff.vz < 128)
+    if (diff.vx > diff.vz || -diff.vx > diff.vz || diff.vz < 128)
         return;
     sint32 sp;
     gte_stsxy(&sp);
@@ -439,15 +439,15 @@ void Flare::CarShapedHalo(sint32 type, COORD16 *ptCenter, COORD16 *pt1, COORD16 
         sint32 dify = sp2.vy - screen.vy;
         sint32 difx = sp2.vx - screen.vx;
         angleOuter = fixedatan(dify, difx) >> 4;
-        uint32 distance = isqrt((uint32)difx * (uint32)difx + (uint32)dify * (uint32)dify);
-        sizeOuter = (sint32)(distance * (uint32)diff.vz);
+        uint32 distance = isqrt(difx * (uint32)difx + dify * (uint32)dify);
+        sizeOuter = (distance * diff.vz);
     }
     gfrgb = color[0];
     gfrgb2 = color[1];
     COORD16 *edgeVector = flag < 0 ? &vec2 : &vec1;
-    uint32 squares = (uint32)((sint32)edgeVector->x * edgeVector->x) + (uint32)((sint32)edgeVector->y * edgeVector->y) + (uint32)((sint32)edgeVector->z * edgeVector->z);
+    uint32 squares = (edgeVector->x * edgeVector->x) + (uint32)(edgeVector->y * edgeVector->y) + (uint32)(edgeVector->z * edgeVector->z);
     gscale = (sint32)squares >> 1;
-    sint32 scaled = (sint32)((uint32)gscale << (scale & 31));
+    sint32 scaled = ((uint32)gscale << (scale & 31));
     gscale = scaled;
     if ((flags & 1) != 0)
     {
@@ -458,16 +458,16 @@ void Flare::CarShapedHalo(sint32 type, COORD16 *ptCenter, COORD16 *pt1, COORD16 
         gte_stlvnl(&transformed);
         VectorNormal(&transformed, &normalized);
         if ((flags & 2) != 0)
-            normalized.vz = (sint32)(((uint32)normalized.vz - 0xF33U) * 20U);
-        sint32 intensity = (sint32)((uint32)normalized.vz - 600U);
+            normalized.vz = ((normalized.vz - 0xF33) * 20);
+        sint32 intensity = (normalized.vz - 600);
         if (intensity < 0)
             intensity = 0;
         normalized.vz = intensity;
-        gscale = (sint32)((uint32)gscale * (uint32)intensity) >> 11;
+        gscale = (gscale * intensity) >> 11;
     }
     if ((type & 0x100) != 0)
     {
-        sint32 reflectionScale = (sint32)((uint32)scaled + (uint32)(sizeOuter >> 7));
+        sint32 reflectionScale = (scaled + (sizeOuter >> 7));
         CVECTOR save = gfrgb;
         uint32 words[5] = { (uint32)reflectionScale, 0, (uint32)reflectionScale, 0, 0 };
         MATRIX scalemat, mtx;
@@ -492,7 +492,7 @@ void Flare::CarShapedHalo(sint32 type, COORD16 *ptCenter, COORD16 *pt1, COORD16 
     else
     {
         sint32 radius = gscale;
-        uint32 words[5] = { (uint32)radius + (uint32)(sizeOuter >> 5), 0, (uint32)radius, 0, 0 };
+        uint32 words[5] = { radius + (uint32)(sizeOuter >> 5), 0, (uint32)radius, 0, 0 };
         MATRIX scalemat, mtx, mtx2;
         memcpy(&scalemat, words, sizeof(words));
         IdentMatrix(&mtx);
@@ -537,7 +537,6 @@ void Flare::CarShapedHalo(sint32 type, COORD16 *ptCenter, COORD16 *pt1, COORD16 
 void Flare::Halo2(DRender::tView *Vi, sint32 scale, sint32 type, coorddef *fpt, coorddef *fpt2, Draw::FlareCache *sd)
 {
     FUNCTION_MARKER(0x800CD530, "NFS4.EXE");
-    (void)sd;
     sint32 flare_type = (uint8)type;
     sint32 flags = gType[flare_type].flags;
     sint32 angleZ = 0;
@@ -545,24 +544,24 @@ void Flare::Halo2(DRender::tView *Vi, sint32 scale, sint32 type, coorddef *fpt, 
         flags &= ~5;
     coorddef translation = Vi->cview.translation;
     SVECTOR sdiff;
-    sdiff.vx = (sint16)((sint32)((uint32)fpt->x - (uint32)translation.x) >> 10);
-    sdiff.vy = (sint16)((sint32)((uint32)fpt->y - (uint32)translation.y) >> 10);
-    sdiff.vz = (sint16)((sint32)((uint32)fpt->z - (uint32)translation.z) >> 10);
+    sdiff.vx = (sint16)((fpt->x - (uint32)translation.x) >> 10);
+    sdiff.vy = (sint16)((fpt->y - (uint32)translation.y) >> 10);
+    sdiff.vz = (sint16)((fpt->z - (uint32)translation.z) >> 10);
     SVECTOR sdiff2;
     if ((flags & 5) != 0)
     {
-        sdiff2.vx = (sint16)((sint32)((uint32)fpt2->x - (uint32)translation.x) >> 10);
-        sdiff2.vy = (sint16)((sint32)((uint32)fpt2->y - (uint32)translation.y) >> 10);
-        sdiff2.vz = (sint16)((sint32)((uint32)fpt2->z - (uint32)translation.z) >> 10);
+        sdiff2.vx = (sint16)((fpt2->x - (uint32)translation.x) >> 10);
+        sdiff2.vy = (sint16)((fpt2->y - (uint32)translation.y) >> 10);
+        sdiff2.vz = (sint16)((fpt2->z - (uint32)translation.z) >> 10);
     }
     if ((flags & 0x10) != 0)
     {
-        if (((uint32)simGlobal.gameTicks & 0x40U) != 0)
+        if ((simGlobal.gameTicks & 0x40U) != 0)
             return;
     }
     else if ((flags & 0x20) != 0)
     {
-        if ((((uint32)simGlobal.gameTicks + 27U) & 0x20U) != 0)
+        if (((simGlobal.gameTicks + 27U) & 0x20U) != 0)
             return;
     }
     SetMatrix(&gWorldMat);
@@ -575,19 +574,19 @@ void Flare::Halo2(DRender::tView *Vi, sint32 scale, sint32 type, coorddef *fpt, 
         scale = gType[flare_type].scale;
     VECTOR diff;
     gte_stlvnl(&diff);
-    if (diff.vx > diff.vz || (sint32)(0U - (uint32)diff.vx) > diff.vz || diff.vz < 128)
+    if (diff.vx > diff.vz || -diff.vx > diff.vz || diff.vz < 128)
         return;
     DVECTOR sp;
     gte_stsxy(&sp);
     sint32 otz;
     gte_stsz(&otz);
     otz = (otz >> 2) >> 1;
-    if (otz < 0 || otz > (sint32)((uint32)Draw::gViewOtSize - 3U))
+    if (otz < 0 || otz > (Draw::gViewOtSize - 3))
         return;
     if ((flags & 0x80) != 0)
     {
         uint32 sample = random() % 20U;
-        scale = (sint32)((uint32)scale + sample * 4U);
+        scale = (scale + sample * 4U);
         color[0].r = (uint8)(color[0].r + sample);
         color[0].g = (uint8)(color[0].g + sample);
         color[0].b = (uint8)(color[0].b + sample);
@@ -596,7 +595,7 @@ void Flare::Halo2(DRender::tView *Vi, sint32 scale, sint32 type, coorddef *fpt, 
         color[1].b = (uint8)(color[1].b + sample);
     }
     if ((flags & 8) != 0)
-        angleZ = ((sint32)sp.vx + (sint32)sp.vy) * 4;
+        angleZ = (sp.vx + sp.vy) * 4;
     memcpy(&gfrgb, &color[0], 4);
     memcpy(&gfrgb2, &color[1], 4);
     gscale = scale;
@@ -625,19 +624,19 @@ void Flare::Halo2(DRender::tView *Vi, sint32 scale, sint32 type, coorddef *fpt, 
         if ((flags & 1) != 0)
         {
             VECTOR tvec;
-            tvec.vx = (sint32)((uint32)diff.vx - (uint32)diff2.vx);
-            tvec.vy = (sint32)((uint32)diff.vy - (uint32)diff2.vy);
-            tvec.vz = (sint32)((uint32)diff.vz - (uint32)diff2.vz);
+            tvec.vx = (diff.vx - diff2.vx);
+            tvec.vy = (diff.vy - diff2.vy);
+            tvec.vz = (diff.vz - diff2.vz);
             VECTOR tvec2;
             VectorNormal(&tvec, &tvec2);
             if ((flags & 2) != 0)
-                tvec2.vz = (sint32)(((uint32)tvec2.vz - 0xF33U) * 20U);
-            tvec2.vz = (sint32)((uint32)tvec2.vz - 600U);
+                tvec2.vz = ((tvec2.vz - 0xF33) * 20);
+            tvec2.vz = (tvec2.vz - 600);
             if (tvec2.vz < 0)
                 tvec2.vz = 0;
             if (tvec2.vz == 0)
                 return;
-            gscale = (sint32)((uint32)gscale * (uint32)tvec2.vz) >> 11;
+            gscale = (gscale * tvec2.vz) >> 11;
             if (type == 30)
                 z /= 4;
         }
@@ -659,12 +658,12 @@ void Flare::Halo2(DRender::tView *Vi, sint32 scale, sint32 type, coorddef *fpt, 
     }
     else
     {
-        sint32 dify = (sint32)sp2.vy - (sint32)sp.vy;
-        sint32 difx = (sint32)sp2.vx - (sint32)sp.vx;
+        sint32 dify = sp2.vy - sp.vy;
+        sint32 difx = sp2.vx - sp.vx;
         sint32 r = fixedatan(dify, difx) >> 4;
-        uint32 distance = isqrt((uint32)difx * (uint32)difx + (uint32)dify * (uint32)dify);
+        uint32 distance = isqrt(difx * (uint32)difx + dify * (uint32)dify);
         MATRIX scalemat;
-        uint32 outer = (uint32)gscale + (uint32)((sint32)(distance * (uint32)diff.vz) >> 4);
+        uint32 outer = gscale + (uint32)((sint32)(distance * diff.vz) >> 4);
         const uint32 scaleWords[5] = { outer, 0, (uint32)gscale, 0, 0 };
         memcpy(&scalemat, scaleWords, sizeof(scaleWords));
         MATRIX mtx, mtx2;
@@ -758,21 +757,21 @@ void Flare::_2DHalo(sint32 x, sint32 y, sint32 scalex, sint32 scaley, sint32 typ
     DVECTOR octring[8];
     for (sint32 i = 0; i < 8; ++i)
     {
-        uint32 product = (uint32)(sint32)gOct[i].vx * (uint32)scalex;
+        uint32 product = (gOct[i].vx) * (uint32)scalex;
         if ((sint32)product < 0)
             product += 0xFFFFU;
-        octring[i].vx = (sint16)((sint32)product >> 16);
-        product = (uint32)(sint32)gOct[i].vy * (uint32)scaley;
+        octring[i].vx = (sint16)(product >> 16);
+        product = (gOct[i].vy) * (uint32)scaley;
         if ((sint32)product < 0)
             product += 0xFFFFU;
-        octring[i].vy = (sint16)((sint32)product >> 16);
+        octring[i].vy = (sint16)(product >> 16);
     }
     DVECTOR save1;
-    save1.vx = (sint16)((uint32)(uint16)octring[0].vx + (uint32)x);
-    save1.vy = (sint16)((uint32)(uint16)octring[0].vy + (uint32)y);
+    save1.vx = (sint16)(((uint16)octring[0].vx) + (uint32)x);
+    save1.vy = (sint16)(((uint16)octring[0].vy) + (uint32)y);
     DVECTOR npt[2];
-    npt[1].vx = (sint16)((uint32)(uint16)octring[1].vx + (uint32)x);
-    npt[1].vy = (sint16)((uint32)(uint16)octring[1].vy + (uint32)y);
+    npt[1].vx = (sint16)(((uint16)octring[1].vx) + (uint32)x);
+    npt[1].vy = (sint16)(((uint16)octring[1].vy) + (uint32)y);
     sint32 center, first, packed[2];
     memcpy(&center, &pt2, 4);
     memcpy(&first, &save1, 4);
@@ -782,8 +781,8 @@ void Flare::_2DHalo(sint32 x, sint32 y, sint32 scalex, sint32 scaley, sint32 typ
     for (sint32 i = 2; i < 8; ++i)
     {
         sint32 slot = i & 1;
-        npt[slot].vx = (sint16)((uint32)(uint16)octring[i].vx + (uint32)x);
-        npt[slot].vy = (sint16)((uint32)(uint16)octring[i].vy + (uint32)y);
+        npt[slot].vx = (sint16)(((uint16)octring[i].vx) + (uint32)x);
+        npt[slot].vy = (sint16)(((uint16)octring[i].vy) + (uint32)y);
         memcpy(&packed[slot], &npt[slot], 4);
         Tri(&center, &packed[slot ^ 1], &packed[slot], 0);
         _2DSpike(&center, &packed[slot], 0);
@@ -925,14 +924,14 @@ void Flare::SingleColorTex(DVECTOR *xy, CVECTOR *color, sint32 width, sint32 hei
 {
     FUNCTION_MARKER(0x800CE6F8, "NFS4.EXE");
     DVECTOR pt[4];
-    pt[0].vx = (sint16)((uint32)(uint16)xy->vx - (uint32)width);
-    pt[0].vy = (sint16)((uint32)(uint16)xy->vy + (uint32)height);
-    pt[1].vx = (sint16)((uint32)(uint16)xy->vx + (uint32)width);
-    pt[1].vy = (sint16)((uint32)(uint16)xy->vy + (uint32)height);
-    pt[2].vx = (sint16)((uint32)(uint16)xy->vx - (uint32)width);
-    pt[2].vy = (sint16)((uint32)(uint16)xy->vy - (uint32)height);
-    pt[3].vx = (sint16)((uint32)(uint16)xy->vx + (uint32)width);
-    pt[3].vy = (sint16)((uint32)(uint16)xy->vy - (uint32)height);
+    pt[0].vx = (sint16)(((uint16)xy->vx) - (uint32)width);
+    pt[0].vy = (sint16)(((uint16)xy->vy) + (uint32)height);
+    pt[1].vx = (sint16)(((uint16)xy->vx) + (uint32)width);
+    pt[1].vy = (sint16)(((uint16)xy->vy) + (uint32)height);
+    pt[2].vx = (sint16)(((uint16)xy->vx) - (uint32)width);
+    pt[2].vy = (sint16)(((uint16)xy->vy) - (uint32)height);
+    pt[3].vx = (sint16)(((uint16)xy->vx) + (uint32)width);
+    pt[3].vy = (sint16)(((uint16)xy->vy) - (uint32)height);
     sint32 packed[4];
     memcpy(packed, pt, sizeof(pt));
     TextureQuad(packed, color, type, otz);
@@ -969,14 +968,14 @@ void Flare::SingleColorOct(DVECTOR *xy, CVECTOR *color, sint32 width, sint32 hei
     DVECTOR pt[8];
     for (sint32 i = 0; i < 8; ++i)
     {
-        uint32 product = (uint32)width * (uint32)(sint32)gLensOct[i].vx;
+        uint32 product = width * (uint32)(sint32)gLensOct[i].vx;
         if ((sint32)product < 0)
             product += 0xFFU;
-        pt[i].vx = (sint16)((uint16)xy->vx + ((sint32)product >> 8));
-        product = (uint32)height * (uint32)(sint32)gLensOct[i].vy;
+        pt[i].vx = (sint16)((uint16)xy->vx + (product >> 8));
+        product = height * (uint32)(sint32)gLensOct[i].vy;
         if ((sint32)product < 0)
             product += 0xFFU;
-        pt[i].vy = (sint16)((uint16)xy->vy + ((sint32)product >> 8));
+        pt[i].vy = (sint16)((uint16)xy->vy + (product >> 8));
     }
     sint32 packed[8];
     memcpy(packed, pt, sizeof(pt));
@@ -989,28 +988,28 @@ void Flare::SingleColorOctRing(DVECTOR *xy, CVECTOR *color, sint32 width, sint32
 {
     FUNCTION_MARKER(0x800CE988, "NFS4.EXE");
     DVECTOR pt[18];
-    uint32 width2 = (uint32)width - 5U;
-    uint32 height2 = (uint32)height - 5U;
+    uint32 width2 = width - 5U;
+    uint32 height2 = height - 5U;
     for (sint32 i = 0; i < 9; ++i)
     {
         sint32 index = i & 7;
         sint32 i2 = i * 2;
-        uint32 product = (uint32)width * (uint32)(sint32)gOct[index].vx;
+        uint32 product = width * (uint32)(sint32)gOct[index].vx;
         if ((sint32)product < 0)
             product += 0xFFU;
-        pt[i2].vx = (sint16)((uint16)xy->vx + ((sint32)product >> 8));
-        product = (uint32)height * (uint32)(sint32)gOct[index].vy;
+        pt[i2].vx = (sint16)((uint16)xy->vx + (product >> 8));
+        product = height * (uint32)(sint32)gOct[index].vy;
         if ((sint32)product < 0)
             product += 0xFFU;
-        pt[i2].vy = (sint16)((uint16)xy->vy + ((sint32)product >> 8));
-        product = width2 * (uint32)(sint32)gOct[index].vx;
+        pt[i2].vy = (sint16)((uint16)xy->vy + (product >> 8));
+        product = width2 * (gOct[index].vx);
         if ((sint32)product < 0)
             product += 0xFFU;
-        pt[i2 + 1].vx = (sint16)((uint16)xy->vx + ((sint32)product >> 8));
-        product = height2 * (uint32)(sint32)gOct[index].vy;
+        pt[i2 + 1].vx = (sint16)((uint16)xy->vx + (product >> 8));
+        product = height2 * (gOct[index].vy);
         if ((sint32)product < 0)
             product += 0xFFU;
-        pt[i2 + 1].vy = (sint16)((uint16)xy->vy + ((sint32)product >> 8));
+        pt[i2 + 1].vy = (sint16)((uint16)xy->vy + (product >> 8));
     }
     sint32 packed[18];
     memcpy(packed, pt, sizeof(pt));
@@ -1048,7 +1047,7 @@ void Flare::LensFlare(DVECTOR *screenPos, Draw::FlareCache *sd)
     CVECTOR white = { 255, 255, 255, 0 };
     sint32 angleZ = (sx + sy) * 8;
     sint32 angleZ2 = (sx + sy) * 6;
-    QuadNotTransparent(packed, &white, (sint32)((uint32)Draw::gViewOtSize - 2U));
+    QuadNotTransparent(packed, &white, (Draw::gViewOtSize - 2));
     sint32 dx = 320 - sx;
     sint32 dy = 240 - sy;
     sint16 oldX = gFlare_LensFlare.pos[0].vx;
@@ -1082,7 +1081,7 @@ void Flare::LensFlare(DVECTOR *screenPos, Draw::FlareCache *sd)
     sint32 center;
     memcpy(&center, screenPos, 4);
     Spikes(&center, 0);
-    scaleWords[0] = (uint32)flareVis << 6;
+    scaleWords[0] = flareVis << 6;
     memcpy(&scalemat, scaleWords, 4);
     IdentMatrix(&mtx);
     RotMatrixZ(angleZ2, &mtx);
@@ -1104,17 +1103,17 @@ void Flare::LensFlare(DVECTOR *screenPos, Draw::FlareCache *sd)
     {
         FLARE_PIECE_DEF *piece = gFlare_LensFlare.piece + i;
         DVECTOR pxy;
-        uint32 distance = (uint32)piece->distance;
-        uint32 product = (0x10000U - distance) * (uint32)sx + distance * (uint32)dx;
+        uint32 distance = piece->distance;
+        uint32 product = (0x10000U - distance) * sx + distance * dx;
         if ((sint32)product < 0)
             product += 0xFFFFU;
-        pxy.vx = (sint16)((sint32)product >> 16);
-        distance = (uint32)piece->distance;
-        product = (0x10000U - distance) * (uint32)sy + distance * (uint32)dy;
+        pxy.vx = (sint16)(product >> 16);
+        distance = piece->distance;
+        product = (0x10000U - distance) * sy + distance * dy;
         if ((sint32)product < 0)
             product += 0xFFFFU;
-        pxy.vy = (sint16)((sint32)product >> 16);
-        product = (uint32)gFlare_LensFlare.size * (uint32)piece->size;
+        pxy.vy = (sint16)(product >> 16);
+        product = gFlare_LensFlare.size * (uint32)piece->size;
         if ((sint32)product < 0)
             product += 0xFFFFU;
         sint32 width = (sint32)product >> 16;
@@ -1159,18 +1158,18 @@ void Flare::Sun(SVECTOR *worldPos, Draw::FlareCache *sd)
     gte_ldv0(worldPos);
     gte_rtps();
     gte_stlvnl(&diff);
-    if (diff.vx > diff.vz || (sint32)(0U - (uint32)diff.vx) > diff.vz)
+    if (diff.vx > diff.vz || -diff.vx > diff.vz)
         return;
     CVECTOR color;
-    uint32 colorWord = 0x00808080U;
+    uint32 colorWord = 0x00808080;
     memcpy(&color, &colorWord, 4);
     DVECTOR posOnScreen;
     gte_stsxy(&posOnScreen);
     sint32 commMode = GameSetup::gData.commMode;
     posOnScreen.vy = (sint16)((diff.vy >> 2) + pshift);
     sint32 vertRezBy2 = commMode == 1 ? 60 : 120;
-    diff.vy = ((sint32)posOnScreen.vy - vertRezBy2) * 4;
-    sint32 dvz = (sint32)((uint32)Camera::gGeomScreen << 2);
+    diff.vy = (posOnScreen.vy - vertRezBy2) * 4;
+    sint32 dvz = ((uint32)Camera::gGeomScreen << 2);
     sint32 sx = posOnScreen.vx;
     diff.vx = (sx - 160) * 4;
     if (dvz > 0xB50)
@@ -1179,7 +1178,7 @@ void Flare::Sun(SVECTOR *worldPos, Draw::FlareCache *sd)
     gte_SetTransVector(&diff);
     if (sx < 317 && commMode != 1 && (TrackSpec::gSpec.skyspec.flags & 0x100) == 0)
         LensFlare(&posOnScreen, sd);
-    sint32 otz = (sint32)((uint32)Draw::gViewOtSize - 2U);
+    sint32 otz = (Draw::gViewOtSize - 2);
     memcpy(&gfrgb, &color, 4);
     Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
     {
@@ -1216,18 +1215,17 @@ void Flare::Sun(SVECTOR *worldPos, Draw::FlareCache *sd)
 void Flare::Moon(SVECTOR *worldPos, Draw::FlareCache *sd)
 {
     FUNCTION_MARKER(0x800CF4BC, "NFS4.EXE");
-    (void)sd;
     sint32 pshift = GameSetup::gData.commMode == 1 ? 60 : 120;
     VECTOR diff;
     gte_ldv0(worldPos);
     gte_rtps();
     CVECTOR color;
-    uint32 colorWord = 0x00808080U;
+    uint32 colorWord = 0x00808080;
     memcpy(&color, &colorWord, 4);
     gte_stlvnl(&diff);
     DVECTOR posOnScreen;
     gte_stsxy(&posOnScreen);
     posOnScreen.vy = (sint16)((diff.vy >> 2) + pshift);
-    if (diff.vx <= diff.vz && (sint32)(0U - (uint32)diff.vx) <= diff.vz)
-        SingleColorTex(&posOnScreen, &color, 16, 16, 0, (sint32)((uint32)Draw::gViewOtSize - 2U));
+    if (diff.vx <= diff.vz && -diff.vx <= diff.vz)
+        SingleColorTex(&posOnScreen, &color, 16, 16, 0, (Draw::gViewOtSize - 2));
 }

@@ -15,13 +15,11 @@ void iSNDpsxmemconstrain(uint32 *offset, uint32 *length)
     }
     uint32 available = *length;
     uint32 end = soundSpuMemory.endUnit;
-    if ((sint32)end < (sint32)(position + available))
-        *length = end - position;
+    if ((sint32)end < (sint32)(position + available)) *length = end - position;
     position = *offset;
     available = *length;
     uint32 limit = soundSpuMemory.limitUnit;
-    if ((sint32)limit < (sint32)(position + available))
-        *length = limit - position;
+    if ((sint32)limit < (sint32)(position + available)) *length = limit - position;
 }
 
 sint32 iSNDpsxmalloc(sint32 size)
@@ -29,7 +27,7 @@ sint32 iSNDpsxmalloc(sint32 size)
     FUNCTION_MARKER(0x8010A5CC, "NFS4.EXE");
     if (soundSpuMemory.allocationCount >= 128)
         return 0;
-    sint32 units = (sint32)(((uint32)(size)) + 63u) >> 6;
+    sint32 units = (((size)) + 63) >> 6;
     sint32 index = 0;
     uint32 offset;
     uint32 length;
@@ -39,7 +37,7 @@ sint32 iSNDpsxmalloc(sint32 size)
             offset = soundSpuMemory.firstUnit;
         else
             offset = soundSpuMemory.allocations[index - 1].offsetUnits + soundSpuMemory.allocations[index - 1].lengthUnits;
-        length = ((uint32)(soundSpuMemory.allocations[index].offsetUnits)) - offset;
+        length = ((soundSpuMemory.allocations[index].offsetUnits)) - offset;
         iSNDpsxmemconstrain(&offset, &length);
         if ((sint32)length >= units)
             break;
@@ -50,7 +48,7 @@ sint32 iSNDpsxmalloc(sint32 size)
             offset = soundSpuMemory.firstUnit;
         else
             offset = soundSpuMemory.allocations[index - 1].offsetUnits + soundSpuMemory.allocations[index - 1].lengthUnits;
-        length = ((uint32)(soundSpuMemory.endUnit)) - offset;
+        length = ((soundSpuMemory.endUnit)) - offset;
         iSNDpsxmemconstrain(&offset, &length);
         if ((sint32)length < units)
             return 0;
@@ -63,7 +61,7 @@ sint32 iSNDpsxmalloc(sint32 size)
     soundSpuMemory.allocations[index].lengthUnits = (uint16)units;
     soundSpuMemory.allocations[index].offsetUnits = (uint16)offset;
     ++soundSpuMemory.allocationCount;
-    return (sint32)(offset << 6);
+    return (offset << 6);
 }
 
 sint32 iSNDpsxfree(sint32 address)

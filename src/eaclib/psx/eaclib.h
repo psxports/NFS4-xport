@@ -288,7 +288,7 @@ uint32 asyncloadfile(const char *name, uint32 flags);
 #ifdef __cplusplus
 uint32 asyncloadfilecallback(const char *name, uint32 flags, NativeAsyncCallback callback);
 void synccallback(uint32 operation, uint32 result, void *userData);
-sint32 syncblockio(sint32 fileHandle, sint32 offset, void *destination, sint32 length, sint32 priority, NativeReadOperation reader);
+sint32 syncblockio(NativeFileSlot *fileHandle, sint32 offset, void *destination, sint32 length, sint32 priority, NativeReadOperation reader);
 void iFILE_perror(NativeFileOperation *operation);
 NativeFileOperation *reserveop(void);
 void freeop(NativeFileOperation *operation);

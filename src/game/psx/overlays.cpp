@@ -22,10 +22,9 @@ void OptionsBarThing(sint32 x, sint32 y, sint32 w, sint32 h)
     char *text = TextSys::Word(0x40);
     char *measureText = TextSys::Word(0x40);
     sint32 width = Hud::BuildString(measureText, 0, 0, 0, 0, true);
-    uint32 bottom = (uint32)y + (uint32)h;
-    Hud::BuildString(text, (sint32)(160U - (uint32)(width >> 1)),
-        (sint32)(bottom - 6U), 0xBEBE, 0, false);
-    Hud::FBuildF4(0, x, (sint32)(bottom - 8U), w, 8, 0, 0, 0);
+    uint32 bottom = y + (uint32)h;
+    Hud::BuildString(text, (160 - ((width >> 1))), (bottom - 6U), 0xBEBE, 0, false);
+    Hud::FBuildF4(0, x, (bottom - 8U), w, 8, 0, 0, 0);
     Hud::GoTpage(0);
 }
 
@@ -54,7 +53,7 @@ void RaceSummary(void)
         Font::TextXY(TextSys::Word(0x3C), colbestlap, headerY);
     sint16 rowBase = (sint16)(135 - halfHeight);
     Hud::FBuildF4(0, HUD_STATS_POS_X, rowBase + 12, HUD_STATS_SIZE_W, 1, 0, 0, 0);
-    sint32 lineHeight = sint32(HUD_STATS_SIZE_H) - 8;
+    sint32 lineHeight = HUD_STATS_SIZE_H - 8;
     Hud::FBuildF4(0, colname - 2, HUD_STATS_POS_Y, 1, lineHeight, 0, 0, 0);
     Hud::FBuildF4(0, colcar - 2, HUD_STATS_POS_Y, 1, lineHeight, 0, 0, 0);
     Hud::FBuildF4(0, coltime - 2, HUD_STATS_POS_Y, 1, lineHeight, 0, 0, 0);
@@ -64,11 +63,11 @@ void RaceSummary(void)
     for (sint16 i = 0; i < Cars::gNumRaceCars; ++i)
     {
         sint32 pos = Cars::gRaceCarList[i]->stats.finalPosition;
-        if ((sint32)(uint32(pos) * 2U + 4U) >= StatsTimer[0])
+        if (((pos * 2) + 4) >= StatsTimer[0])
             continue;
         Font::TextColor((Cars::gRaceCarList[i]->carFlags & 4) != 0 ? 3 : 4);
         sprintf(string, "%d", pos);
-        sint32 rowY = (sint32)(uint32(rowBase) + uint32(pos) * 12U);
+        sint32 rowY = (rowBase + (pos * 12));
         Font::TextXY(string, HUD_STATS_POS_X | 1, rowY);
         Font::TextColor(3);
         sprintf(string, "%s", Cars::gRaceCarList[i]->carInfo->driver);
@@ -122,8 +121,7 @@ void RaceStatistics(void)
     for (sint16 i = 0; i < Cars::gNumHumanRaceCars; ++i)
     {
         sint32 driverWidth = textpixels(Cars::gRaceCarList[i]->carInfo->driver);
-        Hud::FBuildF4(0, col2 - 2, headerY + 11, 1,
-            sint32(HUD_STATS_SIZE_H) - ((headerY - HUD_STATS_POS_Y) + 19), 0, 0, 0);
+        Hud::FBuildF4(0, col2 - 2, headerY + 11, 1, sint32(HUD_STATS_SIZE_H) - ((headerY - HUD_STATS_POS_Y) + 19), 0, 0, 0);
         if (i > 0)
             Hud::FBuildF4(0, col1 - 2, HUD_STATS_POS_Y, 1, sint32(HUD_STATS_SIZE_H) - 8, 0, 0, 0);
         if (StatsTimer[1] > 2)
@@ -143,20 +141,20 @@ void RaceStatistics(void)
                 memcpy(&lapTime, reinterpret_cast<uint8 *>(Cars::gHumanRaceCarList[i]) + offset, sizeof(lapTime));
                 Font::TextColor(lapTime != 0 && lapTime == Cars::gHumanRaceCarList[i]->stats.finalBestLap ? 3 : 4);
                 sprintf(string, TextSys::Word(0x34), sint32(j) + 1);
-                sint32 lapY = headerY + sint32(j) * 12 + 12;
+                sint32 lapY = (headerY + (j * 12)) + 12;
                 Font::TextXY(string, col1, lapY);
                 memcpy(&lapTime, reinterpret_cast<uint8 *>(Cars::gHumanRaceCarList[i]) + offset, sizeof(lapTime));
                 Hud::ParseTime(lapTime, string);
                 Font::TextXY(string, col2 + 5, lapY);
             }
         }
-        if ((sint32)(uint32(GameSetup::gData.numLaps) * 2U + 4U) < StatsTimer[1])
+        if (((GameSetup::gData.numLaps * 2) + 4) < StatsTimer[1])
         {
             sprintf(string, TextSys::Word(0x37));
             Font::TextColor(3);
-            sint32 totalY = (sint32)(uint32(headerY) + uint32(GameSetup::gData.numLaps) * 12U);
+            sint32 totalY = (headerY + (GameSetup::gData.numLaps * 12));
             if (GameSetup::gData.numLaps != 1)
-                totalY = (sint32)(uint32(totalY) + 12U);
+                totalY = (totalY + 12);
             Font::TextXY(string, col1, totalY);
             if (GameSetup::gData.pinkSlipsForfeit == i)
                 sprintf(string, TextSys::Word(0x36));
@@ -168,12 +166,12 @@ void RaceStatistics(void)
                 sprintf(string, TextSys::Word(0x35));
             sint32 timeY = headerY;
             if (GameSetup::gData.numLaps != 1)
-                timeY = (sint32)(uint32(timeY) + uint32(GameSetup::gData.numLaps) * 12U);
-            Font::TextXY(string, col2 + 5, (sint32)(uint32(timeY) + 12U));
+                timeY = (timeY + (GameSetup::gData.numLaps * 12));
+            Font::TextXY(string, col2 + 5, (timeY + 12));
         }
         if (GameSetup::gData.raceType == 1)
         {
-            if ((sint32)(uint32(GameSetup::gData.numLaps) * 2U + 6U) < StatsTimer[1])
+            if (((GameSetup::gData.numLaps * 2) + 6) < StatsTimer[1])
             {
                 sprintf(string, TextSys::Word(0x3E));
                 Font::TextColor(3);
@@ -181,7 +179,7 @@ void RaceStatistics(void)
                 sprintf(string, "%d", Cars::gHumanRaceCarList[i]->stats.finalNumWarnings);
                 Font::TextXY(string, col2 + 5, HUD_STATS_HOTPURSUIT_Y + 1);
             }
-            if ((sint32)(uint32(GameSetup::gData.numLaps) * 2U + 8U) < StatsTimer[1])
+            if (((GameSetup::gData.numLaps * 2) + 8) < StatsTimer[1])
             {
                 sprintf(string, TextSys::Word(0x3F));
                 Font::TextColor(3);
@@ -214,7 +212,7 @@ void Hud::BTCStats(sint16 player, bool postgame)
     if (postgame)
     {
         sint32 caught;
-        sint32 last = sint32(player) * 10 + NextPerp[player] - 1;
+        sint32 last = ((player * 10) + NextPerp[player]) - 1;
         if (player == 0 && NextPerp[player] == 0)
             memcpy(&caught, &gCopMarkerColor[11], sizeof(caught));
         else
@@ -223,8 +221,7 @@ void Hud::BTCStats(sint16 player, bool postgame)
     }
     uint16 HUD_STATS_SIZE_W = PLAYERWIDTH + 6;
     sint16 HUD_STATS_POS_X = 160 - (PLAYERWIDTH >> 1);
-    sint16 HUD_STATS_SIZE_H = (sint16)((sint32(NextPerp[player]) + 1) * 12 + 22 +
-        (showtimeleft ? 12 : 0) + (postgame ? 8 : 0) + (showname ? 12 : 0));
+    sint16 HUD_STATS_SIZE_H = (sint16)((sint32(NextPerp[player]) + 1) * 12 + 22 + (showtimeleft ? 12 : 0) + (postgame ? 8 : 0) + (showname ? 12 : 0));
     sint32 halfHeight = sint32(HUD_STATS_SIZE_H) >> 1;
     sint16 HUD_STATS_POS_Y = (sint16)(120 - halfHeight);
     sint32 titleWidth = textpixels(TextSys::Word(postgame ? 0x48 : 0x47));
@@ -234,8 +231,7 @@ void Hud::BTCStats(sint16 player, bool postgame)
     col[2] = HUD_STATS_POS_X + 7 + (chasinghuman ? 12 : 80);
     col[3] = HUD_STATS_POS_X + 7 + (chasinghuman ? 80 : 150);
     Font::TextColor(6);
-    Font::TextXY(TextSys::Word(postgame ? 0x48 : 0x47),
-        (sint16)(160U - uint32(titleWidth >> 1)), (sint16)(118 - halfHeight));
+    Font::TextXY(TextSys::Word(postgame ? 0x48 : 0x47), (sint16)(160U - uint32(titleWidth >> 1)), (sint16)(118 - halfHeight));
     sint16 startY = (sint16)(133 - halfHeight);
     if (showname)
     {
@@ -248,15 +244,13 @@ void Hud::BTCStats(sint16 player, bool postgame)
         Font::TextXY(TextSys::Word(0x4A), col[1], startY);
     Font::TextXY(TextSys::Word(0x4B), col[2], startY);
     Font::TextXY(TextSys::Word(0x4C), col[3], startY);
-    sint32 ruleY = sint32(startY) + 15;
+    sint32 ruleY = startY + 15;
     FBuildF4(0, HUD_STATS_POS_X, ruleY, HUD_STATS_SIZE_W, 1, 0, 0, 0);
-    sint32 lineHeight = sint32(HUD_STATS_SIZE_H) - (ruleY - HUD_STATS_POS_Y) -
-        (postgame ? 8 : 0) - (showtimeleft ? 16 : 0);
+    sint32 lineHeight = ((HUD_STATS_SIZE_H - (ruleY - HUD_STATS_POS_Y)) - (postgame ? 8 : 0)) - (showtimeleft ? 16 : 0);
     for (sint16 i = 1; i < 4; ++i)
         FBuildF4(0, col[i] - 2, ruleY, 1, lineHeight, 0, 0, 0);
     if (showtimeleft)
-        FBuildF4(0, HUD_STATS_POS_X, sint32(HUD_STATS_POS_Y) + HUD_STATS_SIZE_H -
-            (postgame ? 24 : 16), HUD_STATS_SIZE_W, 1, 0, 0, 0);
+        FBuildF4(0, HUD_STATS_POS_X, sint32(HUD_STATS_POS_Y) + HUD_STATS_SIZE_H - (postgame ? 24 : 16), HUD_STATS_SIZE_W, 1, 0, 0, 0);
     startY = (sint16)(startY + 15);
     char string[40];
     sint16 i = 0;
@@ -266,7 +260,7 @@ void Hud::BTCStats(sint16 player, bool postgame)
             continue;
         Font::TextColor(4);
         sprintf(string, "%d", sint32(i) + 1);
-        sint32 rowY = sint32(startY) + sint32(i) * 12;
+        sint32 rowY = startY + (i * 12);
         Font::TextXY(string, col[0], rowY);
         if (!chasinghuman)
         {
@@ -282,7 +276,7 @@ void Hud::BTCStats(sint16 player, bool postgame)
         Font::TextColor(3);
         ParseTime(FinalBTC_Countdown, string);
         char *label = TextSys::Word(0x4D);
-        sint32 rowY = sint32(startY) + sint32(i) * 12 + 2;
+        sint32 rowY = (startY + (i * 12)) + 2;
         Font::TextXY(label, col[0], rowY);
         Font::TextXY(string, col[chasinghuman ? 3 : 2], rowY);
     }
@@ -315,7 +309,7 @@ void Hud::RenderStatsView(void)
     if (screen == 0)
     {
         StatsTimer[1] = 0;
-        sint32 time = (sint32)(uint32(StatsTimer[0]) + 1U);
+        sint32 time = (StatsTimer[0] + 1);
         StatsTimer[0] = time;
         if (time > 10000)
             StatsTimer[0] = 10000;
@@ -327,7 +321,7 @@ void Hud::RenderStatsView(void)
     else
     {
         StatsTimer[0] = 0;
-        sint32 time = (sint32)(uint32(StatsTimer[1]) + 1U);
+        sint32 time = (StatsTimer[1] + 1);
         StatsTimer[1] = time;
         if (time > 10000)
             StatsTimer[1] = 10000;

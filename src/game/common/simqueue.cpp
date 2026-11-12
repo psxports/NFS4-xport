@@ -78,7 +78,7 @@ sint32 SimQueue::Put(sint32 pIndex, Input::tResults *val)
     Input::tResults value = *val;
     inputQueue.Buffer[pIndex][tail] = value;
     inputQueue.Validity[pIndex][tail] = kVALID;
-    inputQueue.TailTime[pIndex] = (sint32)((uint32)inputQueue.TailTime[pIndex] + 1);
+    inputQueue.TailTime[pIndex] = (inputQueue.TailTime[pIndex] + 1);
     if (GameSetup::gData.commMode == 0)
     {
         if (GameSetup::gData.numPlayerRaceCars >= 2 && pIndex == 0)
@@ -86,7 +86,7 @@ sint32 SimQueue::Put(sint32 pIndex, Input::tResults *val)
     }
     else if (GameSetup::gData.commMode != 1 || pIndex == 0)
         return 1;
-    gSimQueue_Ticker = (sint32)((uint32)gSimQueue_Ticker + 1);
+    gSimQueue_Ticker = (gSimQueue_Ticker + 1);
     return 1;
 }
 
@@ -102,7 +102,7 @@ void SimQueue::SetCurrentInput(sint32 time)
     }
     for (sint32 pIndex = 0; pIndex < GameSetup::gData.numPlayerRaceCars; ++pIndex)
         inputQueue.Validity[pIndex][i] = kINVALID;
-    inputQueue.HeadTime = (sint32)((uint32)inputQueue.HeadTime + 1);
+    inputQueue.HeadTime = (inputQueue.HeadTime + 1);
 }
 
 void SimQueue::GetCurrentInput(sint32 pIndex, Input::tResults *out)
@@ -129,6 +129,6 @@ sint32 SimQueue::IsBlocking(sint32 pIndex)
         return 0;
     if (GameSetup::gData.commMode != 0 && GameSetup::gData.commMode != 1)
         return 0;
-    sint32 limit = (sint32)((uint32)inputQueue.HeadTime + (uint32)maxTicksPerFrame);
+    sint32 limit = (inputQueue.HeadTime + maxTicksPerFrame);
     return inputQueue.TailTime[0] >= limit;
 }

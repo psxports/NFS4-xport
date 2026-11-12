@@ -11,7 +11,6 @@ extern "C" sint32 VoxSentence_GetNumPhrases(const uint8 *sentence)
 sint32 iSPCH::MatchSample(sint32 bank, SPCHSample *sample, uint8 *component, sint32 *parameters)
 {
     FUNCTION_MARKER(0x8010077C, "NFS4.EXE");
-    (void)bank;
     sint32 count = (sint8)component[3];
     if (count >= 5)
         return 0;
@@ -96,8 +95,8 @@ sint32 iSPCH::CheckTemplateSample(SPCHSampleChoice *choice, uint8 *bank, sint32 
     sint32 multiplier = choice->offsetMultiplier;
     if (multiplier >= count)
         return 0;
-    sint32 bit = (sint32)(uint32(index) + uint32(bank[3]) * uint32(multiplier));
-    return (sint32)CheckBankBit(bank, bit);
+    sint32 bit = (index + (bank[3] * multiplier));
+    return CheckBankBit(bank, bit);
 }
 
 sint32 iSPCH::SampleExists(SPCHSampleChoice *choice, uint8 *bank, sint32 index)
@@ -109,7 +108,7 @@ sint32 iSPCH::SampleExists(SPCHSampleChoice *choice, uint8 *bank, sint32 index)
     if (choice->offsetMultiplier != -1)
         result = CheckTemplateSample(choice, bank, index);
     if (bank[2] & 0xF0)
-        result = (sint32)CheckBankBit(bank, (sint32)(uint32(index) + 8u));
+        result = CheckBankBit(bank, (index + 8));
     return result;
 }
 
@@ -124,9 +123,7 @@ sint32 iSPCH::ChooseSamples(SPCHSampleChoice *choice, sint32 capacity, uint8 *co
     for (sint32 i = 0; i < count; ++i)
     {
         SPCHSample sample;
-        if (UnPackSample(bank, i, &sample) != 0 &&
-            MatchSample(bankIndex, &sample, component, parameters) != 0 &&
-            SampleExists(choice, bank, i) != 0)
+        if (UnPackSample(bank, i, &sample) != 0 && MatchSample(bankIndex, &sample, component, parameters) != 0 && SampleExists(choice, bank, i) != 0)
         {
             ispch_gPickSamples[output] = (uint8)i;
             ++selected;
@@ -155,7 +152,7 @@ sint32 iSPCH::ConvertTime(sint32 size)
     sint32 rate = gDataRate;
     if (rate == 0)
         return 0;
-    sint32 scaled = (sint32)(uint32(size) * 100u);
+    sint32 scaled = (size * 100);
     if (rate == -1 && scaled == (-2147483647 - 1))
         abort();
     return scaled / rate;
@@ -252,8 +249,8 @@ sint32 iSPCH::SentenceGetChoices(uint8 *sentence, sint32 *parameters, uint32 req
             }
             return 0;
         }
-        sint32 available = ChooseSamples(choice, (sint32)(100u - uint32(total)), component, parameters);
-        total = (sint32)(uint32(total) + uint32(available));
+        sint32 available = ChooseSamples(choice, (100 - total), component, parameters);
+        total = (total + available);
         if (available == 0)
             return 0;
         choice->unknown4 = (sint16)available;
@@ -290,12 +287,12 @@ sint32 iSPCH::IterateChoice(uint8 *sentence)
     sint16 start;
     memcpy(&length, choice + 4, sizeof(length));
     memcpy(&start, choice + 6, sizeof(start));
-    sint32 limit = sint32(start) + sint32(length);
+    sint32 limit = start + length;
     for (;;)
     {
         uint16 pick;
         memcpy(&pick, choice + 8, sizeof(pick));
-        pick = (uint16)(pick + 1u);
+        pick = (uint16)(pick + 1);
         memcpy(choice + 8, &pick, sizeof(pick));
         sint16 signedPick;
         memcpy(&signedPick, &pick, sizeof(signedPick));
@@ -307,7 +304,7 @@ sint32 iSPCH::IterateChoice(uint8 *sentence)
         choice -= 12;
         memcpy(&length, choice + 4, sizeof(length));
         memcpy(&start, choice + 6, sizeof(start));
-        limit = sint32(start) + sint32(length);
+        limit = start + length;
         if (index < 0)
             return 1;
     }
@@ -441,7 +438,7 @@ void iSPCH::PlayChosen(void)
         ConstantRuleSet(gSentenceChoice.definition, gSentenceChoice.sentence);
         MakeSampleRequests(gSentenceChoice.sentence, event);
         if (event == gVoxInGame.event)
-            gVoxInGame.count = (sint32)((uint32)gVoxInGame.count + 1);
+            gVoxInGame.count = (gVoxInGame.count + 1);
         else
         {
             gVoxInGame.event = event;
@@ -462,7 +459,7 @@ sint32 iSPCH::ChooseSentence(sint32 *parameters)
     sint32 filter = gFilterSetting;
     if (gVoxEvents.unknown4 == 1)
     {
-        filter = (sint32)(uint32(filter) + 1u);
+        filter = (filter + 1);
         if (filter > 2)
             filter = 2;
     }

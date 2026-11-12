@@ -47,7 +47,7 @@ struct NativeFileSlot
 {
     union
     {
-        uint32 descriptor;
+        intptr descriptor;
         ::FILE *stream;
         NativeBigArchive *archive;
     };
@@ -88,12 +88,12 @@ namespace XPORT_UNPLACED
 class FILE
 {
 public:
-    static sint32 opensync(const char *filename, sint32 mode, sint32 priority, sint32 *handle);
-    static sint32 readsync(sint32 handle, sint32 offset, void *destination, sint32 size, sint32 priority);
-    static sint32 closesync(sint32 handle, sint32 priority);
-    static sint32 sizesync(sint32 handle, sint32 priority);
-    static sint32 addbigsync(const char *name, uint32 flags, sint32 priority, sint32 *handle);
-    static sint32 delbigsync(sint32 handle, sint32 priority);
+    static sint32 opensync(const char *filename, sint32 mode, sint32 priority, NativeFileSlot **handle);
+    static sint32 readsync(NativeFileSlot *handle, sint32 offset, void *destination, sint32 size, sint32 priority);
+    static sint32 closesync(NativeFileSlot *handle, sint32 priority);
+    static sint32 sizesync(NativeFileSlot *handle, sint32 priority);
+    static sint32 addbigsync(const char *name, uint32 flags, sint32 priority, NativeFileSlot **handle);
+    static sint32 delbigsync(NativeFileSlot *handle, sint32 priority);
     static sint32 init(sint32 fileCount, sint32 bufferSize, sint32 operationCount);
     static sint32 initwithmem(sint32 fileCount, sint32 bufferSize, sint32 operationCount, void *memory);
     static sint32 overhead(sint32 fileCount, sint32 bufferSize, sint32 operationCount);
@@ -103,13 +103,13 @@ public:
     static void priorityop(uint32 operation, sint32 priority);
     static void cancelop(uint32 operation);
     static sint32 waitop(uint32 operation);
-    static sint32 completeop(sint32 handle);
+    static intptr completeop(sint32 handle);
     static uint32 open(const char *name, sint32 mode, sint32 priority, void *userData);
-    static uint32 close(sint32 filehandle, sint32 priority, void *userData);
-    static sint32 read(sint32 filehandle, sint32 offset, void *destination, sint32 size, sint32 priority, void *userData);
-    static uint32 size(sint32 filehandle, sint32 priority, void *userData);
+    static uint32 close(NativeFileSlot *filehandle, sint32 priority, void *userData);
+    static sint32 read(NativeFileSlot *filehandle, sint32 offset, void *destination, sint32 size, sint32 priority, void *userData);
+    static uint32 size(NativeFileSlot *filehandle, sint32 priority, void *userData);
     static uint32 addbig(const char *name, uint32 flags, sint32 priority, void *userData);
-    static uint32 delbig(sint32 handle, sint32 priority, void *userData);
+    static uint32 delbig(NativeFileSlot *handle, sint32 priority, void *userData);
     static NativeFileAtomicResult atomic(NativeFileAtomicResult (*callback)(sint32, void *), uint32 unused, sint32 priority, void *userData);
 };
 }

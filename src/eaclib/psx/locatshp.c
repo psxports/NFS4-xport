@@ -11,17 +11,17 @@ void *locateshape(void *file, const char *name)
     memcpy(&wanted, name, 4);
     if (count == 0)
         return 0;
-    uint32 index = count - 1U;
+    uint32 index = count - 1;
     while (index != 0)
     {
         uint32 id;
-        uint32 entryOffset = index * 8U + 16U;
+        uint32 entryOffset = index * 8 + 16U;
         memcpy(&id, base + entryOffset, 4);
         if (id == wanted)
             break;
         --index;
     }
-    uint32 entryOffset = index * 8U + 16U;
+    uint32 entryOffset = index * 8 + 16U;
     uint32 id;
     memcpy(&id, base + entryOffset, 4);
     if (id != wanted)

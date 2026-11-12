@@ -20,7 +20,7 @@ void xformy(matrixtdef *matrix, sint32 angle)
     matrix->m[5] = 0;
     matrix->m[7] = 0;
     matrix->m[0] = cosine;
-    matrix->m[2] = (sint32)(0U - (uint32)sine);
+    matrix->m[2] = (-sine);
     matrix->m[6] = sine;
     matrix->m[8] = cosine;
 }

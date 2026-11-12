@@ -69,19 +69,19 @@ sint32 AIHigh_BTC_Perp::IsFalseArrest(void)
         Car::tObj *cop = Cars::gList[carLoop];
         if ((cop->carFlags & 0x200) != 0) {
             coorddef carCopVector;
-            carCopVector.x = (sint32)((uint32)cop->N.position.x - (uint32)carObj_->N.position.x);
-            carCopVector.y = (sint32)((uint32)cop->N.position.y - (uint32)carObj_->N.position.y);
-            carCopVector.z = (sint32)((uint32)cop->N.position.z - (uint32)carObj_->N.position.z);
+            carCopVector.x = (cop->N.position.x - carObj_->N.position.x);
+            carCopVector.y = (cop->N.position.y - carObj_->N.position.y);
+            carCopVector.z = (cop->N.position.z - carObj_->N.position.z);
             sint32 first = fixedmult(carCopVector.x, carObj_->N.orientMat.m[0]);
             sint32 second = fixedmult(carCopVector.y, carObj_->N.orientMat.m[1]);
             sint32 third = fixedmult(carCopVector.z, carObj_->N.orientMat.m[2]);
-            sint32 xDot = (sint32)((uint32)first + (uint32)second + (uint32)third);
+            sint32 xDot = ((first + second) + third);
             first = fixedmult(carCopVector.x, carObj_->N.orientMat.m[6]);
             second = fixedmult(carCopVector.y, carObj_->N.orientMat.m[7]);
             third = fixedmult(carCopVector.z, carObj_->N.orientMat.m[8]);
-            sint32 zDot = (sint32)((uint32)first + (uint32)second + (uint32)third);
+            sint32 zDot = ((first + second) + third);
             if (xDot < 0)
-                xDot = (sint32)(0 - (uint32)xDot);
+                xDot = (-xDot);
             if (xDot > 0x30000 || zDot > 0x80000 || zDot < 0) {
                 AudioClc::HonkHorn(carObj_, 2, 128, 32);
                 return 1;
@@ -118,12 +118,12 @@ void AIHigh_BTC_Perp::HandlePullOver(void)
     if (pullOverMode_ != PULLOVER_NONE)
     {
         NotifyCopsOfArrest();
-        beatingTicksLeft_ = (sint32)((uint32)beatingTicksLeft_ - (uint32)AI::elapsedTime);
+        beatingTicksLeft_ = (beatingTicksLeft_ - AI::elapsedTime);
         if (beatingTicksLeft_ <= 0 && hudActivated_ == 0)
         {
             if (IsFalseArrest() != 0)
             {
-                lastPullOverTime_ = (sint32)((uint32)simGlobal.gameTicks - 640u);
+                lastPullOverTime_ = (simGlobal.gameTicks - 640);
                 NotifyCopsOfFalseArrest();
                 carObj_->pullOver = 0;
                 pullOverMode_ = PULLOVER_NONE;
@@ -136,8 +136,7 @@ void AIHigh_BTC_Perp::HandlePullOver(void)
             }
         }
         sint32 userReadyToContinue = CheckForControlsPressed();
-        if (beatingTicksLeft_ <= 0 && pullOverMode_ != PULLOVER_NONE && userReadyToContinue != 0 &&
-            hudActivated_ == 1 && (sint32)((uint32)simGlobal.gameTicks - (uint32)lastPullOverTime_) > 320)
+        if (beatingTicksLeft_ <= 0 && pullOverMode_ != PULLOVER_NONE && userReadyToContinue != 0 && hudActivated_ == 1 && (simGlobal.gameTicks - lastPullOverTime_) > 320)
         {
             lastPullOverTime_ = simGlobal.gameTicks;
             basicPerpInfo_.crime_ = CRIME_NONE;
@@ -228,8 +227,7 @@ AIHigh_BTC_HumanCop *AIHigh_BTC_Perp::CheckForActivation(void)
     for (sint32 carLoop = 0; carLoop < count; ++carLoop) {
         Car::tObj *humanCopCarObj = Cars::gList[carLoop];
         if ((humanCopCarObj->carFlags & 0x200) != 0 && humanCopCarObj->N.active != 0) {
-            AIHigh_BTC_HumanCop *carHigh = static_cast<AIHigh_BTC_HumanCop *>(
-                highLevelAIObjs[humanCopCarObj->carIndex]);
+            AIHigh_BTC_HumanCop *carHigh = static_cast<AIHigh_BTC_HumanCop *>( highLevelAIObjs[humanCopCarObj->carIndex]);
             if (carHigh->copIndex_ == 0 && carHigh->needPerp_ != 0) {
                 Car::tObj *car = carObj_;
                 if ((car->carFlags & 4) != 0)
@@ -254,14 +252,14 @@ void AIHigh_BTC_HumanPerp::NewStage(AIHigh_BTC_HumanCop *chaserCop)
     Car::tObj *car = carObj_;
     randtemp = product;
     fastRandom = product & 0xFFFF;
-    sint32 offset = (sint32)((uint32)humanDirection << 4);
+    sint32 offset = ((uint32)humanDirection << 4);
     sint32 chaserSlice = chaserCop->carObj_->N.simRoadInfo.slice;
-    sint32 nextSlice = (sint32)((uint32)chaserSlice + (uint32)offset);
+    sint32 nextSlice = (chaserSlice + offset);
     if (offset >= 0) {
         if (nextSlice >= gNumSlices)
-            nextSlice = (sint32)((uint32)nextSlice - (uint32)gNumSlices);
+            nextSlice = (nextSlice - gNumSlices);
     } else if (nextSlice < 0) {
-        nextSlice = (sint32)((uint32)nextSlice + (uint32)gNumSlices);
+        nextSlice = (nextSlice + gNumSlices);
     }
     car->N.simRoadInfo.slice = (sint16)nextSlice;
     carObj_->desiredDirection = humanDirection;
@@ -350,13 +348,13 @@ void AIHigh_BTC_AIPerp::AvoidCops(void)
         sint32 distance = closestCopCarDistanceMeters_;
         sint32 absDistance = distance;
         if (absDistance < 0)
-            absDistance = (sint32)(0 - (uint32)absDistance);
+            absDistance = (-absDistance);
         if (absDistance >= 0x1F40000)
             break;
-        sint32 xPosition = (sint32)(((uint32)car->roadPosition - (uint32)cop->roadPosition) * (uint32)direction);
-        sint32 zPosition = (sint32)((uint32)distance * (uint32)direction);
+        sint32 xPosition = ((car->roadPosition - cop->roadPosition) * direction);
+        sint32 zPosition = (distance * direction);
         sint32 halfWidth = cop->N.dimension.x;
-        sint32 negativeHalfWidth = (sint32)(0 - (uint32)halfWidth);
+        sint32 negativeHalfWidth = (-halfWidth);
         sint32 xPositionIndex = 0;
         if (xPosition >= negativeHalfWidth)
             xPositionIndex = xPosition > halfWidth ? 2 : 1;
@@ -367,7 +365,7 @@ void AIHigh_BTC_AIPerp::AvoidCops(void)
             if (zPosition <= halfLength) {
                 zPositionIndex = 4;
                 if (zPosition >= -0x190000) {
-                    sint32 negativeHalfLength = (sint32)(0 - (uint32)halfLength);
+                    sint32 negativeHalfLength = (-halfLength);
                     zPositionIndex = zPosition < negativeHalfLength ? 3 : 2;
                 }
             }
@@ -383,11 +381,11 @@ void AIHigh_BTC_AIPerp::AvoidCops(void)
             if (sample < brakeChance) {
                 sint32 copSpeed = closestCopCarObj_->currentSpeed;
                 if (copSpeed < 0)
-                    copSpeed = (sint32)(0 - (uint32)copSpeed);
+                    copSpeed = (-copSpeed);
                 if (copSpeed > 0x11C71C) {
                     sint32 ownSpeed = car->currentSpeed;
                     if (ownSpeed < 0)
-                        ownSpeed = (sint32)(0 - (uint32)ownSpeed);
+                        ownSpeed = (-ownSpeed);
                     if (ownSpeed > 0x11C71C) {
                         doBrake = 1;
                         break;
@@ -397,21 +395,21 @@ void AIHigh_BTC_AIPerp::AvoidCops(void)
         }
         if ((strategyChart[zPositionIndex][xPositionIndex] & 2) != 0) {
             uint32 product = fastRandom * randSeed;
-            uint32 turnChance = (uint32)AIHigh::BTC_uTurnProb1000Skills[GameSetup::gData.skill] * (uint32)AI::elapsedTime;
+            uint32 turnChance = AIHigh::BTC_uTurnProb1000Skills[GameSetup::gData.skill] * (uint32)AI::elapsedTime;
             randtemp = product;
             fastRandom = product & 0xFFFF;
             uint32 sample = (((product >> 8) & 0xFFFF) * 1000) >> 16;
             if (sample < turnChance) {
                 sint32 copSpeed = closestCopCarObj_->currentSpeed;
                 if (copSpeed < 0)
-                    copSpeed = (sint32)(0 - (uint32)copSpeed);
+                    copSpeed = (-copSpeed);
                 if (copSpeed > 0x11C71C) {
                     car = carObj_;
                     sint32 ownSpeed = car->currentSpeed;
                     if (ownSpeed < 0)
-                        ownSpeed = (sint32)(0 - (uint32)ownSpeed);
+                        ownSpeed = (-ownSpeed);
                     if (ownSpeed > 0x11C71C && car->direction == car->desiredDirection)
-                        car->desiredDirection = (sint32)(0 - (uint32)car->direction);
+                        car->desiredDirection = (-car->direction);
                 }
             }
         }
@@ -424,7 +422,7 @@ void AIHigh_BTC_AIPerp::CalculateTimeTillContact(void)
     FUNCTION_MARKER(0x80060710, "NFS4.EXE");
     Car::tObj *cop = closestCopCarObj_;
     if (cop && (uint32)perpMode_ < 2) {
-        sint32 relVel = (sint32)((uint32)carObj_->currentSpeed - (uint32)cop->currentSpeed);
+        sint32 relVel = (carObj_->currentSpeed - cop->currentSpeed);
         sint32 distance = closestCopCarDistanceMeters_;
         sint32 contactTime = 0x3E80000;
         if ((uint32)relVel + 0x7FFF > 0xFFFE) {
@@ -450,7 +448,7 @@ void AIHigh_BTC_AIPerp::FindClosestCop(void)
             sint32 longMetersBetween = AIWorld::ApxSplineDistance(carObj_, cop);
             sint32 absLongMetersBetween = longMetersBetween;
             if (absLongMetersBetween < 0)
-                absLongMetersBetween = (sint32)(0 - (uint32)absLongMetersBetween);
+                absLongMetersBetween = (-absLongMetersBetween);
             if (absLongMetersBetween < closestCopInMetersAbs) {
                 closestCopInMeters = longMetersBetween;
                 closestCopInMetersAbs = absLongMetersBetween;
@@ -494,13 +492,13 @@ void AIHigh_BTC_AIPerp::HighExecute(void)
             perpMode_ = PERPMODE_ESCAPE;
             break;
         case PERPMODE_ESCAPE: {
-            sint32 elapsed = (sint32)((uint32)simGlobal.gameTicks - (uint32)madeContactTime_);
+            sint32 elapsed = (simGlobal.gameTicks - madeContactTime_);
             if (escapeDuration_ < elapsed) {
                 perpMode_ = PERPMODE_CHASEON;
                 ReleaseCops();
             }
-            elapsed = (sint32)((uint32)simGlobal.gameTicks - (uint32)madeContactTime_);
-            if ((sint32)((uint32)escapeDuration_ - 64) < elapsed) {
+            elapsed = (simGlobal.gameTicks - madeContactTime_);
+            if ((escapeDuration_ - 64) < elapsed) {
                 if (Camera::gInfo[0].forceFocus != FOCUS_NORMAL) {
                     Speech::Mobile(originalActivationCop_->carObj_)->Engage(carObj_);
                     Camera::ResetRelPos(3);
@@ -516,11 +514,11 @@ void AIHigh_BTC_AIPerp::HighExecute(void)
             if (otherCarObj->direction == car->direction) {
                 sint32 distance = AIWorld::ApxSplineDistance(car, otherCarObj);
                 car = carObj_;
-                sint32 directedDistance = (sint32)((uint32)distance * (uint32)car->direction);
+                sint32 directedDistance = (distance * car->direction);
                 if (directedDistance > 0) {
                     sint32 speed = car->currentSpeed;
                     if (speed < 0)
-                        speed = (sint32)(0 - (uint32)speed);
+                        speed = (-speed);
                     sint32 requestedSpeed = fixedmult(speed, 0xCCCC);
                     originalActivationCop_->requestedDesiredSpeed_ = requestedSpeed;
                 }
@@ -653,19 +651,19 @@ void AIHigh_BTC_AIPerp::NewStage(AIHigh_BTC_HumanCop *chaserCop)
             escapeDuration_ = 384;
         }
     }
-    sint32 offset = (sint32)((uint32)(placementDistance / 6) * (uint32)placementSide * (uint32)humanDirection);
+    sint32 offset = ((((placementDistance / 6)) * placementSide) * humanDirection);
     Car::tObj *car = carObj_;
-    sint32 nextSlice = (sint32)((uint32)humanCopCarObj->N.simRoadInfo.slice + (uint32)offset);
+    sint32 nextSlice = (humanCopCarObj->N.simRoadInfo.slice + offset);
     if (offset >= 0) {
         if (nextSlice >= gNumSlices)
-            nextSlice = (sint32)((uint32)nextSlice - (uint32)gNumSlices);
+            nextSlice = (nextSlice - gNumSlices);
     } else if (nextSlice < 0) {
-        nextSlice = (sint32)((uint32)nextSlice + (uint32)gNumSlices);
+        nextSlice = (nextSlice + gNumSlices);
     }
     car->N.simRoadInfo.slice = (sint16)nextSlice;
-    sint32 direction = (sint32)((uint32)placementSide * (uint32)humanDirection);
+    sint32 direction = (placementSide * humanDirection);
     if (!placementDirection)
-        direction = (sint32)(0 - (uint32)direction);
+        direction = (-direction);
     carObj_->desiredDirection = direction;
     car = carObj_;
     car->direction = car->desiredDirection;

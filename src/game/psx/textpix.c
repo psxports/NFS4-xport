@@ -17,7 +17,7 @@
             if (ch != 0)
             {
                 sint32 dx = (sint8)ch->advance;
-                stringlen = (sint32)((uint32)stringlen + dx);
+                stringlen = (stringlen + dx);
             }
         }
         return stringlen;

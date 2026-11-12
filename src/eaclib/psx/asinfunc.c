@@ -48,7 +48,7 @@ sint32 intarcsin(sint32 value)
     };
     bool negative = value < 0;
     if (negative)
-        value = (sint32)(0U - (uint32)value);
+        value = (-value);
     sint32 angle;
     if (value <= 0xFA00)
     {
@@ -66,12 +66,12 @@ sint32 intarcsin(sint32 value)
     }
     else
         angle = 256;
-    return negative ? (sint32)(0U - (uint32)angle) : angle;
+    return negative ? -angle : angle;
 }
 
 sint32 intarccos(sint32 value)
 {
     FUNCTION_MARKER(0x800EAD98, "NFS4.EXE");
     sint32 angle = intarcsin(value);
-    return (sint32)(0x100u - (uint32)angle);
+    return (0x100 - angle);
 }

@@ -241,8 +241,7 @@ void GameSetup::StartUp(sint32 *FrontEndDataStream)
                 if (l->v == command)
                     p = l->p;
             if (p != 0) {
-                ptrdiff_t fieldOffset = reinterpret_cast<uint8 *>(p) -
-                    reinterpret_cast<uint8 *>(&gData.carInfo[0]);
+                ptrdiff_t fieldOffset = reinterpret_cast<uint8 *>(p) - reinterpret_cast<uint8 *>(&gData.carInfo[0]);
                 sint32 *field = reinterpret_cast<sint32 *>(reinterpret_cast<uint8 *>(&gData.carInfo[s[1]]) + fieldOffset);
                 *field = s[2];
             }
@@ -260,11 +259,9 @@ void GameSetup::StartUp(sint32 *FrontEndDataStream)
                 if (l->v == command)
                     p = l->p;
             if (p != 0) {
-                if (*s < 0x4b)
-                    *p = s[1];
+                if (*s < 0x4b) *p = s[1];
                 else
-                    for (sint32 i = 0; i < s[1]; ++i)
-                        *p++ = s[i + 2];
+                    for (sint32 i = 0; i < s[1]; ++i) *p++ = s[i + 2];
             }
             if (*s >= 0x4b)
                 s += s[1];

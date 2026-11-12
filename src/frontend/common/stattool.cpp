@@ -58,7 +58,7 @@ void UserNameUpperCaseOneLetter(char *c)
 void Stattool::nCreateIndex(sint32 nNumber, sint32 *nInput, sint16 *nIndex)
 {
     FUNCTION_MARKER(0x8004A868, "FRONT.BIN");
-    sint32 *nTemp = static_cast<sint32 *>(reservememadr("TempSort", (sint32)(((uint32)nNumber + 1U) * 4U), 16));
+    sint32 *nTemp = static_cast<sint32 *>(reservememadr("TempSort", (((nNumber + 1) * 4)), 16));
     for (sint32 j = 0; j < nNumber; ++j) {
         nIndex[j] = (sint16)j;
         nTemp[j] = nInput[j];

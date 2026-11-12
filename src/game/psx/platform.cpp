@@ -67,14 +67,13 @@ void Platform::InitMemory(void)
 char * Platform::ReserveMemory(sint32 size, char *string)
 {
     FUNCTION_MARKER(0x800DC2E8, "NFS4.EXE");
-    (void)string;
     uint32 rounded = (uint32)size + 3;
     if ((sint32)rounded < 0)
         rounded += 3;
-    sint32 length = (sint32)((uint32)((sint32)rounded >> 2) << 2);
+    sint32 length = ((uint32)((sint32)rounded >> 2) << 2);
     char *current = gCurrentMemory;
     char *next = reinterpret_cast<char *>(reinterpret_cast<uintptr_t>(current) + (uintptr_t)length);
-    sint32 used = (sint32)(uint32)(reinterpret_cast<uintptr_t>(next) - reinterpret_cast<uintptr_t>(gLowMemory));
+    sint32 used = ((uint32)(reinterpret_cast<uintptr_t>(next) - reinterpret_cast<uintptr_t>(gLowMemory)));
     if ((sint32)gTotalMemory < used)
         return 0;
     gCurrentMemory = next;
@@ -84,14 +83,13 @@ char * Platform::ReserveMemory(sint32 size, char *string)
 char * Platform::TempReserveMemory(sint32 size, char *string)
 {
     FUNCTION_MARKER(0x800DC334, "NFS4.EXE");
-    (void)string;
     uint32 rounded = (uint32)size + 3;
     if ((sint32)rounded < 0)
         rounded += 3;
-    sint32 length = (sint32)((uint32)((sint32)rounded >> 2) << 2);
+    sint32 length = ((uint32)((sint32)rounded >> 2) << 2);
     char *current = gCurrentMemory;
     char *next = reinterpret_cast<char *>(reinterpret_cast<uintptr_t>(current) + (uintptr_t)length);
-    sint32 used = (sint32)(uint32)(reinterpret_cast<uintptr_t>(next) - reinterpret_cast<uintptr_t>(gLowMemory));
+    sint32 used = ((uint32)(reinterpret_cast<uintptr_t>(next) - reinterpret_cast<uintptr_t>(gLowMemory)));
     if ((sint32)gTotalMemory < used)
         return 0;
     return current;
@@ -100,11 +98,11 @@ char * Platform::TempReserveMemory(sint32 size, char *string)
 void Platform::SysStartUp(void)
 {
     FUNCTION_MARKER(0x800DC378, "NFS4.EXE");
-    if (!gpu_register_packet_range(primitiveMemory.bytes, sizeof(primitiveMemory.bytes)) ||
-        !gpu_register_packet_range(systemAllocationStorage, sizeof(systemAllocationStorage)))
+    if (!gpu_register_packet_range(primitiveMemory.bytes, sizeof(primitiveMemory.bytes)) || !gpu_register_packet_range(systemAllocationStorage, sizeof(systemAllocationStorage)))
         abort();
     uintptr_t aligned = (reinterpret_cast<uintptr_t>(systemAllocationStorage) + 31) & ~(uintptr_t)31;
-    char *endofcode = reinterpret_cast<char *>(aligned + 12);
+    uintptr_t heapStart = (aligned + 12 + sizeof(void *) - 1U) & (~((uintptr_t)sizeof(void *) - 1));
+    char *endofcode = reinterpret_cast<char *>(heapStart);
     disablecd = 0;
     nfs_sysInfo.userRam = SYSTEM_ALLOCATION_BYTES;
     initmemadr(endofcode, SYSTEM_ALLOCATION_BYTES);
@@ -143,7 +141,6 @@ void Platform::ResetDCTBuffer(void)
 char * Platform::GetDCTBuffer(sint32 size, char *string)
 {
     FUNCTION_MARKER(0x800DC4B4, "NFS4.EXE");
-    (void)string;
     char *p = gDctXtraMem;
     if (p == 0 || size < 0 || size > dctWorkspace.bytes + sizeof(dctWorkspace.bytes) - p)
         abort();

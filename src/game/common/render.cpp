@@ -231,7 +231,7 @@ void StampImage(sint32 xo, sint32 depth)
     if ((Render::gBlurEffectMode & 2) != 0)
         frame = gFlip;
     else
-        frame = (sint32)(1U - (uint32)gFlip);
+        frame = (1 - gFlip);
     if ((Render::gBlurEffectMode & 4) == 0)
         xo = 0;
     Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
@@ -244,7 +244,7 @@ void StampImage(sint32 xo, sint32 depth)
         setaddr(ot, ft4_p);
         setlen(ft4_p, 9);
         ft4_p->rgbc.code = 0x2E;
-        sint32 right = (sint32)((uint32)xo + 64U);
+        sint32 right = (xo + 64);
         ft4_p->p[1].xy.x = (sint16)right;
         ft4_p->p[3].xy.x = (sint16)right;
         ft4_p->p[0].uv.u = 0;

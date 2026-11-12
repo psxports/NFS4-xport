@@ -44,7 +44,7 @@ void tVideoWall::UpdateImages(void)
         if (fFlipAxis > 0)
         {
             fTVs[i].flags |= 4;
-            fTVs[i].flip_axis = (uint16)fFlipAxis;
+            fTVs[i].flip_axis = fFlipAxis;
         }
         if (fValid == 0 || fAvailable == 0)
             fTVs[i].flags |= 0x28;
@@ -94,7 +94,7 @@ void tVideoWall::SetValid(sint16 valid)
 void tVideoWall::UpdateTransition(void)
 {
     FUNCTION_MARKER(0x800369E4, "FRONT.BIN");
-    sint16 j = (sint16)((uint32(ticks) - uint32(fTVTicks)) >> 3);
+    sint16 j = (sint16)((uint32(ticks) - fTVTicks) >> 3);
     if (fTransitionDirection > 0)
     {
         if (fValid == 0)

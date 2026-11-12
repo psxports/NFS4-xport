@@ -169,11 +169,9 @@ void tScreenTrophyRoom::DrawBackground(void)
     tTournamentDefinition *definition = tournamentManager.fDefinition;
     tTourneyInfo *tourn = &definition->fTournaments[definition->fTiers[currentTier].fTournOffset + currentTourn];
     sint32 trophyText = (sint8)tourn->fTournamentID + 0x354;
-    FETextRender::MenuTextPositionedJustifyFade(fScreenFadeVal, (sint16)trophyText, 256, 47, 2,
-        textState_Hilighted, textType_ScreenInfo);
+    FETextRender::MenuTextPositionedJustifyFade(fScreenFadeVal, trophyText, 256, 47, 2, textState_Hilighted, textType_ScreenInfo);
     sint32 texttoshow = 0x3DE;
-    if ((gPadinfo.buf[0].ID == 0x23 && (gPadinfo.buf[4].ID == 0x23 || gPadinfo.buf[4].nopad != 0)) ||
-        (gPadinfo.buf[4].ID == 0x23 && (gPadinfo.buf[0].ID == 0x23 || gPadinfo.buf[0].nopad != 0)))
+    if ((gPadinfo.buf[0].ID == 0x23 && (gPadinfo.buf[4].ID == 0x23 || gPadinfo.buf[4].nopad != 0)) || (gPadinfo.buf[4].ID == 0x23 && (gPadinfo.buf[0].ID == 0x23 || gPadinfo.buf[0].nopad != 0)))
         texttoshow = 0x3DF;
     else if (gPadinfo.buf[0].ID == 0x23 || gPadinfo.buf[4].ID == 0x23)
         texttoshow = 0x3E0;
@@ -188,7 +186,7 @@ void tScreenTrophyRoom::DrawBackground(void)
         if (i == fRealCurrentTourn[tier] && (fSwapShapes.fFlags & 1) != 0)
         {
             drawFlags.custom_shapes = fSwapShapes.fShapes;
-            sint32 elapsed = (sint32)((uint32)ticks - (uint32)startTicks);
+            sint32 elapsed = (sint32)((uint32)ticks - startTicks);
             frame = (elapsed / 12) % 32;
         }
         else

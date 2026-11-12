@@ -19,7 +19,7 @@ void transmult(matrixtdef *left, matrixtdef *right, matrixtdef *result)
             uint32 first = fixedmult(left->m[row * 3], right->m[column]);
             uint32 second = fixedmult(left->m[row * 3 + 1], right->m[column + 3]);
             uint32 third = fixedmult(left->m[row * 3 + 2], right->m[column + 6]);
-            product.m[row * 3 + column] = (sint32)(first + second + third);
+            product.m[row * 3 + column] = (first + second + third);
         }
     }
     *result = product;

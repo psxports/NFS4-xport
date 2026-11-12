@@ -30,9 +30,7 @@ sint32 AIHigh_Player::CheckIfABlockadeCanBeSetup(void)
     sint32 ready[2] = { 0, 0 };
     sint32 assigned[2] = { 0, 0 };
     sint32 split = Cars::gNumHumanRaceCars == 2;
-    if (pLevel->numBlockaders == 0 || perpChaseInfo_.blockadeDone_ != 0 ||
-        (basicPerpInfo_.copsAssigned_[0] < pLevel->copChasers[0] && !split) ||
-        (basicPerpInfo_.copsAssigned_[1] < pLevel->copChasers[1] && !split))
+    if (pLevel->numBlockaders == 0 || perpChaseInfo_.blockadeDone_ != 0 || (basicPerpInfo_.copsAssigned_[0] < pLevel->copChasers[0] && !split) || (basicPerpInfo_.copsAssigned_[1] < pLevel->copChasers[1] && !split))
         return 0;
     sint32 nCopsNeeded[2];
     nCopsNeeded[0] = pLevel->copBlockaders[0];
@@ -71,8 +69,7 @@ sint32 AIHigh_Player::CheckIfABlockadeCanBeSetup(void)
         for (sint32 copLoop = 0; copLoop < numCops; ++copLoop) {
             Car::tObj *cop = Cars::gCopCarList[copLoop];
             AIHigh_Cop *thisCop = static_cast<AIHigh_Cop *>(highLevelAIObjs[cop->carIndex]);
-            if ((cop->AIFlags & 12) == 8 && thisCop->type_ == COP_REGULAR &&
-                assigned[1] < nCopsNeeded[1] && assigned[1] == 0) {
+            if ((cop->AIFlags & 12) == 8 && thisCop->type_ == COP_REGULAR && assigned[1] < nCopsNeeded[1] && assigned[1] == 0) {
                 assigned[1] = 1;
                 thisCop->blockade_.mode = BLOCKADEMODE_SETUP_FOR_OTHER;
                 thisCop->blockade_.target = this;
@@ -87,19 +84,18 @@ void AIHigh_Player::SetupBlockade(void)
     FUNCTION_MARKER(0x80061784, "NFS4.EXE");
     Car::tObj *car = carObj_;
     copLevel_t *pLevel = perpChaseInfo_.chaseLevel_;
-    sint32 addToSlice = (sint32)((uint32)car->direction * 83);
-    sint32 searchSlice = (sint32)((uint32)car->N.simRoadInfo.slice + (uint32)addToSlice);
+    sint32 addToSlice = (car->direction * 83);
+    sint32 searchSlice = (car->N.simRoadInfo.slice + addToSlice);
     if (addToSlice < 0) {
         if (searchSlice < 0)
-            searchSlice = (sint32)((uint32)searchSlice + (uint32)gNumSlices);
+            searchSlice = (searchSlice + gNumSlices);
     } else if (searchSlice >= gNumSlices) {
-        searchSlice = (sint32)((uint32)searchSlice - (uint32)gNumSlices);
+        searchSlice = (searchSlice - gNumSlices);
     }
     sint32 nCopsNeeded[2];
     nCopsNeeded[0] = pLevel->copBlockaders[0];
     nCopsNeeded[1] = pLevel->copBlockaders[1];
-    sint32 blockadeHandle = triggerManagerCops->CheckForClosestTriggerOfType(searchSlice,
-        TRIGGER_COP_ROADBLOCK, carObj_->direction);
+    sint32 blockadeHandle = triggerManagerCops->CheckForClosestTriggerOfType(searchSlice, TRIGGER_COP_ROADBLOCK, carObj_->direction);
     if (blockadeHandle == -1) {
         CheckForNewLevel(1);
         return;
@@ -108,15 +104,13 @@ void AIHigh_Player::SetupBlockade(void)
     trigger::trigger_t *blockade = triggerManagerCops->GetTrigger(blockadeHandle, &used);
     sint32 loop = 0;
     do {
-        if (!AILife::IsSliceInAnyVisibleArea(blockade->any.slice) &&
-            !AILife::IsSliceCloseToAnyCopCar(blockade->any.slice))
+        if (!AILife::IsSliceInAnyVisibleArea(blockade->any.slice) && !AILife::IsSliceCloseToAnyCopCar(blockade->any.slice))
             break;
-        sint32 nextSlice = (sint32)((uint32)blockade->any.slice + 1);
+        sint32 nextSlice = (blockade->any.slice + 1);
         sint32 numSlices = gNumSlices;
         if (nextSlice >= numSlices)
-            nextSlice = (sint32)((uint32)blockade->any.slice - ((uint32)numSlices - 1));
-        blockadeHandle = triggerManagerCops->CheckForClosestTriggerOfType(nextSlice,
-            TRIGGER_COP_ROADBLOCK, carObj_->direction);
+            nextSlice = (blockade->any.slice - (numSlices - 1));
+        blockadeHandle = triggerManagerCops->CheckForClosestTriggerOfType(nextSlice, TRIGGER_COP_ROADBLOCK, carObj_->direction);
         if (blockadeHandle == -1) {
             CheckForNewLevel(1);
             return;
@@ -132,10 +126,9 @@ void AIHigh_Player::SetupBlockade(void)
     for (sint32 copLoop = 0; copLoop < numCops; ++copLoop) {
         Car::tObj *cop = Cars::gCopCarList[copLoop];
         AIHigh_Cop *thisCop = static_cast<AIHigh_Cop *>(highLevelAIObjs[cop->carIndex]);
-        if ((cop->AIFlags & 4) != 0 && thisCop->blockade_.mode == BLOCKADEMODE_SETUP &&
-            needed[thisCop->type_] != 0) {
+        if ((cop->AIFlags & 4) != 0 && thisCop->blockade_.mode == BLOCKADEMODE_SETUP && needed[thisCop->type_] != 0) {
             sint32 type = thisCop->type_;
-            needed[type] = (sint32)((uint32)needed[type] - 1);
+            needed[type] = (needed[type] - 1);
             ++nCopsAvail[type];
         }
     }
@@ -157,20 +150,20 @@ void AIHigh_Player::SetupBlockade(void)
             continue;
         if (!blockadeCar)
             blockadeCar = thisCop;
-        nCopsNeeded[type] = (sint32)((uint32)nCopsNeeded[type] - 1);
+        nCopsNeeded[type] = (nCopsNeeded[type] - 1);
         blockade_t *copBlockade = &thisCop->blockade_;
         copBlockade->blockadeSpeechFlags = 0;
         copBlockade->flags = blockadeFlags;
         copBlockade->chaseLevel = perpChaseInfo_.chaseLevelIndex_;
         copBlockade->mode = BLOCKADEMODE_WAITING;
-        addToSlice = (sint32)((uint32)((posIndex / 2) * 2 + 3) * (uint32)carObj_->direction);
+        addToSlice = ((((posIndex / 2) * 2) + 3) * carObj_->direction);
         blockadeFlags = 0;
-        sint32 slice = (sint32)((uint32)blockadeSlice + (uint32)addToSlice);
+        sint32 slice = (blockadeSlice + addToSlice);
         if (addToSlice < 0) {
             if (slice < 0)
-                slice = (sint32)((uint32)slice + (uint32)gNumSlices);
+                slice = (slice + gNumSlices);
         } else if (slice >= gNumSlices) {
-            slice = (sint32)((uint32)slice - (uint32)gNumSlices);
+            slice = (slice - gNumSlices);
         }
         copBlockade->slice = slice;
         if (superPlacement) {
@@ -204,7 +197,7 @@ void AIHigh_Player::SetupBlockade(void)
             sint32 distance = AIWorld::ApxSplineDistance(carObj_, slice);
             sint32 initialDistance = -(distance / 65536);
             copBlockade->initialPlayerDistanceMetersInt = initialDistance;
-            sint32 directedDistance = (sint32)((uint32)initialDistance * (uint32)carObj_->direction);
+            sint32 directedDistance = (initialDistance * carObj_->direction);
             if (directedDistance < 0)
                 copBlockade->initialPlayerDistanceMetersInt = 0;
         } else {
@@ -222,7 +215,7 @@ void AIHigh_Player::SetupBlockade(void)
             sint32 distance = AIWorld::ApxSplineDistance(carObj_, slice);
             sint32 initialDistance = -(distance / 65536);
             copBlockade->initialPlayerDistanceMetersInt = initialDistance;
-            sint32 directedDistance = (sint32)((uint32)initialDistance * (uint32)carObj_->direction);
+            sint32 directedDistance = (initialDistance * carObj_->direction);
             if (directedDistance < 0)
                 copBlockade->initialPlayerDistanceMetersInt = 0;
             Trk::NewSlice *road = &BWorldSm::slices[copBlockade->slice];
@@ -278,12 +271,11 @@ void AIHigh_Player::CheckForNewLevel(sint32 force)
             perpChaseInfo_.bestChaseLevelIndex_ = 0;
     } else {
         CheckForCrimes();
-        if (basicPerpInfo_.crime_ != CRIME_NONE &&
-            (force != 0 || perpChaseInfo_.engagementTime_ / 65536 <= 0)) {
-            chaseLevel = (sint32)((uint32)chaseLevel + 1);
+        if (basicPerpInfo_.crime_ != CRIME_NONE && (force != 0 || perpChaseInfo_.engagementTime_ / 65536 <= 0)) {
+            chaseLevel = (chaseLevel + 1);
             sint32 numLevels = perpChaseInfo_.copGameInfo_->numLevels;
             if (chaseLevel >= numLevels)
-                chaseLevel = (sint32)((uint32)numLevels - 2);
+                chaseLevel = (numLevels - 2);
             perpChaseInfo_.chaseLevelIndex_ = chaseLevel;
             if (perpChaseInfo_.bestChaseLevelIndex_ < chaseLevel)
                 perpChaseInfo_.bestChaseLevelIndex_ = chaseLevel;
@@ -293,12 +285,12 @@ void AIHigh_Player::CheckForNewLevel(sint32 force)
     if (resetTimer) {
         copLevel_t *pLevel = perpChaseInfo_.copGameInfo_->levels + perpChaseInfo_.chaseLevelIndex_;
         perpChaseInfo_.chaseLevel_ = pLevel;
-        sint32 product = (sint32)((uint32)pLevel->engagementLapFraction * (uint32)AITune::gRoughLapTime);
+        sint32 product = (pLevel->engagementLapFraction * AITune::gRoughLapTime);
         sint32 seconds = product / 65536;
-        sint32 divisor = (sint32)((uint32)seconds << 5);
+        sint32 divisor = ((uint32)seconds << 5);
         XASSERT(divisor > 0);
         sint32 increase = 65536 / divisor;
-        perpChaseInfo_.engagementTime_ = (sint32)((uint32)seconds << 21);
+        perpChaseInfo_.engagementTime_ = ((uint32)seconds << 21);
         perpChaseInfo_.engagementPercentIncreasePerTick_ = increase;
         if (GameSetup::gData.numLaps == 2)
             perpChaseInfo_.engagementPercentIncreasePerTick_ = fixedmult(increase, 0x13333);
@@ -311,8 +303,7 @@ void AIHigh_Player::CheckForNewLevel(sint32 force)
         return;
     }
     if (oldChaseLevel != perpChaseInfo_.chaseLevelIndex_)
-        newTriggerProb_ = (sint32)((uint32)triggerManagerCops->invNumTriggers_ *
-            (uint32)perpChaseInfo_.chaseLevel_->copsPerLap);
+        newTriggerProb_ = (triggerManagerCops->invNumTriggers_ * perpChaseInfo_.chaseLevel_->copsPerLap);
 }
 
 void AIHigh_Player::HandleSpeech(void)
@@ -337,7 +328,7 @@ void AIHigh_Player::HandleSpeech(void)
     case PULLOVER_BUST: {
         Hud::Perp_OverlayOn(player, 1);
         sint32 busts = numBusts_;
-        arrestType = busts < 3 ? 8 : (sint32)((uint32)busts + 6);
+        arrestType = busts < 3 ? 8 : (busts + 6);
         break;
     }
     case PULLOVER_EOG:
@@ -364,17 +355,16 @@ void AIHigh_Player::MaintainAvailableCops(void)
     for (sint32 playLoop = 0; playLoop < numPlayers; ++playLoop) {
         Car::tObj *playerCarObj = Cars::gRaceCarList[playLoop];
         AIHigh_Player *playerHighObj = static_cast<AIHigh_Player *>(highLevelAIObjs[playerCarObj->carIndex]);
-        need[0] = (uint32)need[0] + (uint32)playerHighObj->perpChaseInfo_.chaseLevel_->copBlockaders[0];
-        need[1] = (uint32)need[1] + (uint32)playerHighObj->perpChaseInfo_.chaseLevel_->copBlockaders[1];
-        need[0] = (uint32)need[0] + (uint32)playerHighObj->perpChaseInfo_.chaseLevel_->copChasers[0];
-        need[1] = (uint32)need[1] + (uint32)playerHighObj->perpChaseInfo_.chaseLevel_->copChasers[1];
+        need[0] = need[0] + playerHighObj->perpChaseInfo_.chaseLevel_->copBlockaders[0];
+        need[1] = need[1] + playerHighObj->perpChaseInfo_.chaseLevel_->copBlockaders[1];
+        need[0] = need[0] + playerHighObj->perpChaseInfo_.chaseLevel_->copChasers[0];
+        need[1] = need[1] + playerHighObj->perpChaseInfo_.chaseLevel_->copChasers[1];
     }
     sint32 numCops = Cars::gNumCopCars;
     for (sint32 copLoop = 0; copLoop < numCops; ++copLoop) {
         Car::tObj *copCarObj = Cars::gCopCarList[copLoop];
         AIHigh_Cop *copHighObj = static_cast<AIHigh_Cop *>(highLevelAIObjs[copCarObj->carIndex]);
-        if ((copCarObj->AIFlags & 4) == 0 || copHighObj->blockade_.mode == BLOCKADEMODE_SETUP ||
-            copHighObj->blockade_.mode == BLOCKADEMODE_WAITING) {
+        if ((copCarObj->AIFlags & 4) == 0 || copHighObj->blockade_.mode == BLOCKADEMODE_SETUP || copHighObj->blockade_.mode == BLOCKADEMODE_WAITING) {
             ++got[copHighObj->type_];
             --availableCops;
             copCarObj->AIFlags |= 8;
@@ -418,20 +408,19 @@ AIHigh_Player::AIHigh_Player(Car::tObj *carObj) : AIHigh_BasicPerp(carObj)
     numBusts_ = 0;
     if (GameSetup::gData.cops == 0)
         return;
-    newTriggerProb_ = (sint32)((uint32)triggerManagerCops->invNumTriggers_ *
-        (uint32)perpChaseInfo_.chaseLevel_->copsPerLap);
+    newTriggerProb_ = (triggerManagerCops->invNumTriggers_ * perpChaseInfo_.chaseLevel_->copsPerLap);
     lastTriggerCheckSlice_ = carObj_->N.simRoadInfo.slice;
     perpChaseInfo_.chaseLevelIndex_ = 0;
     if (perpChaseInfo_.bestChaseLevelIndex_ < 0)
         perpChaseInfo_.bestChaseLevelIndex_ = 0;
     copLevel_t *pLevel = perpChaseInfo_.copGameInfo_->levels + perpChaseInfo_.chaseLevelIndex_;
     perpChaseInfo_.chaseLevel_ = pLevel;
-    sint32 product = (sint32)((uint32)pLevel->engagementLapFraction * (uint32)AITune::gRoughLapTime);
+    sint32 product = (pLevel->engagementLapFraction * AITune::gRoughLapTime);
     sint32 seconds = product / 65536;
-    sint32 divisor = (sint32)((uint32)seconds << 5);
+    sint32 divisor = ((uint32)seconds << 5);
     XASSERT(divisor > 0);
     sint32 increase = 65536 / divisor;
-    perpChaseInfo_.engagementTime_ = (sint32)((uint32)seconds << 21);
+    perpChaseInfo_.engagementTime_ = ((uint32)seconds << 21);
     perpChaseInfo_.engagementPercentIncreasePerTick_ = increase;
     if (GameSetup::gData.numLaps == 2)
         perpChaseInfo_.engagementPercentIncreasePerTick_ = fixedmult(increase, 0x13333);
@@ -452,25 +441,22 @@ void AIHigh_Player::HandleCops(void)
     if (pLevel->numBlockaders == 0)
         CleanupBlockaders(0);
     Car::tObj *car = carObj_;
-    sint32 travelSpeed = (sint32)((uint32)car->currentSpeed * (uint32)car->direction);
-    sint32 totalCopsEngaged = (sint32)((uint32)basicPerpInfo_.copsAssigned_[0] +
-        (uint32)basicPerpInfo_.copsAssigned_[1]);
+    sint32 travelSpeed = (car->currentSpeed * car->direction);
+    sint32 totalCopsEngaged = (basicPerpInfo_.copsAssigned_[0] + basicPerpInfo_.copsAssigned_[1]);
     sint32 ticks = AI::elapsedTime;
     if (totalCopsEngaged > 0) {
         perpChaseInfo_.copFreeTicks_ = 0;
         sint32 engagementTime = perpChaseInfo_.engagementTime_;
         if (engagementTime / 65536 >= -1) {
             uint32 decrease = (uint32)ticks << (travelSpeed < 0 ? 15 : 16);
-            perpChaseInfo_.engagementTime_ = (uint32)engagementTime - decrease;
-            sint32 lapTime = (sint32)((uint32)perpChaseInfo_.chaseLevel_->engagementLapFraction *
-                (uint32)AITune::gRoughLapTime);
+            perpChaseInfo_.engagementTime_ = engagementTime - decrease;
+            sint32 lapTime = (perpChaseInfo_.chaseLevel_->engagementLapFraction * AITune::gRoughLapTime);
             sint32 threshold = (lapTime / 65536) * 32 - 128;
             if (perpChaseInfo_.engagementTime_ / 65536 < threshold)
-                perpChaseInfo_.totalEngagementPercent_ = (uint32)perpChaseInfo_.totalEngagementPercent_ +
-                    (uint32)perpChaseInfo_.engagementPercentIncreasePerTick_ * (uint32)ticks;
+                perpChaseInfo_.totalEngagementPercent_ = perpChaseInfo_.totalEngagementPercent_ + (perpChaseInfo_.engagementPercentIncreasePerTick_ * ticks);
         }
     } else {
-        perpChaseInfo_.copFreeTicks_ = (uint32)perpChaseInfo_.copFreeTicks_ + (uint32)ticks;
+        perpChaseInfo_.copFreeTicks_ = perpChaseInfo_.copFreeTicks_ + ticks;
     }
     CheckForNewLevel(0);
     HandlePullOver();
@@ -485,8 +471,7 @@ void AIHigh_Player::CleanupBlockaders(sint32 forceClearAll)
         AIHigh_Cop *thisCop = static_cast<AIHigh_Cop *>(highLevelAIObjs[Cars::gCopCarList[copLoop]->carIndex]);
         blockade_t *blockade = &thisCop->blockade_;
         blockadeMode_t mode = blockade->mode;
-        if ((mode == BLOCKADEMODE_SETUP || mode == BLOCKADEMODE_SETUP_FOR_OTHER ||
-                (mode == BLOCKADEMODE_WAITING && clearWaitingBlockaders)) && blockade->target == this) {
+        if ((mode == BLOCKADEMODE_SETUP || mode == BLOCKADEMODE_SETUP_FOR_OTHER || (mode == BLOCKADEMODE_WAITING && clearWaitingBlockaders)) && blockade->target == this) {
             blockade->mode = BLOCKADEMODE_NONE;
             thisCop->AssignToPlayer(0);
         }
@@ -497,7 +482,7 @@ void AIHigh_Player::HandlePullOver(void)
 {
     FUNCTION_MARKER(0x80062D7C, "NFS4.EXE");
     if (pullOverMode_ != PULLOVER_NONE) {
-        beatingTicksLeft_ = (sint32)((uint32)beatingTicksLeft_ - (uint32)AI::elapsedTime);
+        beatingTicksLeft_ = (beatingTicksLeft_ - AI::elapsedTime);
         if (beatingTicksLeft_ > 0)
             return;
         sint32 player = carObj_->carIndex;
@@ -506,7 +491,7 @@ void AIHigh_Player::HandlePullOver(void)
         lastPullOverTime_ = simGlobal.gameTicks;
         if (pullOverMode_ == PULLOVER_EOG) {
             if ((carObj_->carFlags & 4) != 0)
-                AICop::numArrestedHumans = (sint32)((uint32)AICop::numArrestedHumans + 1);
+                AICop::numArrestedHumans = (AICop::numArrestedHumans + 1);
             carObj_->stats.finishType = 3;
         }
         if (AICop::numArrestedHumans == Cars::gNumHumanRaceCars) {
@@ -518,12 +503,12 @@ void AIHigh_Player::HandlePullOver(void)
             perpChaseInfo_.bestChaseLevelIndex_ = 0;
         copLevel_t *pLevel = perpChaseInfo_.copGameInfo_->levels + perpChaseInfo_.chaseLevelIndex_;
         perpChaseInfo_.chaseLevel_ = pLevel;
-        sint32 product = (sint32)((uint32)pLevel->engagementLapFraction * (uint32)AITune::gRoughLapTime);
+        sint32 product = (pLevel->engagementLapFraction * AITune::gRoughLapTime);
         sint32 seconds = product / 65536;
-        sint32 divisor = (sint32)((uint32)seconds << 5);
+        sint32 divisor = ((uint32)seconds << 5);
         XASSERT(divisor > 0);
         sint32 increase = 65536 / divisor;
-        perpChaseInfo_.engagementTime_ = (sint32)((uint32)seconds << 21);
+        perpChaseInfo_.engagementTime_ = ((uint32)seconds << 21);
         perpChaseInfo_.engagementPercentIncreasePerTick_ = increase;
         if (GameSetup::gData.numLaps == 2)
             perpChaseInfo_.engagementPercentIncreasePerTick_ = fixedmult(increase, 0x13333);
@@ -555,36 +540,32 @@ void AIHigh_Player::HandlePullOver(void)
     carObj_->pullOver = 1;
     CleanupBlockaders(1);
     copLevel_t *pLevel = perpChaseInfo_.chaseLevel_;
-    sint32 product = (sint32)((uint32)pLevel->engagementLapFraction * (uint32)AITune::gRoughLapTime);
-    sint32 lapTicks = (sint32)((uint32)(product / 65536) << 5);
+    sint32 product = (pLevel->engagementLapFraction * AITune::gRoughLapTime);
+    sint32 lapTicks = ((uint32)(product / 65536) << 5);
     sint32 engagementSeconds = perpChaseInfo_.engagementTime_ / 65536;
     beatingTicksLeft_ = pLevel->beatingTicks;
     lastPullOverTime_ = simGlobal.gameTicks;
-    sint32 chaseTime = (sint32)((uint32)lapTicks - (uint32)engagementSeconds);
-    bool warning = basicPerpInfo_.crime_ != CRIME_SMASHCOP && carObj_->stats.numFines == 0 &&
-        perpChaseInfo_.copGameInfo_->levels[perpChaseInfo_.bestChaseLevelIndex_].numWarningsAdded != 0 &&
-        chaseTime < perpChaseInfo_.chaseLevel_->warningTicks;
+    sint32 chaseTime = (lapTicks - engagementSeconds);
+    bool warning = basicPerpInfo_.crime_ != CRIME_SMASHCOP && carObj_->stats.numFines == 0 && perpChaseInfo_.copGameInfo_->levels[perpChaseInfo_.bestChaseLevelIndex_].numWarningsAdded != 0 && chaseTime < perpChaseInfo_.chaseLevel_->warningTicks;
     if (warning && numWarnings_ < 2) {
         Car::tObj *car = carObj_;
-        numWarnings_ = (sint32)((uint32)numWarnings_ + (uint32)perpChaseInfo_.chaseLevel_->numWarningsAdded);
-        car->stats.numWarnings = (sint32)((uint32)car->stats.numWarnings + 1);
+        numWarnings_ = (numWarnings_ + perpChaseInfo_.chaseLevel_->numWarningsAdded);
+        car->stats.numWarnings = (car->stats.numWarnings + 1);
         pullOverMode_ = PULLOVER_WARNING;
     } else {
         Car::tObj *car = carObj_;
-        numBusts_ = (sint32)((uint32)numBusts_ + 1);
-        car->stats.numFines = (sint32)((uint32)car->stats.numFines + 1);
+        numBusts_ = (numBusts_ + 1);
+        car->stats.numFines = (car->stats.numFines + 1);
         sint32 lapIndex = 2;
         if (GameSetup::gData.numLaps == 2)
             lapIndex = 0;
         else if (GameSetup::gData.numLaps == 4)
             lapIndex = 1;
-        if (numBusts_ >= kNumArrestsByLap[lapIndex] ||
-            (perpChaseInfo_.bestChaseLevelIndex_ == (sint32)((uint32)perpChaseInfo_.copGameInfo_->numLevels - 1) &&
-                Cars::gNumHumanRaceCars == 1)) {
+        if (numBusts_ >= kNumArrestsByLap[lapIndex] || (perpChaseInfo_.bestChaseLevelIndex_ == (perpChaseInfo_.copGameInfo_->numLevels - 1) && Cars::gNumHumanRaceCars == 1)) {
             pullOverMode_ = PULLOVER_EOG;
             car = carObj_;
-            beatingTicksLeft_ = (sint32)((uint32)beatingTicksLeft_ + 192);
-            car->stats.numArrests = (sint32)((uint32)car->stats.numArrests + 1);
+            beatingTicksLeft_ = (beatingTicksLeft_ + 192);
+            car->stats.numArrests = (car->stats.numArrests + 1);
         } else {
             pullOverMode_ = PULLOVER_BUST;
         }

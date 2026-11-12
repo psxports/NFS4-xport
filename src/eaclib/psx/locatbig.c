@@ -21,7 +21,7 @@ sint32 sizeofbigfileheader(const void *header)
     if (kind == 1)
         return (sint32)getm(data + 2, 2) + 4;
     if (kind == 2)
-        return (sint32)getm(data + 12, 4);
+        return getm(data + 12, 4);
     return 0;
 }
 
@@ -64,20 +64,16 @@ char *locatebigentryz(char *header, const char *name, sint32 index, sint32 *offs
             }
             if (matches)
             {
-                if (offset != 0)
-                    *offset = getm(entry, fieldSize);
-                if (size != 0)
-                    *size = getm(entry + fieldSize, fieldSize);
+                if (offset != 0) *offset = getm(entry, fieldSize);
+                if (size != 0) *size = getm(entry + fieldSize, fieldSize);
                 return entry + nameOffset;
             }
             entry += strlen(entry + nameOffset) + nameOffset + 1;
-            ordinal = (sint32)((uint32)ordinal + 1);
+            ordinal = (ordinal + 1);
         }
     }
-    if (offset != 0)
-        *offset = 0;
-    if (size != 0)
-        *size = 0;
+    if (offset != 0) *offset = 0;
+    if (size != 0) *size = 0;
     return 0;
 }
 
@@ -111,8 +107,8 @@ sint32 bigcount(const void *header)
     sint32 kind = typeofbigfile(header);
     const uint8 *data = ((const uint8 *)(header));
     if (kind == 1)
-        return (sint32)getm(data + 4, 2);
+        return getm(data + 4, 2);
     if (kind == 2)
-        return (sint32)getm(data + 8, 4);
+        return getm(data + 8, 4);
     return 0;
 }

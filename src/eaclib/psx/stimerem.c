@@ -17,7 +17,7 @@ sint32 SNDtimeremaining(sint32 handle)
     sint32 cursor = -1;
     while (iSNDpatchkey(channel, &cursor) != 0)
     {
-        sint32 remaining = (sint32)iSNDtimeremaining(cursor);
+        sint32 remaining = iSNDtimeremaining(cursor);
         if (longest < remaining)
             longest = remaining;
     }

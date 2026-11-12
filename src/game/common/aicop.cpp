@@ -126,7 +126,7 @@ sint32 AICop::NoCopsInArea(sint32 slice, sint32 sliceDistance)
         if ((cop->AIFlags & 4) == 0) {
             sint32 absDistance = AIWorld::ApxSplineDistance(cop, slice);
             if (absDistance < 0)
-                absDistance = (sint32)(0 - (uint32)absDistance);
+                absDistance = (-absDistance);
             if (absDistance < sliceDistance)
                 return 0;
         }

@@ -96,7 +96,7 @@ void tScreenTrackSelect::DrawBackground(void)
         if (result == 1)
         {
             hVideo = 2;
-            fFrame = (sint32)((uint32)fFrame + 1);
+            fFrame = (fFrame + 1);
             shapeY = (fFrame & 1) == 0 ? 128 : 0;
         }
         else if (result == 0 && hVideo == 1)
@@ -115,8 +115,7 @@ void tScreenTrackSelect::DrawBackground(void)
 #endif
         }
     }
-    else if ((fTicksSet || fDestBrightness < fBrightness) &&
-        (uint32)ticks - fVideoTicks > 256)
+    else if ((fTicksSet || fDestBrightness < fBrightness) && (uint32)ticks - fVideoTicks > 256)
     {
         if (fBrightness <= fDestBrightness)
             SetBrightness(trackInfo.fAvailable ? 128 : 32);
@@ -151,7 +150,7 @@ void tScreenTrackSelect::DrawBackground(void)
         prim->p[1].uv.u = prim->p[3].uv.u = 80;
         prim->p[0].uv.v = prim->p[1].uv.v = (uint8)shapeY;
         prim->p[2].uv.v = prim->p[3].uv.v = (uint8)(shapeY | 127);
-        prim->p[1].attr = (uint16)GetTPage(2, 1, 512, 0);
+        prim->p[1].attr = GetTPage(2, 1, 512, 0);
         prim->p[0].attr = 0;
 
         cprim = &DrawC::carCache.head.cprim;
@@ -174,7 +173,7 @@ void tScreenTrackSelect::DrawBackground(void)
         prim->p[1].uv.u = prim->p[3].uv.u = 96;
         prim->p[0].uv.v = prim->p[1].uv.v = (uint8)shapeY;
         prim->p[2].uv.v = prim->p[3].uv.v = (uint8)(shapeY | 127);
-        prim->p[1].attr = (uint16)GetTPage(2, 1, 576, 0);
+        prim->p[1].attr = GetTPage(2, 1, 576, 0);
         prim->p[0].attr = 0;
     }
     DrawVideoWall();
@@ -256,7 +255,7 @@ void tScreenTrackSelect::UpdateBrightness(tTrackInformation &trackInfo)
     FUNCTION_MARKER(0x80041D98, "FRONT.BIN");
 
     uint32 currentTicks = ticks;
-    sint32 elapsed = (sint32)(currentTicks - fStartTicks);
+    sint32 elapsed = (currentTicks - fStartTicks);
     if (fDestBrightness != fBrightness)
     {
         if (elapsed >= 128)
@@ -264,8 +263,7 @@ void tScreenTrackSelect::UpdateBrightness(tTrackInformation &trackInfo)
         else if (elapsed < 0)
             fBrightness = 0;
         else
-            fBrightness = sint16(fStartBrightness +
-                (fDestBrightness - fStartBrightness) * elapsed / 128);
+            fBrightness = sint16(fStartBrightness + (fDestBrightness - fStartBrightness) * elapsed / 128);
     }
     if (fBrightness == 0 && fDestBrightness == 0)
     {

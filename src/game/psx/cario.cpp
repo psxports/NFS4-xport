@@ -121,42 +121,42 @@ void CarIO::ReStart(void)
 void CarIO::CopyFromShape(sint16 *source, sint16 *dest, sint32 w, sint32 h, sint32 x, sint32 y)
 {
     FUNCTION_MARKER(0x800BBFF0, "NFS4.EXE");
-    sint32 columns = (sint32)((uint32)(w >> 2) + ((w & 3) != 0));
+    sint32 columns = ((uint32)(w >> 2) + ((w & 3) != 0));
     sint32 mask = w & 3;
     uint32 lastMask = mask != 0 ? 0xFFFFU : 0;
-    uint32 lastLastMask = 0xFFFFU;
+    uint32 lastLastMask = 0xFFFF;
     uint32 firstMask = 0;
     for (sint32 i = 0; i < mask; ++i)
         lastMask <<= 4;
     mask = x & 3;
     for (sint32 i = 0; i < mask; ++i)
     {
-        uint16 rollOver = (uint16)((lastMask & 0xF000U) >> 12);
-        firstMask = (firstMask << 4) | 0xFU;
+        uint16 rollOver = (uint16)((lastMask & 0xF000) >> 12);
+        firstMask = (firstMask << 4) | 0xF;
         lastMask <<= 4;
         lastLastMask = (lastLastMask << 4) | rollOver;
     }
     if ((lastLastMask & 0xFFFFU) != 0xFFFFU)
     {
         lastMask = lastLastMask;
-        columns = (sint32)((uint32)columns + 1U);
+        columns = (columns + 1);
     }
-    sint32 destOffset = (sint32)((uint32)(x >> 2) + (uint32)y * 12U);
+    sint32 destOffset = (((x >> 2)) + (y * 12));
     dest += destOffset;
-    uint32 rows = (uint32)h;
-    while (--rows != 0xFFFFFFFFU)
+    uint32 rows = h;
+    while (--rows != 0xFFFFFFFF)
     {
         uint32 current = (uint16)*source++;
         uint32 next = 0;
         for (sint32 shift = 0; shift < mask; ++shift)
         {
-            uint16 rollOver = (uint16)((current & 0xF000U) >> 12);
+            uint16 rollOver = (uint16)((current & 0xF000) >> 12);
             current <<= 4;
             next = (next << 4) | rollOver;
         }
         dest[0] = (sint16)(((uint16)dest[0] & firstMask) | current);
         sint32 i = 1;
-        sint32 lastColumn = (sint32)((uint32)columns - 1U);
+        sint32 lastColumn = (columns - 1);
         for (; i < lastColumn; ++i)
         {
             dest[i] = (sint16)next;
@@ -164,7 +164,7 @@ void CarIO::CopyFromShape(sint16 *source, sint16 *dest, sint32 w, sint32 h, sint
             next = 0;
             for (sint32 shift = 0; shift < mask; ++shift)
             {
-                uint16 rollOver = (uint16)((current & 0xF000U) >> 12);
+                uint16 rollOver = (uint16)((current & 0xF000) >> 12);
                 current <<= 4;
                 next = (next << 4) | rollOver;
             }
@@ -189,17 +189,14 @@ void CarIO::CopyToShape(sint16 *source, sint16 *dest, sint32 mirror)
     {
         if (mirror == 0)
         {
-            for (sint32 i = 0; i < 6; ++i)
-                *dest++ = source[i];
+            for (sint32 i = 0; i < 6; ++i) *dest++ = source[i];
         }
         else
         {
             for (sint32 i = 5; i >= 0; --i)
             {
-                uint16 pixel3 = (uint16)source[i];
-                *dest++ = (sint16)(((pixel3 & 0xFU) << 12) |
-                    ((pixel3 & 0xF0U) << 4) |
-                    ((pixel3 & 0xF00U) >> 4) | (pixel3 >> 12));
+                uint16 pixel3 = source[i];
+                *dest++ = (sint16)(((pixel3 & 0xFU) << 12) | ((pixel3 & 0xF0U) << 4) | ((pixel3 & 0xF00U) >> 4) | (pixel3 >> 12));
             }
         }
         source += 12;
@@ -243,8 +240,8 @@ void CarIO::CreateLicense(char *text, sint32 carType, sint32 player)
     Plate2[player]->width = 24;
     Plate1[player]->width = 24;
     CopyFromShape((sint16 *)((uint8 *)shape + 16), thePlate, 48, 22, 0, 0);
-    sint32 length = (sint32)(uint32)strlen(text);
-    sint32 start = (sint32)(24U - (uint32)length * 3U);
+    sint32 length = ((uint32)strlen(text));
+    sint32 start = (24 - (length * 3));
     for (sint32 i = 0; i < length; ++i)
     {
         uint8 ascii = (uint8)text[i];
@@ -266,7 +263,7 @@ void CarIO::CreateLicense(char *text, sint32 carType, sint32 player)
             shapetbl *glyph = (shapetbl *)locateshape(R3DCar::LicenseShapeFile, letter);
             CopyFromShape((sint16 *)((uint8 *)glyph + 16), thePlate, 7, 12, start, 5);
         }
-        start = (sint32)((uint32)start + 6U);
+        start = (start + 6);
     }
     if (R3DCar::InMenu == 0 && GameSetup::gData.mirrorTrack != 0)
     {
@@ -300,10 +297,10 @@ void CarIO::LicenseCheck(sint32 reload, sint32 *license_vx, sint32 *license_vy, 
         sint32 sfx_vx = licenseSFX_Vram[licenseSFX_Count][0];
         sint32 sfx_vy = licenseSFX_Vram[licenseSFX_Count][1];
         carObj->render.licenseOffsetU[plate] = (uint8)(((sfx_vx & 63) - (*license_vx & 63)) * 4);
-        carObj->render.licenseOffsetV[plate] = (uint8)((uint32)sfx_vy - ((uint32)*license_vy & 0xFFU));
+        carObj->render.licenseOffsetV[plate] = (uint8)(sfx_vy - ((*license_vy) & 0xFFU));
         *license_vx = sfx_vx;
         *license_vy = sfx_vy;
-        licenseSFX_Count = (sint32)((uint32)licenseSFX_Count + 1U);
+        licenseSFX_Count = (licenseSFX_Count + 1);
     }
     else
     {
@@ -330,12 +327,12 @@ void CarIO::ReadInCarTextureData(char *shpfile, Car::tObj *carObj, sint32 reload
             if (carType < 28)
             {
                 if ((carObj->render.inside & 1) != 0)
-                    carVRamCount = (sint32)((uint32)slot + (uint32)carVRamAdd[slot / 3] * 3U);
+                    carVRamCount = (slot + (carVRamAdd[slot / 3] * 3));
                 else
-                    carVRamCount = (sint32)((uint32)slot + 3U);
+                    carVRamCount = (slot + 3);
             }
             else
-                carVRamCount = (sint32)((uint32)slot + 1U);
+                carVRamCount = (slot + 1);
         }
         else
         {
@@ -343,7 +340,7 @@ void CarIO::ReadInCarTextureData(char *shpfile, Car::tObj *carObj, sint32 reload
             vx = carVRamSlotsMenu[slot][0];
             vy = carVRamSlotsMenu[slot][1];
             carObj->render.VRamY = (sint16)vy;
-            carVRamCount = (sint32)((uint32)slot + (uint32)carVRamAdd[slot]);
+            carVRamCount = (slot + carVRamAdd[slot]);
         }
     }
     else
@@ -396,8 +393,7 @@ void CarIO::ReadInCarTextureData(char *shpfile, Car::tObj *carObj, sint32 reload
                     sint32 license_vx = vx + licensePlate[carType][1];
                     sint32 license_vy = vy + licensePlate[carType][2];
                     LicenseCheck(reload, &license_vx, &license_vy, carObj, 0);
-                    Texture::LoadPmx(0, (char *)Plate1[player], recolor_flag,
-                        license_vx, license_vy, -1, -1, &CarIO::carPixMap[carPixMapCount]);
+                    Texture::LoadPmx(0, (char *)Plate1[player], recolor_flag, license_vx, license_vy, -1, -1, &CarIO::carPixMap[carPixMapCount]);
                     license = true;
                     CarIO::carPixMap[carPixMapCount].flag = 1;
                 }
@@ -406,8 +402,7 @@ void CarIO::ReadInCarTextureData(char *shpfile, Car::tObj *carObj, sint32 reload
                     sint32 license_vx = vx + licensePlate[carType][4];
                     sint32 license_vy = vy + licensePlate[carType][5];
                     LicenseCheck(reload, &license_vx, &license_vy, carObj, 1);
-                    Texture::LoadPmx(0, (char *)Plate2[player], recolor_flag,
-                        license_vx, license_vy, -1, -1, &CarIO::carPixMap[carPixMapCount]);
+                    Texture::LoadPmx(0, (char *)Plate2[player], recolor_flag, license_vx, license_vy, -1, -1, &CarIO::carPixMap[carPixMapCount]);
                     license = true;
                     CarIO::carPixMap[carPixMapCount].flag = 2;
                 }
@@ -423,10 +418,10 @@ void CarIO::ReadInCarTextureData(char *shpfile, Car::tObj *carObj, sint32 reload
             sint32 palIndex = carPixMapCount;
             if (palShare != 0)
             {
-                sint32 sharedIndex = (sint32)((uint32)palShare - 1U);
+                sint32 sharedIndex = (palShare - 1);
                 if (recolor_flag != 0)
                     carObj->render.palCopyNum[i] = carObj->render.palCopyNum[sharedIndex];
-                palIndex = (sint32)((uint32)sharedIndex + (uint32)carObj->render.textureStartIndex);
+                palIndex = (sharedIndex + carObj->render.textureStartIndex);
             }
             shape = (shapetbl *)locateshape(shpfile, textureName[i].tex);
             if (shape != 0)
@@ -442,8 +437,7 @@ void CarIO::ReadInCarTextureData(char *shpfile, Car::tObj *carObj, sint32 reload
                         sint32 license_vx = vx + licensePlate[carType][1];
                         sint32 license_vy = vy + licensePlate[carType][2];
                         LicenseCheck(reload, &license_vx, &license_vy, carObj, 0);
-                        Texture::LoadPmx(0, (char *)Plate1[player], 0x20,
-                            license_vx, license_vy, cx, cy, &CarIO::carPixMap[carPixMapCount]);
+                        Texture::LoadPmx(0, (char *)Plate1[player], 0x20, license_vx, license_vy, cx, cy, &CarIO::carPixMap[carPixMapCount]);
                         license = true;
                         CarIO::carPixMap[carPixMapCount].flag = 1;
                     }
@@ -452,8 +446,7 @@ void CarIO::ReadInCarTextureData(char *shpfile, Car::tObj *carObj, sint32 reload
                         sint32 license_vx = vx + licensePlate[carType][4];
                         sint32 license_vy = vy + licensePlate[carType][5];
                         LicenseCheck(reload, &license_vx, &license_vy, carObj, 1);
-                        Texture::LoadPmx(0, (char *)Plate2[player], 0x20,
-                            license_vx, license_vy, cx, cy, &CarIO::carPixMap[carPixMapCount]);
+                        Texture::LoadPmx(0, (char *)Plate2[player], 0x20, license_vx, license_vy, cx, cy, &CarIO::carPixMap[carPixMapCount]);
                         license = true;
                         CarIO::carPixMap[carPixMapCount].flag = 2;
                     }
@@ -466,7 +459,7 @@ void CarIO::ReadInCarTextureData(char *shpfile, Car::tObj *carObj, sint32 reload
                     CarIO::carPixMap[carPixMapCount].flag |= 0x80;
             }
         }
-        carPixMapCount = (sint32)((uint32)carPixMapCount + 1U);
+        carPixMapCount = (carPixMapCount + 1);
     }
     if ((reload & 0x80) != 0)
         CarIO::carPixMapCount = carPixMapCount;
@@ -499,7 +492,7 @@ void CarIO::UpdateCarTextureData(char *shpfile, Car::tObj *carObj, sint32 player
             Draw::tPixMap *pmx = &CarIO::carPixMap[carPixMapCount];
             if ((pmx->flag & 0x80) == 0)
             {
-                carPixMapCount = (sint32)((uint32)carPixMapCount + 1U);
+                carPixMapCount = (carPixMapCount + 1);
                 continue;
             }
             sint32 cx = (pmx->clut & 63) << 4;
@@ -512,14 +505,12 @@ void CarIO::UpdateCarTextureData(char *shpfile, Car::tObj *carObj, sint32 player
                 if (i == licensePlate[carType][0])
                 {
                     license = true;
-                    Texture::LoadPmx(0, (char *)Plate1[player], recolor_flag,
-                        vx + licensePlate[carType][1], vy + licensePlate[carType][2], cx, cy, pmx);
+                    Texture::LoadPmx(0, (char *)Plate1[player], recolor_flag, vx + licensePlate[carType][1], vy + licensePlate[carType][2], cx, cy, pmx);
                 }
                 else if (i == licensePlate[carType][3])
                 {
                     license = true;
-                    Texture::LoadPmx(0, (char *)Plate2[player], recolor_flag,
-                        vx + licensePlate[carType][4], vy + licensePlate[carType][5], cx, cy, pmx);
+                    Texture::LoadPmx(0, (char *)Plate2[player], recolor_flag, vx + licensePlate[carType][4], vy + licensePlate[carType][5], cx, cy, pmx);
                 }
             }
             if (!license)
@@ -533,10 +524,10 @@ void CarIO::UpdateCarTextureData(char *shpfile, Car::tObj *carObj, sint32 player
             sint32 palIndex = carPixMapCount;
             if (palShare != 0)
             {
-                sint32 sharedIndex = (sint32)((uint32)palShare - 1U);
+                sint32 sharedIndex = (palShare - 1);
                 if (recolor_flag != 0)
                     carObj->render.palCopyNum[i] = carObj->render.palCopyNum[sharedIndex];
-                palIndex = (sint32)((uint32)sharedIndex + (uint32)carObj->render.textureStartIndex);
+                palIndex = (sharedIndex + carObj->render.textureStartIndex);
             }
             shape = (shapetbl *)locateshape(shpfile, textureName[i].tex);
             if (shape != 0)
@@ -550,14 +541,12 @@ void CarIO::UpdateCarTextureData(char *shpfile, Car::tObj *carObj, sint32 player
                     if (i == licensePlate[carType][0])
                     {
                         license = true;
-                        Texture::LoadPmx(0, (char *)Plate1[player], 0x20,
-                            vx + licensePlate[carType][1], vy + licensePlate[carType][2], cx, cy, &CarIO::carPixMap[carPixMapCount]);
+                        Texture::LoadPmx(0, (char *)Plate1[player], 0x20, vx + licensePlate[carType][1], vy + licensePlate[carType][2], cx, cy, &CarIO::carPixMap[carPixMapCount]);
                     }
                     else if (i == licensePlate[carType][3])
                     {
                         license = true;
-                        Texture::LoadPmx(0, (char *)Plate2[player], 0x20,
-                            vx + licensePlate[carType][4], vy + licensePlate[carType][5], cx, cy, &CarIO::carPixMap[carPixMapCount]);
+                        Texture::LoadPmx(0, (char *)Plate2[player], 0x20, vx + licensePlate[carType][4], vy + licensePlate[carType][5], cx, cy, &CarIO::carPixMap[carPixMapCount]);
                     }
                 }
                 if (!license)
@@ -568,7 +557,7 @@ void CarIO::UpdateCarTextureData(char *shpfile, Car::tObj *carObj, sint32 player
                     CarIO::carPixMap[carPixMapCount].flag |= 0x80;
             }
         }
-        carPixMapCount = (sint32)((uint32)carPixMapCount + 1U);
+        carPixMapCount = (carPixMapCount + 1);
     }
 }
 
@@ -581,10 +570,10 @@ void CarIO::ReleaseCarCluts(Car::tObj *carObj)
         Draw::tPixMap *pixMap = &CarIO::carPixMap[carPixMapCount];
         if ((pixMap->flag & 0x80) != 0)
         {
-            sint16 clut = (sint16)pixMap->clut;
+            sint16 clut = pixMap->clut;
             pixMap->flag = 0;
             Texture::MenuReleaseClutId(clut);
         }
-        carPixMapCount = (sint32)((uint32)carPixMapCount + 1U);
+        carPixMapCount = (carPixMapCount + 1);
     }
 }

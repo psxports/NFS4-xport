@@ -151,7 +151,7 @@ void tDialogHelp::AddItem(sint16 textID, sint16 controllerID)
         char *word = TextSys::Word(textID);
         text[numItems] = word;
         cont[numItems] = controllerID;
-        numItems = (sint16)((uint16)numItems + 1u);
+        numItems = (sint16)((uint16)numItems + 1);
     }
 }
 
@@ -212,7 +212,7 @@ void tDialogHelp::CalculateDimensions(void)
     lefttext = helpcontrollers == 3 ? 70 : 40;
     width = (sint16)((uint16)width + lefttext);
     height = numItems < 2 ? 0 : (sint16)(numItems * 15);
-    left = (sint16)((sint32)(uint32(screenwidth) - uint32((sint32)width)) / 2);
+    left = (sint16)((screenwidth - width) / 2);
     top = (sint16)((240 - height) / 2);
     if (width < gHelpShapes[3].width + 20)
         width = (sint16)(gHelpShapes[3].width + 20);
@@ -240,10 +240,10 @@ void tDialogHelp::Draw(void)
     FUNCTION_MARKER(0x8001912C, "FRONT.BIN");
     CalculateDimensions();
     sint32 ticks = ::ticks;
-    sint32 deadline = (sint32)(uint32(startTicks) + 50u);
+    sint32 deadline = (startTicks + 50);
     if (ticks >= deadline)
     {
-        sint32 numLetters = (sint32)(uint32(ticks) - uint32(startTicks) - 50u) / 3;
+        sint32 numLetters = ((ticks - startTicks) - 50) / 3;
         char buffer[80];
         for (sint16 i = 0; i < numItems; ++i)
         {
@@ -256,12 +256,12 @@ void tDialogHelp::Draw(void)
                 sint32 buttonY = top + (i - 1) * 15 + 19;
                 if (helpcontrollers == 3 && control != 0xA0 && control != 0x50 && control != 0x40)
                 {
-                    FeTools::DrawPSXButton(0x41, (uint16)control, x, buttonY);
+                    FeTools::DrawPSXButton(0x41, control, x, buttonY);
                     padType = 0x23;
                     x = left + 40;
                     buttonY = top + (i - 1) * 15 + 19;
                 }
-                FeTools::DrawPSXButton(padType, (uint16)control, x, buttonY);
+                FeTools::DrawPSXButton(padType, control, x, buttonY);
             }
             char *sMenuText;
             if (numLetters < (sint32)strlen(text[i]))
@@ -273,8 +273,7 @@ void tDialogHelp::Draw(void)
             }
             else
                 sMenuText = text[i];
-            FETextRender::FullText(sMenuText, (sint16)((uint16)left + (uint16)lefttext), y,
-                i == 0 ? textType_PopUpTitle : textType_PopUpText, textState_Selected, 0);
+            FETextRender::FullText(sMenuText, ((uint16)left + (uint16)lefttext), y, i == 0 ? textType_PopUpTitle : textType_PopUpText, textState_Selected, 0);
         }
     }
     tDialogBase::Draw();
@@ -285,8 +284,8 @@ void tDialogMessageString::CalculateDimensions(void)
     FUNCTION_MARKER(0x80019418, "FRONT.BIN");
 
     sint32 ticks = ::ticks;
-    sint32 numerator = (sint32)((uint32(ticks) - 50u - uint32(startTicks)) << 7);
-    sint32 fade = (sint32)(128u - uint32(numerator / 100));
+    sint32 numerator = ((uint32(ticks) - 50u - uint32(startTicks)) << 7);
+    sint32 fade = (128 - (numerator / 100));
     fFadeText = fade;
     if (fade > 128)
         fade = 128;
@@ -298,9 +297,9 @@ void tDialogMessageString::CalculateDimensions(void)
     width = MaxW;
     if (MaxH == 0)
     {
-        height = (sint16)FETextRender::WordWrapHeight((sint16)(uint32((uint16)MaxW) - 40u), string);
+        height = (sint16)FETextRender::WordWrapHeight((uint32((uint16)MaxW) - 40u), string);
         Centerit = height == 8 ? 1 : 0;
-        height = (sint16)((uint16)height + 16u);
+        height = (sint16)((uint16)height + 16);
     }
     else
     {
@@ -308,23 +307,23 @@ void tDialogMessageString::CalculateDimensions(void)
         height = MaxH;
     }
     ticks = ::ticks;
-    sint32 elapsed = (sint32)(uint32(ticks) - uint32(startTicks));
+    sint32 elapsed = (ticks - startTicks);
     if (elapsed < 50)
     {
         sint32 shapeWidth = gHelpShapes[42].width;
         sint32 widthDifference = width - (sint16)(uint32(shapeWidth) << 1);
-        sint32 widthProduct = (sint32)(uint32(widthDifference) * uint32(elapsed));
+        sint32 widthProduct = (widthDifference * elapsed);
         sint32 shapeHeight = gHelpShapes[42].height;
         sint32 heightDifference = height - (sint16)(uint32(shapeHeight) << 1);
-        sint32 heightTicks = (sint32)(uint32(ticks) - uint32(startTicks));
-        sint32 heightProduct = (sint32)(uint32(heightDifference) * uint32(heightTicks));
+        sint32 heightTicks = (ticks - startTicks);
+        sint32 heightProduct = (heightDifference * heightTicks);
         fFullyOpen = 0;
         width = (sint16)((uint32(shapeWidth) << 1) + uint32(widthProduct / 50));
         height = (sint16)((uint32(shapeHeight) << 1) + uint32(heightProduct / 50));
     }
     else
         fFullyOpen = 1;
-    sint32 horizontal = (sint32)(uint32(screenwidth) - uint32((sint32)width));
+    sint32 horizontal = (screenwidth - width);
     left = (sint16)((uint16)OffsetX + uint32(horizontal / 2));
     top = (sint16)((uint16)OffsetY + uint32((240 - height) / 2));
 }
@@ -334,7 +333,7 @@ void tDialogMessageString::Draw(void)
     FUNCTION_MARKER(0x8001962C, "FRONT.BIN");
 
     CalculateDimensions();
-    sint32 deadline = (sint32)(uint32(startTicks) + 50);
+    sint32 deadline = (startTicks + 50);
     if (::ticks < deadline)
         fFullyOpen = 0;
     else
@@ -349,7 +348,7 @@ void tDialogMessageString::Draw(void)
         r.h = (sint16)(uint32((uint16)height) - (uint32((uint16)reservedheight) + 8));
         FETextRender::SetABR(1, true);
         if (Centerit != 0)
-            FETextRender::FullTextRGB(string, (sint16)((uint16)left + uint32(sint32(width) >> 1)), (sint16)((uint16)top + 8), col, 0, 2);
+            FETextRender::FullTextRGB(string, ((uint16)left + uint32(sint32(width) >> 1)), ((uint16)top + 8), col, 0, 2);
         else
             FETextRender::WordWrapTextRGB(string, r, col);
         FETextRender::SetABR(0, false);
@@ -386,7 +385,7 @@ sint16 tDialogInteractive::Run(void)
         for (sint32 i = 0; i < 2; ++i)
         {
             tPlayer player = static_cast<tPlayer>(i);
-            keyVal[i] = FEInput::GetKeyFromPlayer(player, (sint32)debounce);
+            keyVal[i] = FEInput::GetKeyFromPlayer(player, debounce);
             if (keyVal[i] == kInput_KeyType_NoKey)
                 keyVal[i] = kInput_KeyType_AlreadyProcessed;
             if (keyVal[i] == kInput_KeyType_Circle && FEApp->helpPopup.currentlyOn == 0 && FEApp->fCurrentMenu[i] != 0)
@@ -422,11 +421,11 @@ void tDialogYesNo::CalculateDimensions(void)
     sint32 elapsed = (sint32)(uint32(ticks) - uint32(startTicks));
     if (elapsed < 50)
     {
-        sint32 scaled = (sint32)(uint32(elapsed) * 15u);
+        sint32 scaled = (elapsed * 15);
         height = (sint16)((uint16)height + uint32(scaled / 50));
     }
     else
-        height = (sint16)((uint16)height + 15u);
+        height = (sint16)((uint16)height + 15);
     reservedheight = 15;
     top = (sint16)((uint16)OffsetY + uint32((240 - height) / 2));
 }
@@ -476,7 +475,7 @@ void tDialogYesNo::Draw(void)
             sint32 y = top + height - 11;
             FETextRender::SetABR(1, true);
             char *word = TextSys::Word(yesnowords[i]);
-            FETextRender::FullTextRGB(word, (sint16)x, (sint16)y, col, 0, 2);
+            FETextRender::FullTextRGB(word, x, y, col, 0, 2);
             FETextRender::SetABR(0, false);
             x += sint32(width) >> 1;
         }

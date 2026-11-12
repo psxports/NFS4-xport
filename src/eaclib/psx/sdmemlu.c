@@ -7,7 +7,7 @@ sint32 SNDmemlargestunused(sint32 *address)
     *address = 65;
     sint32 largest = 0;
     if (soundSpuMemory.allocationCount == 0)
-        largest = ((sint32)(soundSpuMemory.limitUnit)) - 65;
+        largest = ((soundSpuMemory.limitUnit)) - 65;
     else
     {
         sint32 index = 0;
@@ -15,14 +15,14 @@ sint32 SNDmemlargestunused(sint32 *address)
         {
             if (index == 0)
             {
-                sint32 gap = ((sint32)(soundSpuMemory.allocations[0].offsetUnits)) - 65;
+                sint32 gap = ((soundSpuMemory.allocations[0].offsetUnits)) - 65;
                 if (largest < gap)
                     largest = gap;
             }
             else
             {
                 sint32 start = soundSpuMemory.allocations[index - 1].offsetUnits + soundSpuMemory.allocations[index - 1].lengthUnits;
-                sint32 gap = ((sint32)(soundSpuMemory.allocations[index].offsetUnits)) - start;
+                sint32 gap = ((soundSpuMemory.allocations[index].offsetUnits)) - start;
                 if (largest < gap)
                 {
                     largest = gap;
@@ -31,13 +31,13 @@ sint32 SNDmemlargestunused(sint32 *address)
             }
         }
         sint32 start = soundSpuMemory.allocations[index - 1].offsetUnits + soundSpuMemory.allocations[index - 1].lengthUnits;
-        sint32 gap = ((sint32)(soundSpuMemory.limitUnit)) - start;
+        sint32 gap = ((soundSpuMemory.limitUnit)) - start;
         if (largest < gap)
         {
             largest = gap;
             *address = start;
         }
     }
-    *address = (sint32)(((uint32)(*address)) << 6);
-    return (sint32)(((uint32)(largest)) << 6);
+    *address = (((uint32)(*address)) << 6);
+    return (((uint32)(largest)) << 6);
 }

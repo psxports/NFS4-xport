@@ -48,14 +48,13 @@ void Chunk::InstanceGroup(SerializedGroup *chunkGroup, SimpleMem *mem)
                     Trk::SimpleInst *inst = reinterpret_cast<Trk::SimpleInst *>(instGroup + 1);
                     for (sint32 j = 0; j < index; ++j)
                         inst = reinterpret_cast<Trk::SimpleInst *>(reinterpret_cast<uint8 *>(inst) + inst->size);
-                    if (inst == 0 || inst->type != 5 ||
-                        reinterpret_cast<Trk::CollideBoomInst *>(inst)->boomIndex != 0)
+                    if (inst == 0 || inst->type != 5 || reinterpret_cast<Trk::CollideBoomInst *>(inst)->boomIndex != 0)
                         break;
                 }
             }
             if (i != 0)
             {
-                simObjBuf = chunkGroup->CreateLiteGroupDataSize(simGroup, mem, (sint32)((uint32)i * 20U));
+                simObjBuf = chunkGroup->CreateLiteGroupDataSize(simGroup, mem, (i * 20));
                 simObjBuf->m_num_elements = i;
             }
             else
@@ -79,7 +78,7 @@ void Chunk::InstanceGroup(SerializedGroup *chunkGroup, SimpleMem *mem)
                 else if (inst->type != 1)
                     break;
                 sint32 length = inst->size;
-                size = (sint32)((uint32)size + (uint32)length);
+                size = (size + length);
                 inst = reinterpret_cast<Trk::SimpleInst *>(reinterpret_cast<uint8 *>(inst) + length);
             }
             objInstanceBuf = chunkGroup->CreateLiteGroupDataSize(instGroup, mem, size);
@@ -108,8 +107,7 @@ void Chunk::InstanceGroup(SerializedGroup *chunkGroup, SimpleMem *mem)
         quadCounts[i] = geomInfo[12 + i * 2];
     Group *quadGroup = geomGroup->LocateCreateGroupType(0x19, mem, 0);
 
-    renderQuads[0] = quadGroup != 0 ? reinterpret_cast<Trk::Quad *>(quadGroup + 1) :
-        reinterpret_cast<Trk::Quad *>(sizeof(Group));
+    renderQuads[0] = quadGroup != 0 ? reinterpret_cast<Trk::Quad *>(quadGroup + 1) : reinterpret_cast<Trk::Quad *>(sizeof(Group));
     sint16 count;
     memcpy(&count, geomInfo + 12, 2);
     renderQuads[1] = count != 0 ? renderQuads[0] + count : renderQuads[0];

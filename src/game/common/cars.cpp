@@ -81,16 +81,15 @@ static void QDUpdateVelForCar(Car::tObj *carObj)
 static coorddef TireEffectPoint(const BO::tNewtonObj &body, const coorddef &position, sint32 wheel, sint32 offset)
 {
     const bool front = wheel < 2;
-    const sint32 lateral = (sint32)((uint32)(front ? body.wheelFrontX : body.wheelBackX) + (uint32)offset) / 256;
+    const sint32 lateral = ((((front ? body.wheelFrontX : body.wheelBackX))) + offset) / 256;
     const sint32 longitudinal = (front ? body.wheelFrontZ : body.wheelBackZ) / 256;
     coorddef point;
     for (sint32 axis = 0; axis < 3; ++axis)
     {
-        const sint32 x = (sint32)((uint32)lateral * (uint32)body.orientMat.m[axis]) / 256;
-        const sint32 z = (sint32)((uint32)longitudinal * (uint32)body.orientMat.m[axis + 6]) / 256;
+        const sint32 x = (lateral * body.orientMat.m[axis]) / 256;
+        const sint32 z = (longitudinal * body.orientMat.m[axis + 6]) / 256;
         const sint32 origin = axis == 0 ? position.x : (axis == 1 ? position.y : position.z);
-        const sint32 value = (sint32)((uint32)origin + ((wheel & 1) != 0 ? (uint32)x : 0U - (uint32)x) +
-            (front ? (uint32)z : 0U - (uint32)z));
+        const sint32 value = (origin + ((wheel & 1) != 0 ? (uint32)x : (~(((uint32)x)) + 1)) + (front ? (uint32)z : (~((uint32)z) + 1)));
         if (axis == 0)
             point.x = value;
         else if (axis == 1)
@@ -105,7 +104,6 @@ void Cars::DoGravityEffectsOnAcc(Car::tObj *carObj, sint32 arcade)
 {
     FUNCTION_MARKER(0x80085D84, "NFS4.EXE");
 
-    (void)arcade;
     if ((carObj->carFlags & 0x10) != 0)
         return;
     coorddef gravity_ch;
@@ -114,21 +112,21 @@ void Cars::DoGravityEffectsOnAcc(Car::tObj *carObj, sint32 arcade)
         gravity_ch.x = fixedmult(-0xa0000, carObj->N.orientMat.m[1]);
         gravity_ch.y = fixedmult(-0xa0000, carObj->N.orientMat.m[4]);
         gravity_ch.z = fixedmult(-0xa0000, carObj->N.orientMat.m[7]);
-        carObj->linearAcc_ch.x = (sint32)((uint32)carObj->linearAcc_ch.x + (uint32)gravity_ch.x);
-        carObj->linearAcc_ch.y = (sint32)((uint32)carObj->linearAcc_ch.y + (uint32)gravity_ch.y);
-        carObj->linearAcc_ch.z = (sint32)((uint32)carObj->linearAcc_ch.z + (uint32)gravity_ch.z);
+        carObj->linearAcc_ch.x = (carObj->linearAcc_ch.x + gravity_ch.x);
+        carObj->linearAcc_ch.y = (carObj->linearAcc_ch.y + gravity_ch.y);
+        carObj->linearAcc_ch.z = (carObj->linearAcc_ch.z + gravity_ch.z);
         return;
     }
     if ((uint8)carObj->control.brakeLevel >= 64)
         return;
     gravity_ch.z = fixedmult(-0xa0000, carObj->N.orientMat.m[7]);
     gravity_ch.z = fixedmult(gravity_ch.z, carObj->N.gravityMult);
-    sint32 magnitude = gravity_ch.z < 0 ? (sint32)(0U - (uint32)gravity_ch.z) : gravity_ch.z;
+    sint32 magnitude = gravity_ch.z < 0 ? -gravity_ch.z : gravity_ch.z;
     if (magnitude < 0xccd)
         return;
     sint32 acceleration = carObj->linearAcc_ch.z;
     sint32 shift = ((gravity_ch.z > 0) == (acceleration > 0)) ? 1 : 3;
-    carObj->linearAcc_ch.z = (sint32)((uint32)acceleration + (uint32)(gravity_ch.z >> shift));
+    carObj->linearAcc_ch.z = (acceleration + (gravity_ch.z >> shift));
 }
 
 void Cars::GetDashData(Car::tObj *carObj, sint32 *rpm, sint32 *gear, sint32 *speed)
@@ -147,11 +145,11 @@ void Cars::QDUpdateVelGlue(Car::tObj *carObj)
     sint32 velocityX = carObj->N.linearVel.x / 256;
     sint32 glue = carObj->glue / 256;
     sint32 velocityZ = carObj->N.linearVel.z / 256;
-    uint32 productX = (uint32)velocityX * (uint32)glue;
-    carObj->N.position.y = (sint32)((uint32)carObj->N.position.y + (uint32)(carObj->N.linearVel.y >> 6));
-    carObj->N.position.x = (sint32)((uint32)carObj->N.position.x + (uint32)((sint32)productX >> 6));
-    uint32 productZ = (uint32)velocityZ * (uint32)glue;
-    carObj->N.position.z = (sint32)((uint32)carObj->N.position.z + (uint32)((sint32)productZ >> 6));
+    uint32 productX = velocityX * (uint32)glue;
+    carObj->N.position.y = (carObj->N.position.y + (carObj->N.linearVel.y >> 6));
+    carObj->N.position.x = (carObj->N.position.x + ((sint32)productX >> 6));
+    uint32 productZ = velocityZ * (uint32)glue;
+    carObj->N.position.z = (carObj->N.position.z + ((sint32)productZ >> 6));
 }
 
 void Cars::InitDashData(Car::tObj *carObj, sint32 *redline, sint32 *topspeed)
@@ -172,7 +170,7 @@ void Cars::SetAudioCalls(Car::tObj *carObj, sint32 type, sint32 chan, sint32 s1,
     carObj->audio[carObj->audioCount].surface2 = s2;
     carObj->audio[carObj->audioCount].force = force;
     carObj->audio[carObj->audioCount].panangle = pan;
-    carObj->audioCount = (sint32)((uint32)carObj->audioCount + 1);
+    carObj->audioCount = (carObj->audioCount + 1);
 }
 
 void Cars::ResetCarCounters(void)
@@ -227,11 +225,11 @@ void Cars::InitializeCarTablesFlagsAndCounters(Car::tObj *carObj)
     carObj->carIndex = carIndex;
     carObj->carFlags = 0;
     carObj->humanIndex = -1;
-    gNumCars = (sint32)((uint32)carIndex + 1);
+    gNumCars = (carIndex + 1);
     strcpy(carObj->carName, GameSetup::gCarNames[carObj->carInfo->carType]);
     sint32 carType = carObj->carInfo->carType;
     if (carType < 29)
-        strcpy(carObj->carNameLocalized, TextSys::Word((sint32)((uint32)carType + 0x4E)));
+        strcpy(carObj->carNameLocalized, TextSys::Word((carType + 0x4E)));
     else
         sprintf(carObj->carNameLocalized, "");
     if ((carClass & 1) != 0) {
@@ -240,7 +238,7 @@ void Cars::InitializeCarTablesFlagsAndCounters(Car::tObj *carObj)
             sprintf(carObj->carInfo->driver, name);
         } else if ((uint8)frontEnd.gameMode == 1) {
             char *format = TextSys::Word(0x2F);
-            sprintf(carObj->carInfo->driver, format, (sint32)((uint32)gNumHumanRaceCars + 1));
+            sprintf(carObj->carInfo->driver, format, (gNumHumanRaceCars + 1));
         } else {
             char *name = TextSys::Word(0x2E);
             sprintf(carObj->carInfo->driver, name);
@@ -249,16 +247,16 @@ void Cars::InitializeCarTablesFlagsAndCounters(Car::tObj *carObj)
         sint32 humanIndex = gNumHumanRaceCars;
         carObj->humanIndex = humanIndex;
         gHumanRaceCarList[humanIndex] = carObj;
-        gNumHumanRaceCars = (sint32)((uint32)humanIndex + 1);
+        gNumHumanRaceCars = (humanIndex + 1);
         carObj->carFlags |= 4;
         sint32 raceIndex = gNumRaceCars;
         gRaceCarList[raceIndex] = carObj;
-        gNumRaceCars = (sint32)((uint32)raceIndex + 1);
+        gNumRaceCars = (raceIndex + 1);
         carObj->carFlags |= 1;
         sint32 lifeIndex = gNumLifeBasisCars;
         gLifeBasisCarList[lifeIndex] = carObj;
         sint32 flags = carObj->carFlags;
-        gNumLifeBasisCars = (sint32)((uint32)lifeIndex + 1);
+        gNumLifeBasisCars = (lifeIndex + 1);
         carObj->carFlags = flags | 0x100;
         if ((carClass & 0x40) != 0)
             carObj->carFlags = flags | 0x300;
@@ -266,9 +264,7 @@ void Cars::InitializeCarTablesFlagsAndCounters(Car::tObj *carObj)
     if ((carClass & 2) != 0) {
         sint32 personality = GameSetup::gData.carInfo[carObj->carIndex].Personality;
         strcpy(carObj->carInfo->driver, GameSetup::gPersonalityNames[personality]);
-        if ((GameSetup::gData.raceType == 1 || GameSetup::gData.raceType == 5) &&
-            ((gHumanRaceCarList[0]->carFlags & 0x200) != 0 ||
-                (gNumHumanRaceCars == 2 && (gHumanRaceCarList[1]->carFlags & 0x200) != 0))) {
+        if ((GameSetup::gData.raceType == 1 || GameSetup::gData.raceType == 5) && ((gHumanRaceCarList[0]->carFlags & 0x200) != 0 || (gNumHumanRaceCars == 2 && (gHumanRaceCarList[1]->carFlags & 0x200) != 0))) {
             char *license = TextSys::Word(0x32);
             strcpy(carObj->carInfo->license, license);
         } else {
@@ -278,44 +274,41 @@ void Cars::InitializeCarTablesFlagsAndCounters(Car::tObj *carObj)
         sint32 aiIndex = gNumAICars;
         sint32 opponentIndex = gNumAIRaceCars;
         gAICarList[aiIndex] = carObj;
-        gNumAICars = (sint32)((uint32)aiIndex + 1);
+        gNumAICars = (aiIndex + 1);
         sint32 raceIndex = gNumRaceCars;
         carObj->carFlags |= 2;
         gAIRaceCarList[opponentIndex] = carObj;
-        gNumAIRaceCars = (sint32)((uint32)opponentIndex + 1);
+        gNumAIRaceCars = (opponentIndex + 1);
         carObj->carFlags |= 8;
         gRaceCarList[raceIndex] = carObj;
         carObj->carFlags |= 1;
-        gNumRaceCars = (sint32)((uint32)raceIndex + 1);
-        if (GameSetup::gData.cops != 0 &&
-            ((GameSetup::gData.raceType != 1 && GameSetup::gData.raceType != 5) ||
-                ((gHumanRaceCarList[0]->carFlags & 0x200) == 0 &&
-                    (gNumHumanRaceCars != 2 || (gHumanRaceCarList[1]->carFlags & 0x200) == 0)))) {
+        gNumRaceCars = (raceIndex + 1);
+        if (GameSetup::gData.cops != 0 && ((GameSetup::gData.raceType != 1 && GameSetup::gData.raceType != 5) || ((gHumanRaceCarList[0]->carFlags & 0x200) == 0 && (gNumHumanRaceCars != 2 || (gHumanRaceCarList[1]->carFlags & 0x200) == 0)))) {
             sint32 lifeIndex = gNumLifeBasisCars;
             gLifeBasisCarList[lifeIndex] = carObj;
-            gNumLifeBasisCars = (sint32)((uint32)lifeIndex + 1);
+            gNumLifeBasisCars = (lifeIndex + 1);
             carObj->carFlags |= 0x100;
         }
     }
     if ((carClass & 4) != 0) {
         sint32 aiIndex = gNumAICars;
         gAICarList[aiIndex] = carObj;
-        gNumAICars = (sint32)((uint32)aiIndex + 1);
+        gNumAICars = (aiIndex + 1);
         carObj->carFlags |= 2;
         sint32 trafficIndex = gNumTrafficCars;
         gTrafficCarList[trafficIndex] = carObj;
-        gNumTrafficCars = (sint32)((uint32)trafficIndex + 1);
+        gNumTrafficCars = (trafficIndex + 1);
         carObj->carFlags |= 0x10;
     }
     if ((carClass & 0x18) != 0) {
         sint32 aiIndex = gNumAICars;
         gAICarList[aiIndex] = carObj;
-        gNumAICars = (sint32)((uint32)aiIndex + 1);
+        gNumAICars = (aiIndex + 1);
         carObj->carFlags |= 2;
         sint32 copIndex = gNumCopCars;
         gCopCarList[copIndex] = carObj;
         sint32 flags = carObj->carFlags;
-        gNumCopCars = (sint32)((uint32)copIndex + 1);
+        gNumCopCars = (copIndex + 1);
         carObj->carFlags = flags | 0x20;
         if ((carClass & 0x10) != 0)
             carObj->carFlags = flags | 0x60;
@@ -351,7 +344,6 @@ void Cars::ResetVariablesAfterACollision(Car::tObj *carObj)
 void Cars::ResetCollidedCars(Car::tObj *carObj, sint32 forceReset, sint32 forceParkAtSide)
 {
     FUNCTION_MARKER(0x80086664, "NFS4.EXE");
-    (void)forceParkAtSide;
     coorddef offset = { 0, 0, 0 };
     sint32 blowout = carObj->blowout;
     sint32 direction = carObj->desiredDirection;
@@ -361,51 +353,46 @@ void Cars::ResetCollidedCars(Car::tObj *carObj, sint32 forceReset, sint32 forceP
         return;
     }
     if (forceReset == 0) {
-        uint32 alignment = (uint32)(carObj->N.roadMatrix.m[3] / 256) *
-            (uint32)(carObj->N.orientMat.m[3] / 256);
-        alignment += (uint32)(carObj->N.roadMatrix.m[4] / 256) *
-            (uint32)(carObj->N.orientMat.m[4] / 256);
-        alignment += (uint32)(carObj->N.roadMatrix.m[5] / 256) *
-            (uint32)(carObj->N.orientMat.m[5] / 256);
-        sint32 y = (sint32)alignment;
-        if (y > 0xC000 && carObj->N.angularVel.x < 65536 && carObj->N.angularVel.z < 65536 &&
-            carObj->N.driveSurfaceType != 14 && carObj->N.driveSurfaceType != 0 &&
-            carObj->N.simRoadInfo.simQuad != 0 && carObj->N.flightTime < 6 && carObj->N.objAltitude < 65536) {
+        uint32 alignment = (carObj->N.roadMatrix.m[3] / 256) * (uint32)(carObj->N.orientMat.m[3] / 256);
+        alignment += (carObj->N.roadMatrix.m[4] / 256) * (uint32)(carObj->N.orientMat.m[4] / 256);
+        alignment += (carObj->N.roadMatrix.m[5] / 256) * (uint32)(carObj->N.orientMat.m[5] / 256);
+        sint32 y = alignment;
+        if (y > 0xC000 && carObj->N.angularVel.x < 65536 && carObj->N.angularVel.z < 65536 && carObj->N.driveSurfaceType != 14 && carObj->N.driveSurfaceType != 0 && carObj->N.simRoadInfo.simQuad != 0 && carObj->N.flightTime < 6 && carObj->N.objAltitude < 65536) {
             carObj->collision.smoking = 0;
             return;
         }
     }
-    sint32 addToSlice = (sint32)((uint32)direction << 2);
-    sint32 newSlice = (sint32)((uint32)carObj->N.simRoadInfo.slice + (uint32)addToSlice);
+    sint32 addToSlice = ((uint32)direction << 2);
+    sint32 newSlice = (carObj->N.simRoadInfo.slice + addToSlice);
     if (addToSlice < 0) {
         if (newSlice < 0)
-            newSlice = (sint32)((uint32)newSlice + (uint32)gNumSlices);
+            newSlice = (newSlice + gNumSlices);
     } else if (newSlice >= gNumSlices) {
-        newSlice = (sint32)((uint32)newSlice - (uint32)gNumSlices);
+        newSlice = (newSlice - gNumSlices);
     }
     if (forceReset == 2)
         newSlice = carObj->N.simRoadInfo.slice;
     sint32 accident = accidentSlice;
     if (accident > 0) {
-        sint32 end = (sint32)((uint32)accident + 5);
+        sint32 end = (accident + 5);
         sint32 numSlices = gNumSlices;
         if (end >= numSlices) {
-            end = (sint32)((uint32)accident - ((uint32)numSlices - 5));
+            end = (accident - (numSlices - 5));
             if (newSlice < end)
                 accident = accidentSlice;
         }
         if (newSlice < end) {
-            sint32 start = (sint32)((uint32)accident - 5);
+            sint32 start = (accident - 5);
             if (start < 0)
-                start = (sint32)((uint32)accident + (uint32)gNumSlices - 5);
+                start = ((accident + gNumSlices) - 5);
             if (start < newSlice) {
-                addToSlice = (sint32)((uint32)direction * 5);
-                newSlice = (sint32)((uint32)newSlice + (uint32)addToSlice);
+                addToSlice = (direction * 5);
+                newSlice = (newSlice + addToSlice);
                 if (addToSlice < 0) {
                     if (newSlice < 0)
-                        newSlice = (sint32)((uint32)newSlice + (uint32)gNumSlices);
+                        newSlice = (newSlice + gNumSlices);
                 } else if (newSlice >= gNumSlices) {
-                    newSlice = (sint32)((uint32)newSlice - (uint32)gNumSlices);
+                    newSlice = (newSlice - gNumSlices);
                 }
             }
         }
@@ -419,11 +406,11 @@ void Cars::ResetCollidedCars(Car::tObj *carObj, sint32 forceReset, sint32 forceP
     if (side != 0) {
         sint32 width = road->avgPavedWidthLf * 0x8000 * (road->laneCount >> 4);
         uint32 margin = (uint32)(carObj->N.dimension.x / 256) * 384;
-        offset.x = (sint32)(margin - (uint32)width);
+        offset.x = (margin - width);
     } else {
         sint32 width = road->avgPavedWidthRt * 0x8000 * (road->laneCount & 15);
         uint32 margin = (uint32)(carObj->N.dimension.x / 256) * 384;
-        offset.x = (sint32)((uint32)width - margin);
+        offset.x = (width - margin);
     }
     Newton::SetInitialSlicePositionOrientationEtc(&carObj->N, newSlice, &offset, direction);
     sint32 resetCounter = 0;
@@ -464,28 +451,27 @@ void Cars::DoExtraCarCollisionProcessing(Car::tObj *carObj)
     if (blowout != 0) {
         sint32 speedZ = carObj->linearVel_ch.z;
         if (speedZ < 0)
-            speedZ = (sint32)(0 - (uint32)speedZ);
+            speedZ = (-speedZ);
         if (speedZ < 0x1999) {
             sint32 speedX = carObj->linearVel_ch.x;
             if (speedX < 0)
-                speedX = (sint32)(0 - (uint32)speedX);
+                speedX = (-speedX);
             if (speedX < 0x1999)
-                carObj->blowout = (sint32)((uint32)blowout + 1);
+                carObj->blowout = (blowout + 1);
         }
         if (carObj->blowout > 320) {
             carObj->blowout = 0;
             ResetCollidedCars(carObj, 1, 0);
         }
     }
-    if (carObj->blowout == 0 && carObj->pullOver == 0 && (uint8)carObj->control.abort != 0 &&
-        carObj->stats.finishType == 0 && simGlobal.gameTicks >= 833 && carObj->stats.fatalCrashes == 0) {
+    if (carObj->blowout == 0 && carObj->pullOver == 0 && (uint8)carObj->control.abort != 0 && carObj->stats.finishType == 0 && simGlobal.gameTicks >= 833 && carObj->stats.fatalCrashes == 0) {
         if (carObj->N.speedXZ < 0x1B9999) {
             ResetCollidedCars(carObj, 2, 0);
             carObj->stats.fatalCrashes = 160;
             sint32 player = carObj == gHumanRaceCarList[1];
-            Camera::gInfo[player].relpos.x = (sint32)(0 - ((uint32)carObj->N.orientMat.m[6] << 1));
-            Camera::gInfo[player].relpos.y = (sint32)(0 - ((uint32)carObj->N.orientMat.m[7] << 1));
-            Camera::gInfo[player].relpos.z = (sint32)(0 - ((uint32)carObj->N.orientMat.m[8] << 1));
+            Camera::gInfo[player].relpos.x = (-(sint32)((uint32)carObj->N.orientMat.m[6] << 1));
+            Camera::gInfo[player].relpos.y = (-(sint32)((uint32)carObj->N.orientMat.m[7] << 1));
+            Camera::gInfo[player].relpos.z = (-(sint32)((uint32)carObj->N.orientMat.m[8] << 1));
         }
     }
     sint32 fatalCrashes = carObj->stats.fatalCrashes;
@@ -501,27 +487,27 @@ void Cars::DoExtraCarCollisionProcessing(Car::tObj *carObj)
         sint32 roadSurfaceWheel = carObj->wheel[wheel].roadSurfaceType & 15;
         if (kSkidMarkSurface[roadSurfaceWheel] == 1 && (random() & 3) == 0) {
             coorddef sideX;
-            sideX.x = (sint32)((uint32)(carObj->N.wheelBackX / 256) * (uint32)carObj->N.orientMat.m[0]) / 256;
-            sideX.y = (sint32)((uint32)(carObj->N.wheelBackX / 256) * (uint32)carObj->N.orientMat.m[1]) / 256;
-            sideX.z = (sint32)((uint32)(carObj->N.wheelBackX / 256) * (uint32)carObj->N.orientMat.m[2]) / 256;
+            sideX.x = (((carObj->N.wheelBackX / 256)) * carObj->N.orientMat.m[0]) / 256;
+            sideX.y = (((carObj->N.wheelBackX / 256)) * carObj->N.orientMat.m[1]) / 256;
+            sideX.z = (((carObj->N.wheelBackX / 256)) * carObj->N.orientMat.m[2]) / 256;
             coorddef position = carObj->N.position;
             position.y = carObj->N.groundElevation;
             if ((wheel & 1) == 0) {
-                sideX.x = (sint32)(0 - (uint32)sideX.x);
-                sideX.y = (sint32)(0 - (uint32)sideX.y);
-                sideX.z = (sint32)(0 - (uint32)sideX.z);
+                sideX.x = (-sideX.x);
+                sideX.y = (-sideX.y);
+                sideX.z = (-sideX.z);
             }
             coorddef point;
-            point.x = (sint32)((uint32)position.x + (uint32)sideX.x);
-            point.y = (sint32)((uint32)position.y + (uint32)sideX.y);
-            point.z = (sint32)((uint32)position.z + (uint32)sideX.z);
+            point.x = (position.x + sideX.x);
+            point.y = (position.y + sideX.y);
+            point.z = (position.z + sideX.z);
             TrgSfx::AddCarSfx(carObj->N.objID, &point, 4, &carObj->N.linearVel);
         }
         carObj->audioDamageScrape = 0;
     }
     if (carObj->N.collision.impulse != 0) {
         bool debris = false;
-        sint32 collisionType = (sint32)((uint32)carObj->N.collision.sfxType & 0xEFFF0000);
+        sint32 collisionType = (carObj->N.collision.sfxType & 0xEFFF0000);
         if (carObj->carInfo->carType < 28) {
             if (((uint16)carObj->render.damageParts & 1) == 0 && carObj->N.damage[7] > 0x1E0000) {
                 carObj->render.damageParts = (sint16)((uint16)carObj->render.damageParts | 1);
@@ -565,7 +551,7 @@ void Cars::DoExtraCarCollisionProcessing(Car::tObj *carObj)
         }
         if (collisionType == 0x40000) {
             coorddef impactPoint = carObj->N.collision.collisionPoint;
-            impactPoint.y = (sint32)((uint32)impactPoint.y + 0x8000);
+            impactPoint.y = (impactPoint.y + 0x8000);
             sint32 speed = carObj->N.speedXZ;
             if (speed > 0x180000) {
                 if (carObj->N.objAltitude < 0x9999) {
@@ -597,7 +583,7 @@ void Cars::DoExtraCarCollisionProcessing(Car::tObj *carObj)
                 surface2 = (uint8)carObj->N.collision.sfxType;
                 if (collisionType == 0x50000) {
                     coorddef impactPoint = carObj->N.collision.collisionPoint;
-                    impactPoint.y = (sint32)((uint32)impactPoint.y + 0x8000);
+                    impactPoint.y = (impactPoint.y + 0x8000);
                     TrgSfx::AddCarSfx(carObj->N.objID, &impactPoint, 4, &carObj->N.linearVel);
                 }
             }
@@ -613,19 +599,19 @@ void Cars::DoExtraCarCollisionProcessing(Car::tObj *carObj)
         carObj->collision.resetTimer = resetTimer - 1;
         sint32 verticalSpeed = carObj->N.linearVel.y;
         if (verticalSpeed < 0)
-            verticalSpeed = (sint32)(0 - (uint32)verticalSpeed);
-        sint32 totalSpeed = (sint32)((uint32)carObj->N.speedXZ + (uint32)verticalSpeed);
+            verticalSpeed = (-verticalSpeed);
+        sint32 totalSpeed = (carObj->N.speedXZ + verticalSpeed);
         if (totalSpeed < 0x10000 || carObj->N.driveSurfaceType == 0 || carObj->N.driveSurfaceType == 14)
-            carObj->collision.resetTimer = (sint32)((uint32)carObj->collision.resetTimer - 8);
+            carObj->collision.resetTimer = (carObj->collision.resetTimer - 8);
         if (carObj->collision.resetTimer <= 0) {
             ResetCollidedCars(carObj, 0, 0);
             carObj->collision.resetTimer = 0;
         }
     }
-    uint32 alignment = (uint32)(carObj->N.roadMatrix.m[3] / 256) * (uint32)(carObj->N.orientMat.m[3] / 256);
-    alignment += (uint32)(carObj->N.roadMatrix.m[4] / 256) * (uint32)(carObj->N.orientMat.m[4] / 256);
-    alignment += (uint32)(carObj->N.roadMatrix.m[5] / 256) * (uint32)(carObj->N.orientMat.m[5] / 256);
-    sint32 y = (sint32)alignment;
+    uint32 alignment = (carObj->N.roadMatrix.m[3] / 256) * (uint32)(carObj->N.orientMat.m[3] / 256);
+    alignment += (carObj->N.roadMatrix.m[4] / 256) * (uint32)(carObj->N.orientMat.m[4] / 256);
+    alignment += (carObj->N.roadMatrix.m[5] / 256) * (uint32)(carObj->N.orientMat.m[5] / 256);
+    sint32 y = alignment;
     if (carObj->collision.resetTimer <= 0 && (y < 0x1999 || carObj->N.driveSurfaceType == 0 || carObj->N.driveSurfaceType == 14))
         carObj->collision.resetTimer = 320;
 }
@@ -633,9 +619,9 @@ void Cars::DoExtraCarCollisionProcessing(Car::tObj *carObj)
 void Cars::AddCarSfx(Car::tObj *carObj, sint32 wheel, coorddef *skidpt, sint32 roadSurface, sint32 surfaceType, sint32 drawSkid)
 {
     FUNCTION_MARKER(0x8008748C, "NFS4.EXE");
-    uint32 road = (uint32)roadSurface & 15;
+    uint32 road = roadSurface & 15;
     sint32 smoking = kSmokingSurface[road];
-    uint32 stateBit = (uint32)1 << ((uint32)wheel & 31);
+    uint32 stateBit = (uint32)1 << (wheel & 31);
     sint32 objID = carObj->N.objID;
     sint32 sfxType = kConvertFromRoadToSfxType[road];
     if (surfaceType == 3)
@@ -644,7 +630,7 @@ void Cars::AddCarSfx(Car::tObj *carObj, sint32 wheel, coorddef *skidpt, sint32 r
     bool traffic = currentCarType > 28;
     sint32 sfxDelay = gTAddCarWheelDelay;
     if (traffic)
-        sfxDelay = (sint32)((uint32)sfxDelay << 1);
+        sfxDelay = ((uint32)sfxDelay << 1);
     if (currentCarType == 28)
         return;
     bool front = wheel < 2;
@@ -652,24 +638,24 @@ void Cars::AddCarSfx(Car::tObj *carObj, sint32 wheel, coorddef *skidpt, sint32 r
         if ((carObj->oldSkidState & stateBit) != 0) {
             sint32 skid = front ? carObj->frontSkid : carObj->rearSkid;
             TrgSfx::AddSkidmark(objID, wheel, &carObj->oldSkidPoint[wheel], 1, skid, carObj, 0);
-            carObj->oldSkidState = (sint32)((uint32)carObj->oldSkidState - stateBit);
+            carObj->oldSkidState = (carObj->oldSkidState - stateBit);
         }
     } else if (skidpt->x != carObj->oldSkidPoint[wheel].x || skidpt->z != carObj->oldSkidPoint[wheel].z) {
         sint32 skid = front ? carObj->frontSkid : carObj->rearSkid;
         if (wheel == (front ? 0 : 2))
-            skid = (sint32)((uint32)skid - (uint32)carObj->gTransferRight);
+            skid = (skid - carObj->gTransferRight);
         else
-            skid = (sint32)((uint32)skid + (uint32)carObj->gTransferRight);
-        skid = (sint32)((uint32)skid - (front ? 0x18000 : 0x10000));
+            skid = (skid + carObj->gTransferRight);
+        skid = (skid - ((front ? 0x18000 : 0x10000)));
         if (skid < 0)
             skid = 0;
         else if (skid > 0x60000)
             skid = 0x60000;
-        sint32 type = (sint32)((uint32)surfaceType - 1);
+        sint32 type = (surfaceType - 1);
         TrgSfx::AddSkidmark(objID, wheel, skidpt, 0, skid, carObj, type);
         coorddef point = *skidpt;
         carObj->oldSkidPoint[wheel] = point;
-        carObj->oldSkidState = (sint32)((uint32)carObj->oldSkidState | stateBit);
+        carObj->oldSkidState = (carObj->oldSkidState | stateBit);
     }
     if (sfxType == 8) {
         TrgSfx::AddCarSplash(objID, wheel, skidpt, 8, &carObj->N.linearVel, sfxDelay, carObj->N.speedXZ);
@@ -687,7 +673,7 @@ void Car::TireSkiddingStuff(Car::tObj *carObj)
 {
     FUNCTION_MARKER(0x800878CC, "NFS4.EXE");
     BO::tNewtonObj &body = carObj->N;
-    const sint32 speed = (sint16)((uint32)body.speedXZ >> 16);
+    const sint32 speed = (sint16)(body.speedXZ >> 16);
     const bool wetRoad = GameSetup::gData.Weather != 0 && !BWorldSm::TunnelFlagSm(&body.simRoadInfo);
     const sint32 roadSurface = body.driveSurfaceType;
     const bool visible = body.distToPlayer < 0x3C0000 && body.objAltitude < 0x6666;
@@ -701,7 +687,7 @@ void Car::TireSkiddingStuff(Car::tObj *carObj)
         {
             originalFront = carObj->frontSkid > 0xA0000 ? 0xA0000 : carObj->frontSkid;
             sint32 velocity = carObj->linearVel_ch.z;
-            sint32 magnitude = velocity < 0 ? (sint32)(0U - (uint32)velocity) : velocity;
+            sint32 magnitude = velocity < 0 ? -velocity : velocity;
             carObj->frontSkid = originalFront;
             skidFront = originalFront;
             if (magnitude > 0x140000)
@@ -741,16 +727,14 @@ void Car::TireSkiddingStuff(Car::tObj *carObj)
         const bool isFront = wheel < 2;
         sint32 &skid = isFront ? front : rear;
         const sint32 roadSurfaceWheel = carObj->wheel[wheel].roadSurfaceType;
-        sint32 surfaceType = carObj->wheel[wheel].wheelInAir == 0 ?
-            Cars::kSkidMarkSurface[roadSurfaceWheel & 15] : 0;
+        sint32 surfaceType = carObj->wheel[wheel].wheelInAir == 0 ? Cars::kSkidMarkSurface[roadSurfaceWheel & 15] : 0;
         if (!visible || ((skid == 0 || wetRoad) && (surfaceType < 2 || speed == 0)))
         {
             const sint32 bit = 1 << wheel;
             if ((carObj->oldSkidState & bit) != 0)
             {
                 carObj->oldSkidState -= bit;
-                TrgSfx::AddSkidmark(body.objID, wheel, &carObj->oldSkidPoint[wheel], 1,
-                    isFront ? carObj->frontSkid : carObj->rearSkid, carObj, 0);
+                TrgSfx::AddSkidmark(body.objID, wheel, &carObj->oldSkidPoint[wheel], 1, isFront ? carObj->frontSkid : carObj->rearSkid, carObj, 0);
             }
         }
         else
@@ -768,13 +752,11 @@ void Car::TireSkiddingStuff(Car::tObj *carObj)
             if (skid < 1)
                 skid = 1;
         }
-        if ((roadSurfaceWheel & 0x20) != 0 && gLeafPixmap != 0 && body.speedXZ > 0xA0000 &&
-            TrgSfx::AddCarExtraCheck(body.objID, wheel))
+        if ((roadSurfaceWheel & 0x20) != 0 && gLeafPixmap != 0 && body.speedXZ > 0xA0000 && TrgSfx::AddCarExtraCheck(body.objID, wheel))
         {
             const sint32 rndOffset = ((sint32)(random() & 7) - 4) * 0x3333;
             coorddef point = TireEffectPoint(body, position, wheel, rndOffset);
-            TrgSfx::AddCarExtraSfx(body.objID, wheel, &point, 13, &body.linearVel, body.speedXZ,
-                point.y, carObj->render.light);
+            TrgSfx::AddCarExtraSfx(body.objID, wheel, &point, 13, &body.linearVel, body.speedXZ, point.y, carObj->render.light);
         }
     }
 
@@ -814,10 +796,10 @@ void Cars::FindTotalSlice(Car::tObj *carObj)
         return;
     }
     sint32 numSlices = gNumSlices;
-    uint32 lapSlices = (uint32)carObj->lap * (uint32)numSlices;
+    uint32 lapSlices = carObj->lap * (uint32)numSlices;
     uint32 roadSlice = (uint16)carObj->N.simRoadInfo.slice;
     if (GameSetup::gData.reverseTrack != 0)
-        roadSlice = (uint32)numSlices - roadSlice - 1;
+        roadSlice = numSlices - roadSlice - 1;
     carObj->N.totalSlice = (uint16)(lapSlices + roadSlice);
 }
 
@@ -831,12 +813,12 @@ void Car::DoSkiddingStuff(Car::tObj *carObj)
             carObj->oldAudioSkidState |= 4;
         } else {
             Cars::SetAudioCalls(carObj, 5, 20, 1, 0, 0, 0);
-            carObj->oldAudioSkidState = (sint32)((uint32)carObj->oldAudioSkidState - 4);
+            carObj->oldAudioSkidState = (carObj->oldAudioSkidState - 4);
         }
     } else {
         if ((carObj->oldAudioSkidState & 4) != 0) {
             Cars::SetAudioCalls(carObj, 5, 20, 1, 0, 0, 0);
-            carObj->oldAudioSkidState = (sint32)((uint32)carObj->oldAudioSkidState - 4);
+            carObj->oldAudioSkidState = (carObj->oldAudioSkidState - 4);
         }
         TireSkiddingStuff(carObj);
     }
@@ -858,7 +840,7 @@ void Car::DoPostCollisionStuff(Car::tObj *carObj)
         Car::tSpecs *specs = carObj->specs;
         carObj->render.bodyPitch = 0;
         carObj->render.bodyRoll = 0;
-        carObj->render.currentHeight = (sint32)(0 - (uint32)specs->rideOffset);
+        carObj->render.currentHeight = (-specs->rideOffset);
         Cars::DoExtraCarCollisionProcessing(carObj);
         return;
     }
@@ -868,33 +850,31 @@ void Car::DoPostCollisionStuff(Car::tObj *carObj)
     bool groundedHuman = (carObj->carFlags & 4) != 0 && carObj->N.flightTime == 0;
     sint32 factor = groundedHuman ? 7 : 15;
     sint32 shift = groundedHuman ? 3 : 4;
-    sint32 pitch = (sint32)((uint32)carObj->render.currentPitch * (uint32)factor +
-        (uint32)carObj->linearAcc_ch.z);
-    sint32 roll = (sint32)((uint32)carObj->render.currentRoll * (uint32)factor +
-        (uint32)carObj->linearAcc_ch.x);
+    sint32 pitch = ((carObj->render.currentPitch * factor) + carObj->linearAcc_ch.z);
+    sint32 roll = ((carObj->render.currentRoll * factor) + carObj->linearAcc_ch.x);
     carObj->render.currentPitch = pitch >> shift;
     carObj->render.currentRoll = roll >> shift;
-    sint32 negativeGroundVelocity = (sint32)(0 - (uint32)carObj->N.groundVel);
+    sint32 negativeGroundVelocity = (-carObj->N.groundVel);
     sint32 Yoffset = negativeGroundVelocity / 32;
     if (Yoffset < -0xA3D)
         Yoffset = -0xA3D;
     else if (Yoffset > 0x51E)
         Yoffset = 0x51E;
-    sint32 rollArgument = (sint32)((uint32)carObj->render.currentRoll * 3);
+    sint32 rollArgument = (carObj->render.currentRoll * 3);
     sint32 rollHeight = fixedmult(rollArgument / 2, carObj->specs->bodyRollFactor);
     if (rollHeight < 0)
-        rollHeight = (sint32)(0 - (uint32)rollHeight);
+        rollHeight = (-rollHeight);
     sint32 rollFactor = carObj->render.rollFactor;
     Car::tSpecs *specs = carObj->specs;
     sint32 currentRoll = carObj->render.currentRoll;
     sint32 rideOffset = specs->rideOffset;
     carObj->render.bodyRoll = currentRoll;
-    carObj->render.currentHeight = (sint32)((uint32)Yoffset - (uint32)rollHeight - (uint32)rideOffset);
+    carObj->render.currentHeight = ((Yoffset - rollHeight) - rideOffset);
     sint32 bodyRoll = fixedmult(currentRoll, rollFactor);
     sint32 pitchFactor = carObj->render.pitchFactor;
     sint32 currentPitch = carObj->render.currentPitch;
     carObj->render.bodyRoll = bodyRoll;
-    sint32 bodyPitch = (sint32)(0 - (uint32)currentPitch);
+    sint32 bodyPitch = (-currentPitch);
     carObj->render.bodyPitch = bodyPitch;
     bodyPitch = fixedmult(bodyPitch, pitchFactor);
     GameSetup::tCarData *carInfo = carObj->carInfo;
@@ -913,16 +893,13 @@ void Cars::CalculateStartingGridOffset(Car::tObj *carObj, sint32 *slice, coordde
     sint32 startingPosition = GameSetup::gData.carInfo[carObj->carIndex].StartingPos;
     sint32 initialSlice = negDir;
     if (gNumRaceCars >= 3)
-        initialSlice = (sint32)((uint32)negDir + (uint32)(negDir * 10) * (uint32)startingPosition);
-    if (initialSlice < 0)
-        *slice = (sint32)((uint32)initialSlice + (uint32)gNumSlices);
-    else if (initialSlice >= gNumSlices)
-        *slice = (sint32)((uint32)initialSlice - (uint32)gNumSlices);
-    else
-        *slice = initialSlice;
+        initialSlice = (negDir + ((negDir * 10) * startingPosition));
+    if (initialSlice < 0) *slice = (initialSlice + gNumSlices);
+    else if (initialSlice >= gNumSlices) *slice = (initialSlice - gNumSlices);
+    else *slice = initialSlice;
 
     sint32 carOnRight = startingPosition & 1;
-    if ((uint32)carObj->desiredDirection * (uint32)AITune::driveSide == 0xFFFFFFFFU)
+    if (carObj->desiredDirection * (uint32)AITune::driveSide == 0xFFFFFFFF)
         carOnRight = 1 - carOnRight;
     if (AITune::GetOneWay() != 0)
     {
@@ -959,31 +936,26 @@ void Cars::IniCarObjects(Car::tObj *carObj, sint32 index)
     {
         sint32 type = carObj->carInfo->carType;
         sint32 carMass;
-        if (type == 0x21 || type == 0x24 || type == 0x26 || type == 0x27 ||
-            type == 0x2F || type == 0x30 || type == 0x31)
+        if (type == 0x21 || type == 0x24 || type == 0x26 || type == 0x27 || type == 0x2F || type == 0x30 || type == 0x31)
             carMass = 0x190000;
         else if (type == 0x22 || type == 0x25 || type == 0x29 || type == 0x2B || type == 0x2C)
             carMass = 0x110000;
         else
             carMass = carObj->specs->mass / 128;
-        Newton::InitBaseNewtonObj(&carObj->N, index | 0x100, carMass, carMass,
-            carObj->N.dimension.x, carObj->N.dimension.y, carObj->N.dimension.z);
+        Newton::InitBaseNewtonObj(&carObj->N, index | 0x100, carMass, carMass, carObj->N.dimension.x, carObj->N.dimension.y, carObj->N.dimension.z);
     }
     sint32 startSlice;
     coorddef offset;
     CalculateStartingGridOffset(carObj, &startSlice, &offset);
     sint32 numSlices = gNumSlices;
-    carObj->stats.extractSlice = numSlices / 2 < startSlice ?
-        (sint32)((uint32)numSlices - (uint32)startSlice) : startSlice;
-    Newton::SetInitialSlicePositionOrientationEtc(&carObj->N, startSlice, &offset,
-        GameSetup::gData.reverseTrack != 0 ? -1 : 1);
+    carObj->stats.extractSlice = numSlices / 2 < startSlice ? (numSlices - startSlice) : startSlice;
+    Newton::SetInitialSlicePositionOrientationEtc(&carObj->N, startSlice, &offset, GameSetup::gData.reverseTrack != 0 ? -1 : 1);
     carObj->unlap = 1;
     carObj->lap = 0;
     if (GameSetup::gData.reverseTrack != 0)
-        carObj->N.oldSlice = (uint16)((uint32)(uint16)gNumSlices -
-            (uint32)(uint16)carObj->N.simRoadInfo.slice - 1U);
+        carObj->N.oldSlice = (uint16)(((uint16)gNumSlices) - (uint32)(uint16)carObj->N.simRoadInfo.slice - 1U);
     else
-        carObj->N.oldSlice = (uint16)carObj->N.simRoadInfo.slice;
+        carObj->N.oldSlice = carObj->N.simRoadInfo.slice;
     FindTotalSlice(carObj);
     carObj->RSControl = 0;
     carObj->RSSteering = 0;
@@ -1083,10 +1055,10 @@ void Cars::IniCarObjects(Car::tObj *carObj, sint32 index)
     if (carInfo->carType < 29)
     {
         Car::tSpecs *specs = carObj->specs;
-        sint32 pitch = fixeddiv(specs->bodyPitchFactor, (sint32)((uint32)specs->suspensionStiffness * 3U));
+        sint32 pitch = fixeddiv(specs->bodyPitchFactor, ((specs->suspensionStiffness * 3)));
         specs = carObj->specs;
         carObj->render.pitchFactor = pitch;
-        carObj->render.rollFactor = fixeddiv(specs->bodyRollFactor, (sint32)((uint32)specs->suspensionStiffness << 1));
+        carObj->render.rollFactor = fixeddiv(specs->bodyRollFactor, ((uint32)specs->suspensionStiffness << 1));
     }
     else
     {
@@ -1195,8 +1167,7 @@ void Cars::Restart(void)
 void Cars::Initialize(char *mem, sint32 size)
 {
     FUNCTION_MARKER(0x8008A5B4, "NFS4.EXE");
-    for (sint32 i = 0; i < size; ++i)
-        *mem++ = 0;
+    for (sint32 i = 0; i < size; ++i) *mem++ = 0;
 }
 
 void Cars::StartUp(void)
@@ -1205,8 +1176,8 @@ void Cars::StartUp(void)
     ResetCarCounters();
     for (sint32 i = 0; i < GameSetup::gData.numCars; ++i)
     {
-        Car::tObj *newCar = static_cast<Car::tObj *>(reservememadr("Car_tObj", 0x8DC, 0));
-        Initialize(reinterpret_cast<char *>(newCar), 0x8DC);
+        Car::tObj *newCar = static_cast<Car::tObj *>(reservememadr("Car_tObj", sizeof(Car::tObj), 0));
+        Initialize(reinterpret_cast<char *>(newCar), sizeof(*newCar));
         if (i < GameSetup::gData.numCars)
             newCar->carInfo = &GameSetup::gData.carInfo[i];
         InitializeCarTablesFlagsAndCounters(newCar);
@@ -1215,15 +1186,13 @@ void Cars::StartUp(void)
     {
         coorddef dim;
         Object::GetIMassObjectDimensions(i, &dim);
-        Newton::InitBaseNewtonObj(&InfiniteMassNewton[i], 0x201, 0x280000, 0x1400000,
-            dim.x, dim.y, (sint32)((uint32)dim.z + 0x10000U));
+        Newton::InitBaseNewtonObj(&InfiniteMassNewton[i], 0x201, 0x280000, 0x1400000, dim.x, dim.y, (dim.z + 0x10000));
     }
     for (sint32 i = 0; i < GameSetup::gData.numCars; ++i)
     {
         Car::tObj *carObj = gList[i];
         InitCar(carObj, i);
-        Sched::AddFunction(simGlobal.schedule32Hz,
-            reinterpret_cast<Sched::tFunctionPt>(carObj->funcUpdateRoadInfo), carObj, 6);
+        Sched::AddFunction(simGlobal.schedule32Hz, reinterpret_cast<Sched::tFunctionPt>(carObj->funcUpdateRoadInfo), carObj, 6);
     }
     if (R3DCar::LicenseShapeFile)
         purgememadr(R3DCar::LicenseShapeFile);
@@ -1231,54 +1200,45 @@ void Cars::StartUp(void)
     for (sint32 i = 0; i < GameSetup::gData.numCars; ++i)
     {
         Car::tObj *carObj = gList[i];
-        Sched::AddFunction(simGlobal.schedule32Hz,
-            reinterpret_cast<Sched::tFunctionPt>(carObj->funcControl), carObj, 21);
+        Sched::AddFunction(simGlobal.schedule32Hz, reinterpret_cast<Sched::tFunctionPt>(carObj->funcControl), carObj, 21);
     }
     for (sint32 i = 0; i < GameSetup::gData.numCars; ++i)
     {
         Car::tObj *carObj = gList[i];
-        Sched::AddFunction(simGlobal.schedule32Hz,
-            reinterpret_cast<Sched::tFunctionPt>(carObj->funcHandlingPhysics), carObj, 30);
+        Sched::AddFunction(simGlobal.schedule32Hz, reinterpret_cast<Sched::tFunctionPt>(carObj->funcHandlingPhysics), carObj, 30);
     }
     for (sint32 i = 0; i < GameSetup::gData.numCars; ++i)
     {
         Car::tObj *carObj = gList[i];
-        Sched::AddFunction(simGlobal.schedule32Hz,
-            reinterpret_cast<Sched::tFunctionPt>(carObj->funcGravityPhysics), carObj, 30);
+        Sched::AddFunction(simGlobal.schedule32Hz, reinterpret_cast<Sched::tFunctionPt>(carObj->funcGravityPhysics), carObj, 30);
     }
     for (sint32 i = 0; i < GameSetup::gData.numCars; ++i)
     {
         Car::tObj *carObj = gList[i];
-        Sched::AddFunction(simGlobal.schedule32Hz,
-            reinterpret_cast<Sched::tFunctionPt>(carObj->funcTestMeForCollisions), carObj, 40);
+        Sched::AddFunction(simGlobal.schedule32Hz, reinterpret_cast<Sched::tFunctionPt>(carObj->funcTestMeForCollisions), carObj, 40);
     }
     for (sint32 i = 0; i < GameSetup::gData.numCars; ++i)
     {
         Car::tObj *carObj = gList[i];
-        Sched::AddFunction(simGlobal.schedule32Hz,
-            reinterpret_cast<Sched::tFunctionPt>(carObj->funcDoPostCollisionStuff), carObj, 50);
+        Sched::AddFunction(simGlobal.schedule32Hz, reinterpret_cast<Sched::tFunctionPt>(carObj->funcDoPostCollisionStuff), carObj, 50);
     }
     Force::StartUp();
     for (sint32 i = 0; i < GameSetup::gData.numCars; ++i)
     {
         Car::tObj *carObj = gList[i];
         if ((carObj->carFlags & 1) != 0)
-            Sched::AddFunction(simGlobal.schedule64Hz,
-                reinterpret_cast<Sched::tFunctionPt>(carObj->funcStats), carObj, 25);
+            Sched::AddFunction(simGlobal.schedule64Hz, reinterpret_cast<Sched::tFunctionPt>(carObj->funcStats), carObj, 25);
     }
     for (sint32 i = 0; i < GameSetup::gData.numCars; ++i)
     {
         Car::tObj *carObj = gList[i];
-        Sched::AddFunction(simGlobal.schedule64Hz,
-            reinterpret_cast<Sched::tFunctionPt>(carObj->funcQDPhysicsUpdateVel), carObj, 30);
+        Sched::AddFunction(simGlobal.schedule64Hz, reinterpret_cast<Sched::tFunctionPt>(carObj->funcQDPhysicsUpdateVel), carObj, 30);
     }
     for (sint32 i = 0; i < GameSetup::gData.numCars; ++i)
     {
         Car::tObj *carObj = gList[i];
-        Sched::tSchedule *schedule = (carObj->carFlags & 4) != 0 ?
-            simGlobal.schedule64Hz : simGlobal.schedule32Hz2;
-        Sched::AddFunction(schedule,
-            reinterpret_cast<Sched::tFunctionPt>(carObj->funcQDPhysicsUpdateRot), carObj, 30);
+        Sched::tSchedule *schedule = (carObj->carFlags & 4) != 0 ? simGlobal.schedule64Hz : simGlobal.schedule32Hz2;
+        Sched::AddFunction(schedule, reinterpret_cast<Sched::tFunctionPt>(carObj->funcQDPhysicsUpdateRot), carObj, 30);
     }
 }
 
@@ -1287,31 +1247,20 @@ void Cars::CleanUp(void)
     FUNCTION_MARKER(0x8008AA40, "NFS4.EXE");
     for (sint32 i = 0; i < gNumCars; ++i)
     {
-        Sched::DeleteFunction(simGlobal.schedule32Hz,
-            reinterpret_cast<Sched::tFunctionPt>(gList[i]->funcUpdateRoadInfo), gList[i]);
-        Sched::DeleteFunction(simGlobal.schedule32Hz,
-            reinterpret_cast<Sched::tFunctionPt>(gList[i]->funcControl), gList[i]);
+        Sched::DeleteFunction(simGlobal.schedule32Hz, reinterpret_cast<Sched::tFunctionPt>(gList[i]->funcUpdateRoadInfo), gList[i]);
+        Sched::DeleteFunction(simGlobal.schedule32Hz, reinterpret_cast<Sched::tFunctionPt>(gList[i]->funcControl), gList[i]);
         if ((gList[i]->carFlags & 1) != 0)
-            Sched::DeleteFunction(simGlobal.schedule64Hz,
-                reinterpret_cast<Sched::tFunctionPt>(gList[i]->funcStats), gList[i]);
-        Sched::DeleteFunction(simGlobal.schedule32Hz,
-            reinterpret_cast<Sched::tFunctionPt>(gList[i]->funcHandlingPhysics), gList[i]);
-        Sched::DeleteFunction(simGlobal.schedule32Hz,
-            reinterpret_cast<Sched::tFunctionPt>(gList[i]->funcGravityPhysics), gList[i]);
-        Sched::DeleteFunction(simGlobal.schedule64Hz,
-            reinterpret_cast<Sched::tFunctionPt>(gList[i]->funcQDPhysicsUpdateVel), gList[i]);
-        Sched::DeleteFunction(simGlobal.schedule32Hz,
-            reinterpret_cast<Sched::tFunctionPt>(gList[i]->funcTestMeForCollisions), gList[i]);
-        Sched::DeleteFunction(simGlobal.schedule32Hz,
-            reinterpret_cast<Sched::tFunctionPt>(gList[i]->funcDoPostCollisionStuff), gList[i]);
+            Sched::DeleteFunction(simGlobal.schedule64Hz, reinterpret_cast<Sched::tFunctionPt>(gList[i]->funcStats), gList[i]);
+        Sched::DeleteFunction(simGlobal.schedule32Hz, reinterpret_cast<Sched::tFunctionPt>(gList[i]->funcHandlingPhysics), gList[i]);
+        Sched::DeleteFunction(simGlobal.schedule32Hz, reinterpret_cast<Sched::tFunctionPt>(gList[i]->funcGravityPhysics), gList[i]);
+        Sched::DeleteFunction(simGlobal.schedule64Hz, reinterpret_cast<Sched::tFunctionPt>(gList[i]->funcQDPhysicsUpdateVel), gList[i]);
+        Sched::DeleteFunction(simGlobal.schedule32Hz, reinterpret_cast<Sched::tFunctionPt>(gList[i]->funcTestMeForCollisions), gList[i]);
+        Sched::DeleteFunction(simGlobal.schedule32Hz, reinterpret_cast<Sched::tFunctionPt>(gList[i]->funcDoPostCollisionStuff), gList[i]);
         if (Force::IsForceOn(gList[i]) != 0)
-            Sched::DeleteFunction(simGlobal.schedule32Hz,
-                reinterpret_cast<Sched::tFunctionPt>(Force::Update), gList[i]);
+            Sched::DeleteFunction(simGlobal.schedule32Hz, reinterpret_cast<Sched::tFunctionPt>(Force::Update), gList[i]);
         Car::tObj *carObj = gList[i];
-        Sched::tSchedule *schedule = (carObj->carFlags & 4) != 0 ?
-            simGlobal.schedule64Hz : simGlobal.schedule32Hz2;
-        Sched::DeleteFunction(schedule,
-            reinterpret_cast<Sched::tFunctionPt>(carObj->funcQDPhysicsUpdateRot), carObj);
+        Sched::tSchedule *schedule = (carObj->carFlags & 4) != 0 ? simGlobal.schedule64Hz : simGlobal.schedule32Hz2;
+        Sched::DeleteFunction(schedule, reinterpret_cast<Sched::tFunctionPt>(carObj->funcQDPhysicsUpdateRot), carObj);
         DeInitCar(gList[i]);
         purgememadr(gList[i]);
     }
@@ -1322,18 +1271,18 @@ void Cars::FindCurrentLap(Car::tObj *carObj)
     FUNCTION_MARKER(0x8008ABC8, "NFS4.EXE");
     sint32 roadSlice = carObj->N.simRoadInfo.slice;
     if (GameSetup::gData.reverseTrack != 0)
-        roadSlice = (sint32)((uint32)gNumSlices - (uint32)roadSlice - 1);
+        roadSlice = ((gNumSlices - roadSlice) - 1);
     uint16 oldSlice = carObj->N.oldSlice;
     if (oldSlice == roadSlice)
         return;
     if (roadSlice >= 501 && oldSlice == 0) {
-        carObj->unlap = (sint32)((uint32)carObj->unlap + 1);
+        carObj->unlap = (carObj->unlap + 1);
     } else if ((uint32)roadSlice < 51 && carObj->N.oldSlice > 500) {
         sint32 unlap = carObj->unlap;
         if (unlap > 0)
-            carObj->unlap = (sint32)((uint32)unlap - 1);
+            carObj->unlap = (unlap - 1);
         else
-            carObj->lap = (sint32)((uint32)carObj->lap + 1);
+            carObj->lap = (carObj->lap + 1);
     }
     carObj->N.oldSlice = (uint16)roadSlice;
 }
@@ -1345,24 +1294,24 @@ sint32 Cars::CalculateRoadSpan(Car::tObj *carObj)
     uint32 span = 0;
     for (sint32 row = 0; row < 3; ++row)
     {
-        uint32 projection = (uint32)(carObj->N.roadMatrix.m[0] / 256) * (uint32)(carObj->N.orientMat.m[row * 3] / 256);
-        projection += (uint32)(carObj->N.roadMatrix.m[1] / 256) * (uint32)(carObj->N.orientMat.m[row * 3 + 1] / 256);
-        projection += (uint32)(carObj->N.roadMatrix.m[2] / 256) * (uint32)(carObj->N.orientMat.m[row * 3 + 2] / 256);
-        sint32 tempSpan = (sint32)projection;
+        uint32 projection = (carObj->N.roadMatrix.m[0] / 256) * (uint32)(carObj->N.orientMat.m[row * 3] / 256);
+        projection += (carObj->N.roadMatrix.m[1] / 256) * (uint32)(carObj->N.orientMat.m[row * 3 + 1] / 256);
+        projection += (carObj->N.roadMatrix.m[2] / 256) * (uint32)(carObj->N.orientMat.m[row * 3 + 2] / 256);
+        sint32 tempSpan = projection;
         if (tempSpan < 0)
-            tempSpan = (sint32)(0U - (uint32)tempSpan);
-        span += (uint32)(tempSpan / 256) * (uint32)(dimension[row] / 256);
+            tempSpan = (-tempSpan);
+        span += (tempSpan / 256) * (uint32)(dimension[row] / 256);
     }
-    return (sint32)span;
+    return span;
 }
 
 sint32 Cars::CalcVelDownRoad(Car::tObj *carObj)
 {
     FUNCTION_MARKER(0x8008AEE8, "NFS4.EXE");
-    uint32 temp = (uint32)(carObj->N.linearVel.x / 256) * (uint32)(carObj->N.roadMatrix.m[6] / 256);
-    temp += (uint32)(carObj->N.linearVel.y / 256) * (uint32)(carObj->N.roadMatrix.m[7] / 256);
-    temp += (uint32)(carObj->N.linearVel.z / 256) * (uint32)(carObj->N.roadMatrix.m[8] / 256);
-    return (sint32)temp;
+    uint32 temp = (carObj->N.linearVel.x / 256) * (uint32)(carObj->N.roadMatrix.m[6] / 256);
+    temp += (carObj->N.linearVel.y / 256) * (uint32)(carObj->N.roadMatrix.m[7] / 256);
+    temp += (carObj->N.linearVel.z / 256) * (uint32)(carObj->N.roadMatrix.m[8] / 256);
+    return temp;
 }
 
 void Cars::Randomize(void)
@@ -1400,15 +1349,12 @@ void Cars::ManageBureaucracy(void)
         {
             sint32 currentSpeed = carObj->currentSpeed;
             carObj->speed = carObj->N.speedXZ;
-            if ((uint32)currentSpeed + 0x2FFFFU < 0x5FFFFU)
+            if (currentSpeed + 0x2FFFFU < 0x5FFFFU)
             {
-                sint32 facing = fixedmult(carObj->N.orientMat.m[6],
-                    (sint8)BWorldSm::slices[carObj->N.simRoadInfo.slice].forward[0]);
-                sint32 second = fixedmult(carObj->N.orientMat.m[7],
-                    (sint8)BWorldSm::slices[carObj->N.simRoadInfo.slice].forward[1]);
-                sint32 third = fixedmult(carObj->N.orientMat.m[8],
-                    (sint8)BWorldSm::slices[carObj->N.simRoadInfo.slice].forward[2]);
-                facing = (sint32)((uint32)facing + (uint32)second + (uint32)third);
+                sint32 facing = fixedmult(carObj->N.orientMat.m[6], (sint8)BWorldSm::slices[carObj->N.simRoadInfo.slice].forward[0]);
+                sint32 second = fixedmult(carObj->N.orientMat.m[7], (sint8)BWorldSm::slices[carObj->N.simRoadInfo.slice].forward[1]);
+                sint32 third = fixedmult(carObj->N.orientMat.m[8], (sint8)BWorldSm::slices[carObj->N.simRoadInfo.slice].forward[2]);
+                facing = ((facing + second) + third);
                 carObj->direction = facing > 0 ? 1 : -1;
             }
             else
@@ -1450,7 +1396,7 @@ void Cars::CheckForAccidentScenes(void)
 void Cars::SortCars(void)
 {
     FUNCTION_MARKER(0x8008B28C, "NFS4.EXE");
-    sint32 limit = (sint32)((uint32)gNumCars - 1U);
+    sint32 limit = (gNumCars - 1);
     sint32 swapped;
     sint32 i;
     Car::tObj *temp;
@@ -1459,7 +1405,7 @@ void Cars::SortCars(void)
         swapped = 0;
         if (limit > 0)
         {
-            sint32 passLimit = (sint32)((uint32)gNumCars - 1U);
+            sint32 passLimit = (gNumCars - 1);
             i = 0;
             do
             {
@@ -1479,13 +1425,13 @@ void Cars::SortCars(void)
     for (i = 0; i < count; ++i)
         gSortedList[i]->sortIndex = i;
 
-    limit = (sint32)((uint32)gNumCars - 1U);
+    limit = (gNumCars - 1);
     do
     {
         swapped = 0;
         if (limit > 0)
         {
-            sint32 passLimit = (sint32)((uint32)gNumCars - 1U);
+            sint32 passLimit = (gNumCars - 1);
             i = 0;
             do
             {

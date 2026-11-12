@@ -6,8 +6,8 @@ sint32 fixeddiv(sint32 numerator, sint32 denominator)
 {
     FUNCTION_MARKER(0x800E4404, "NFS4.EXE");
 
-    uint32 magnitudeNumerator = numerator < 0 ? 0 - (uint32)numerator : (uint32)numerator;
-    uint32 magnitudeDenominator = denominator < 0 ? 0 - (uint32)denominator : (uint32)denominator;
+    uint32 magnitudeNumerator = numerator < 0 ? (~(((uint32)numerator)) + 1) : (uint32)numerator;
+    uint32 magnitudeDenominator = denominator < 0 ? (~(((uint32)denominator)) + 1) : (uint32)denominator;
     if (magnitudeDenominator == 0)
         return 0;
     uint32 remainder = magnitudeNumerator % magnitudeDenominator;
@@ -35,7 +35,7 @@ sint32 fixeddiv(sint32 numerator, sint32 denominator)
     {
         if (quotient == 0x80000000)
             abort();
-        quotient = 0 - quotient;
+        quotient = (~(quotient) + 1);
     }
-    return (sint32)quotient;
+    return quotient;
 }

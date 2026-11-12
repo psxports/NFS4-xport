@@ -19,11 +19,11 @@ extern "C" void iSNDserver(void)
         sndgs.clock = 0;
         sndgs.unknown172 = 0;
     }
-    sndgs.unknown172 = (sint32)((uint32)sndgs.unknown172 + 1);
+    sndgs.unknown172 = (sndgs.unknown172 + 1);
     uint32 elapsed = (uint32)sndgs.unknown172 * 100;
     if (frequency == 0)
         abort();
-    uint32 target = elapsed / (uint32)frequency;
+    uint32 target = elapsed / frequency;
     while (sndgs.clock <= target)
         sndgs.server100hz();
     sndgs.serverRunning = 0;
@@ -63,7 +63,7 @@ extern "C" void iSND100hzserver(...)
         if (ramp != 0)
         {
             volumeChanged = true;
-            sint32 volume = (sint32)((uint32)voice->volume + (uint32)ramp);
+            sint32 volume = (voice->volume + ramp);
             voice->volume = volume;
             sint32 target = voice->volumeTarget;
             if ((ramp < 0 && target >= volume) || (ramp >= 0 && volume >= target))
@@ -81,7 +81,7 @@ extern "C" void iSND100hzserver(...)
         if (delta != 0)
         {
             volumeChanged = true;
-            voice->modulationVolume = (sint32)((uint32)voice->modulationVolume + (uint32)delta);
+            voice->modulationVolume = (voice->modulationVolume + delta);
         }
         if (voice->modulationTicks == 0)
         {
@@ -94,18 +94,18 @@ extern "C" void iSND100hzserver(...)
             const uint8 *point = static_cast<const uint8 *>(voice->envelope) + voice->envelopeIndex * 8;
             uint32 duration;
             memcpy(&duration, point, sizeof(duration));
-            voice->modulationTicks = (sint32)duration;
+            voice->modulationTicks = duration;
             if (voice->modulationTicks < 0)
                 voice->modulationTicks = 0x7FFFFFFF;
             uint32 target;
             memcpy(&target, point + 4, sizeof(target));
-            sint32 difference = (sint32)((target << 16) - (uint32)voice->modulationVolume);
+            sint32 difference = ((target << 16) - voice->modulationVolume);
             sint32 ticks = voice->modulationTicks;
             if (ticks == 0)
                 abort();
             voice->modulationDelta = difference / ticks;
         }
-        voice->modulationTicks = (sint32)((uint32)voice->modulationTicks - 1);
+        voice->modulationTicks = (voice->modulationTicks - 1);
         if (volumeChanged)
         {
             iSNDcalcvol(channel);

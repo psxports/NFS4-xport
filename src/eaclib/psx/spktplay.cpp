@@ -7,30 +7,30 @@ SoundPacketPlayPrefix *sndpps[1];
 extern "C" sint32 iSNDpacketplayoverhead(sint32 chunks)
 {
     FUNCTION_MARKER(0x801028BC, "NFS4.EXE");
-    return (sint32)((uint32)chunks * 24 + 64);
+    return (sint32)((chunks + 1U) * sizeof(SoundPacketRecord) + sizeof(SoundPacketPlayPrefix));
 }
 
 extern "C" const uint8 *iSNDpacketget(sint32 handle, sint32 channel, uint32 *frames)
 {
     FUNCTION_MARKER(0x80103248, "NFS4.EXE");
     SoundPacketPlayPrefix *packet = sndpps[handle];
-    if ((uint32)channel + 1u == packet->format.channels && packet->current >= 0)
+    if (channel + 1u == packet->format.channels && packet->current >= 0)
     {
         sint32 current = packet->current;
         packet->current = -1;
         SoundPacketReleaseCallback release = packet->release;
         if (release != 0)
         {
-            SoundPacketRecord *records = reinterpret_cast<SoundPacketRecord *>(reinterpret_cast<uint8 *>(packet) + 40);
+            SoundPacketRecord *records = reinterpret_cast<SoundPacketRecord *>(reinterpret_cast<uint8 *>(packet) + sizeof(*packet));
             release(records[current].channels[0]);
         }
     }
     if (packet->queued == 0)
         return 0;
-    SoundPacketRecord *records = reinterpret_cast<SoundPacketRecord *>(reinterpret_cast<uint8 *>(packet) + 40);
+    SoundPacketRecord *records = reinterpret_cast<SoundPacketRecord *>(reinterpret_cast<uint8 *>(packet) + sizeof(*packet));
     SoundPacketRecord *record = &records[packet->head];
     *frames = record->frames;
-    if ((uint32)channel + 1u == packet->format.channels)
+    if (channel + 1u == packet->format.channels)
     {
         packet->current = packet->head;
         packet->queued = (sint16)(packet->queued - 1);
@@ -61,7 +61,7 @@ sint32 SNDPKTPLAY::overhead(sint32 chunks)
     FUNCTION_MARKER(0x801028D0, "NFS4.EXE");
     sint32 packetBytes = iSNDpacketplayoverhead(chunks);
     sint32 platformBytes = iSNDplatformpacketoverhead();
-    return (sint32)((uint32)packetBytes + (uint32)platformBytes);
+    return (packetBytes + platformBytes);
 }
 
 sint32 SNDPKTPLAY::create(void *buffer, sint32 size, SoundPacketReleaseCallback release, SoundPacketNotifyCallback notify)
@@ -77,12 +77,12 @@ sint32 SNDPKTPLAY::create(void *buffer, sint32 size, SoundPacketReleaseCallback 
     sint32 platformBytes = iSNDplatformpacketoverhead();
     SoundPacketPlayPrefix *packet = reinterpret_cast<SoundPacketPlayPrefix *>(data + platformBytes);
     platformBytes = iSNDplatformpacketoverhead();
-    uint32 bytes = uint32(size) - uint32(platformBytes) - 64;
+    uint32 bytes = uint32(size) - uint32(platformBytes) - sizeof(*packet) - sizeof(SoundPacketRecord);
     sndpps[0] = packet;
     packet->platformBuffer = data;
     packet->release = release;
     packet->notify = notify;
-    packet->capacity = (sint16)(bytes / 24);
+    packet->capacity = (sint16)(bytes / sizeof(SoundPacketRecord));
     packet->playHandle = -1;
     return 0;
 }
@@ -135,7 +135,7 @@ sint32 SNDPKTPLAY::start(sint32 handle, SNDSAMPLEFORMAT *format, void *attribute
     voice->unknown32 = 0;
     voice->unknown33 = 1;
     voice->unknown2F = bend;
-    voice->effectScale = (sint8)attrs->unknown9;
+    voice->effectScale = attrs->unknown9;
     voice->effectLevel = (sint8)options->fxlevel0;
     sint32 adjustment = (sint8)attrs->unknown10;
     voice->unknown37 = 0;
@@ -181,15 +181,15 @@ sint32 SNDPKTPLAY::submit(sint32 handle, const SoundPacketSubmit *data)
         sint32 index = packet->head + packet->queued;
         if (index >= packet->capacity)
             index -= packet->capacity;
-        SoundPacketRecord *records = reinterpret_cast<SoundPacketRecord *>(reinterpret_cast<uint8 *>(packet) + 40);
+        SoundPacketRecord *records = reinterpret_cast<SoundPacketRecord *>(reinterpret_cast<uint8 *>(packet) + sizeof(*packet));
         SoundPacketRecord *record = &records[index];
         record->frames = data->frames;
-        record->id = (sint32)packet->sequence;
+        record->id = packet->sequence;
         for (sint32 i = 0; i < packet->format.channels; ++i)
             record->channels[i] = data->channels[i];
         packet->queued = (sint16)(packet->queued + 1);
         packet->frames += data->frames;
-        result = (sint32)packet->sequence;
+        result = packet->sequence;
         ++packet->sequence;
     }
     iSNDleaveaudio();
@@ -209,7 +209,7 @@ sint32 SNDPKTPLAY::unsafeframesoutstanding(sint32 handle)
 {
     FUNCTION_MARKER(0x80102EC4, "NFS4.EXE");
     SoundPacketPlayPrefix *packet = sndpps[handle];
-    return (sint32)(packet->frames + packet->inFlightFrames);
+    return (packet->frames + packet->inFlightFrames);
 }
 
 sint32 SNDPKTPLAY::framesoutstanding(sint32 handle)
@@ -233,7 +233,7 @@ sint32 SNDPKTPLAY::purge(sint32 handle, sint32 first, sint32 last)
     sint32 writeIndex = packet->head;
     sint32 readIndex = packet->head;
     sint32 count = packet->queued;
-    SoundPacketRecord *records = reinterpret_cast<SoundPacketRecord *>(reinterpret_cast<uint8 *>(packet) + 40);
+    SoundPacketRecord *records = reinterpret_cast<SoundPacketRecord *>(reinterpret_cast<uint8 *>(packet) + sizeof(*packet));
     for (sint32 i = 0; i < count; ++i)
     {
         SoundPacketRecord *record = &records[readIndex];
@@ -270,7 +270,7 @@ sint32 SNDPKTPLAY::stop(sint32 handle)
     purge(handle, 0, 0x7FFFFFFF);
     if (packet->release != 0 && packet->current >= 0)
     {
-        SoundPacketRecord *records = reinterpret_cast<SoundPacketRecord *>(reinterpret_cast<uint8 *>(packet) + 40);
+        SoundPacketRecord *records = reinterpret_cast<SoundPacketRecord *>(reinterpret_cast<uint8 *>(packet) + sizeof(*packet));
         packet->release(records[packet->current].channels[0]);
     }
     packet->playHandle = -1;

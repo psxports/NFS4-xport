@@ -36,7 +36,7 @@ sint32 Movie::Play(char movie)
     sprintf(path, "DATA/MOVIES/%s", movienames[index]);
     if (!xport_fmv_set_native_source(path, preparedMovieNames[index]))
         return -1;
-    SNDcdvol((sint32)(uint32(gMasterMusicLevel) * 127u) >> 7);
+    SNDcdvol((gMasterMusicLevel * 127) >> 7);
     PSX_RECT clear = { 0, 0, 960, 240 };
     ClearImage(&clear, 0, 0, 0);
     clear.y = 256;

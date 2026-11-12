@@ -47,10 +47,10 @@ sint32 fastintcos(sint32 angle)
 sint32 fastintsin(sint32 angle)
 {
     FUNCTION_MARKER(0x800F18E8, "NFS4.EXE");
-    uint32 phase = (uint32)angle & 0x3FFU;
-    uint32 index = phase & 0xFFU;
+    uint32 phase = angle & 0x3FFU;
+    uint32 index = phase & 0xFF;
     if ((phase & 0x100U) != 0)
-        index = 256U - index;
+        index = 256 - index;
     sint32 value = sintbl[index];
     if ((phase & 0x200U) != 0)
         value = -value;

@@ -22,14 +22,12 @@ static void DampSouffleComponent(sint32 *component, sint32 amount)
     if (value < 0)
     {
         *component = value + amount;
-        if (value + amount > 0)
-            *component = 0;
+        if (value + amount > 0) *component = 0;
     }
     else if (value > 0)
     {
         *component = value - amount;
-        if (value - amount < 0)
-            *component = 0;
+        if (value - amount < 0) *component = 0;
     }
 }
 
@@ -52,7 +50,7 @@ void MoveAngleWind(Souffle::tISouffle *is)
 {
     FUNCTION_MARKER(0x800B76CC, "NFS4.EXE");
     sint32 aspeed = is->aspeed;
-    is->angle = (sint32)((uint32)is->angle + (uint32)aspeed);
+    is->angle = (is->angle + aspeed);
     if (aspeed < -8)
         is->aspeed = aspeed + 1;
     else if (aspeed > 8)
@@ -79,7 +77,7 @@ Souffle::tISouffle *Souffle::Add(coorddef *soufflept, sint32 type, coorddef *vec
     else
     {
         inserti = gCISouffle;
-        gCISouffle = (sint32)((uint32)gCISouffle + 1);
+        gCISouffle = (gCISouffle + 1);
     }
     tISouffle *is = gISouffle + inserti;
     coorddef source = *soufflept;
@@ -132,12 +130,12 @@ void Souffle::DoSouffle(void)
 {
     FUNCTION_MARKER(0x800B78EC, "NFS4.EXE");
     sint32 gameTicks = simGlobal.gameTicks;
-    if ((sint32)((uint32)gameTicks - (uint32)gTMoveSouffle) <= 0)
+    if ((gameTicks - gTMoveSouffle) <= 0)
         return;
     gTMoveSouffle = gameTicks;
     if (gCISouffle == 0)
         return;
-    gWindDir = (sint32)((uint32)gWindDir + 2);
+    gWindDir = (gWindDir + 2);
     coorddef w;
     w.x = fixedmult(fastintcos(gWindDir), 0xCCC);
     w.z = fixedmult(fastintsin(gWindDir), 0xCCC);
@@ -148,13 +146,13 @@ void Souffle::DoSouffle(void)
         coorddef motion = is->motion;
         if (is->wind != 0)
         {
-            motion.x = (sint32)((uint32)motion.x + (uint32)w.x);
-            motion.y = (sint32)((uint32)motion.y + (uint32)w.y);
-            motion.z = (sint32)((uint32)motion.z + (uint32)w.z);
+            motion.x = (motion.x + w.x);
+            motion.y = (motion.y + w.y);
+            motion.z = (motion.z + w.z);
         }
         if (Replay::ReplayMode == 2)
         {
-            sint32 speed = (sint32)(2 - (uint32)Replay::ReplayInterface.speed);
+            sint32 speed = (2 - Replay::ReplayInterface.speed);
             if (speed > 0)
             {
                 motion.x >>= speed & 31;
@@ -163,14 +161,14 @@ void Souffle::DoSouffle(void)
             }
             if (speed < 0)
             {
-                motion.x = (sint32)((uint32)motion.x << 1);
-                motion.z = (sint32)((uint32)motion.z << 1);
-                motion.y = (sint32)((uint32)motion.y << 1);
+                motion.x = ((uint32)motion.x << 1);
+                motion.z = ((uint32)motion.z << 1);
+                motion.y = ((uint32)motion.y << 1);
             }
         }
-        is->source.x = (sint32)((uint32)is->source.x + (uint32)motion.x);
-        is->source.y = (sint32)((uint32)is->source.y + (uint32)motion.y);
-        is->source.z = (sint32)((uint32)is->source.z + (uint32)motion.z);
+        is->source.x = (is->source.x + motion.x);
+        is->source.y = (is->source.y + motion.y);
+        is->source.z = (is->source.z + motion.z);
         DampSouffleComponent(&is->motion.x, 0xA3D);
         DampSouffleComponent(&is->motion.z, 0xA3D);
         if ((uint8)is->type == 13)
@@ -179,7 +177,7 @@ void Souffle::DoSouffle(void)
             sint32 wave = fastintsin(is->angle);
             if (Replay::ReplayMode == 2)
             {
-                sint32 speed = (sint32)(2 - (uint32)Replay::ReplayInterface.speed);
+                sint32 speed = (2 - Replay::ReplayInterface.speed);
                 if (speed > 0)
                 {
                     extramotion.x >>= speed & 31;
@@ -188,19 +186,19 @@ void Souffle::DoSouffle(void)
                 }
                 if (speed < 0)
                 {
-                    extramotion.x = (sint32)((uint32)extramotion.x << 1);
-                    extramotion.z = (sint32)((uint32)extramotion.z << 1);
-                    extramotion.y = (sint32)((uint32)extramotion.y << 1);
+                    extramotion.x = ((uint32)extramotion.x << 1);
+                    extramotion.z = ((uint32)extramotion.z << 1);
+                    extramotion.y = ((uint32)extramotion.y << 1);
                 }
             }
-            sint32 x = (sint32)((uint32)extramotion.x * (uint32)wave) >> 17;
-            is->source.x = (sint32)((uint32)is->source.x + (uint32)x);
-            sint32 z = (sint32)((uint32)extramotion.z * (uint32)wave) >> 17;
-            is->source.z = (sint32)((uint32)is->source.z + (uint32)z);
+            sint32 x = (extramotion.x * wave) >> 17;
+            is->source.x = (is->source.x + x);
+            sint32 z = (extramotion.z * wave) >> 17;
+            is->source.z = (is->source.z + z);
             DampSouffleComponent(&is->extramotion.x, 0x147);
             DampSouffleComponent(&is->extramotion.z, 0x147);
             if (is->ground < is->source.y)
-                is->motion.y = (sint32)((uint32)is->motion.y - 0x147);
+                is->motion.y = (is->motion.y - 0x147);
             else
                 is->type = 0;
         }
@@ -223,17 +221,17 @@ void Souffle::DoSouffle(void)
 sint32 Souffle::CircleClip(coorddef *pt1, coorddef *pt2, sint32 r)
 {
     FUNCTION_MARKER(0x800B7D88, "NFS4.EXE");
-    sint32 dx = (sint32)((uint32)pt1->x - (uint32)pt2->x);
+    sint32 dx = (pt1->x - pt2->x);
     if (dx <= 0)
-        dx = (sint32)((uint32)pt2->x - (uint32)pt1->x);
-    sint32 dz = (sint32)((uint32)pt1->z - (uint32)pt2->z);
+        dx = (pt2->x - pt1->x);
+    sint32 dz = (pt1->z - pt2->z);
     if (dz <= 0)
-        dz = (sint32)((uint32)pt2->z - (uint32)pt1->z);
+        dz = (pt2->z - pt1->z);
     sint32 dist;
     if (dz < dx)
-        dist = (sint32)((uint32)dx + (uint32)(dz >> 2));
+        dist = (dx + (dz >> 2));
     else
-        dist = (sint32)((uint32)dz + (uint32)(dx >> 2));
+        dist = (dz + (dx >> 2));
     return dist < r;
 }
 

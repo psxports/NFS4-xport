@@ -21,8 +21,7 @@ sint32 * Input::StartUp(void)
 
     Device::StartUp();
     sint32 *h = gHandler;
-    for (sint32 i = 0; i < 184; ++i)
-        *h++ = 0;
+    for (sint32 i = 0; i < 184; ++i) *h++ = 0;
     for (sint32 i = 0; i < 2; ++i)
     {
         gDBFlags[i] = 0;
@@ -59,7 +58,7 @@ void Input::Update(void)
         sint32 mode = 0;
         for (sint32 j = 0; j < 2; ++j, ++h)
         {
-            uint32 code = (uint32)*h;
+            uint32 code = (*h);
             if (code != 0 && Device::gDeviceList[code & 255].devicefunc((uint32)((sint32)code >> 8)) > 64)
                 mode = j + 1;
         }
@@ -78,21 +77,21 @@ void Input::Update(void)
                     if (gHandler[152 + j] == h[mode * 17 + 23 + k])
                         iactive[j] = 0;
         }
-        uint32 code = (uint32)*h++;
+        uint32 code = (*h++);
         sint32 left = Device::gDeviceList[code & 255].devicefunc((uint32)((sint32)code >> 8));
-        code = (uint32)*h++;
+        code = (*h++);
         sint32 right = Device::gDeviceList[code & 255].devicefunc((uint32)((sint32)code >> 8));
         if (mode == 0 || (active[0] != 0 && active[1] != 0))
-            r->steering = (char)((sint32)((uint32)right - (uint32)left) / 2);
+            r->steering = (char)((right - left) / 2);
         if (mode == 0 || active[2] != 0)
         {
-            code = (uint32)*h;
+            code = (*h);
             r->gas = (uint8)Device::gDeviceList[code & 255].devicefunc((uint32)((sint32)code >> 8));
         }
         ++h;
         if (mode == 0 || active[3] != 0)
         {
-            code = (uint32)*h;
+            code = (*h);
             r->brake = (uint8)Device::gDeviceList[code & 255].devicefunc((uint32)((sint32)code >> 8));
         }
         ++h;
@@ -100,7 +99,7 @@ void Input::Update(void)
         {
             if (mode == 0 || active[j + 4] != 0)
             {
-                code = (uint32)*h;
+                code = (*h);
                 if (code != 0 && Device::gDeviceList[code & 255].devicefunc((uint32)((sint32)code >> 8)) > 64)
                     r->flags = (uint8)(r->flags | (1U << j));
                 else
@@ -114,13 +113,13 @@ void Input::Update(void)
             hactive[k] = 1;
         for (sint32 j = 0; j < 17; ++j, ++h)
         {
-            code = (uint32)*h;
+            code = (*h);
             if (code != 0)
             {
                 uint32 mask = 1U << j;
                 if ((mode == 0 || active[j + 6] != 0) && Device::gDeviceList[code & 255].devicefunc((uint32)((sint32)code >> 8)) > 64)
                 {
-                    gPressTime[i][j] = (sint32)((uint32)gPressTime[i][j] + 1);
+                    gPressTime[i][j] = (gPressTime[i][j] + 1);
                     if (gPressTime[i][j] >= 6 && (gDBFlags[i] & mask) == 0)
                     {
                         acc = j + 1;
@@ -144,7 +143,7 @@ void Input::Update(void)
         }
         for (sint32 j = 0; j < 17; ++j, ++h)
         {
-            code = (uint32)*h;
+            code = (*h);
             if (code != 0)
             {
                 uint32 mask = 1U << j;
@@ -177,7 +176,7 @@ void Input::Update(void)
             {
                 for (sint32 k = 0; k < 17; ++k, ++h)
                 {
-                    code = (uint32)*h;
+                    code = (*h);
                     if (code != 0)
                     {
                         uint32 mask = 1U << k;
@@ -194,7 +193,7 @@ void Input::Update(void)
             h += (mode - 1) * 17;
             for (sint32 k = 0; k < 17; ++k, ++h)
             {
-                code = (uint32)*h;
+                code = (*h);
                 if (code != 0)
                 {
                     uint32 mask = 1U << k;
@@ -234,13 +233,13 @@ void Input::Update(void)
     {
         if (iactive[k] != 0)
         {
-            uint32 code = (uint32)*h;
+            uint32 code = (*h);
             if (code != 0 && Device::gDeviceList[code & 255].devicefunc((uint32)((sint32)code >> 8)) > 64)
                 menukeys |= 1U << k;
         }
     }
-    uint32 time = (uint32)gTime;
-    gTime = (sint32)(time + 2);
+    uint32 time = gTime;
+    gTime = (time + 2);
     gInterfaceResults[(time + 2) & 31] = menukeys;
     gInterfaceResults[(time + 3) & 31] = menukeys;
 }
@@ -273,7 +272,7 @@ char Input::Gear(char currentGear, sint32 numGears)
 
     if ((gSim.flags >> 3) == 1)
     {
-        if ((uint8)currentGear < (sint32)((uint32)numGears - 1))
+        if ((uint8)currentGear < (numGears - 1))
             currentGear = (char)((uint8)currentGear + 1);
     }
     else if ((gSim.flags >> 3) == 2 && currentGear != 0)
@@ -286,7 +285,7 @@ sint32 Input::Interface(uint32 key, sint32 debounce)
     FUNCTION_MARKER(0x8009D318, "NFS4.EXE");
 
     uint32 mask = (uint32)1 << (key & 31);
-    uint32 time = (uint32)simGlobal.time32Hz;
+    uint32 time = simGlobal.time32Hz;
     uint32 keys = gInterfaceResults[time & 31];
     if (debounce != 0)
         keys &= ~gInterfaceResults[(time - 1) & 31];

@@ -134,11 +134,11 @@ void Sim::FadeInSFX(void)
         GameSetup::gData.userSetting.sfxLevel = level;
         return;
     }
-    if ((uint32)simGlobal.gameTicks - 17U < 64U) {
+    if (simGlobal.gameTicks - 17U < 64U) {
         sint32 level = GameSetup::gData.userSetting.sfxLevel;
         if (Replay::ReplayInterface.statsScreen != 0)
             level >>= 2;
-        uint32 product = (uint32)level * (uint32)(simGlobal.gameTicks - 16);
+        uint32 product = level * (uint32)(simGlobal.gameTicks - 16);
         gMasterSFXLevel = (sint32)product >> 6;
     }
 }
@@ -146,10 +146,7 @@ void Sim::FadeInSFX(void)
 void Sim::ProcessSimSchedules(void)
 {
     FUNCTION_MARKER(0x800B6878, "NFS4.EXE");
-    if ((GameSetup::gData.raceType == 1 || GameSetup::gData.raceType == 5) &&
-        ((Cars::gHumanRaceCarList[0]->carFlags & 0x200) != 0 ||
-         (Cars::gNumHumanRaceCars == 2 &&
-          (Cars::gHumanRaceCarList[1]->carFlags & 0x200) != 0))) {
+    if ((GameSetup::gData.raceType == 1 || GameSetup::gData.raceType == 5) && ((Cars::gHumanRaceCarList[0]->carFlags & 0x200) != 0 || (Cars::gNumHumanRaceCars == 2 && (Cars::gHumanRaceCarList[1]->carFlags & 0x200) != 0))) {
         FadeInSFX();
         simGlobal.gameStarted = 1;
     } else if (simGlobal.gameStarted == 0) {
@@ -191,7 +188,7 @@ void Sim::ProcessSimSchedules(void)
         stackSpeedUpEnbabledFlag = 0;
         AudioClc::SoundCars();
     }
-    simGlobal.gameTicks = (sint32)((uint32)simGlobal.gameTicks + 1U);
+    simGlobal.gameTicks = (simGlobal.gameTicks + 1);
 }
 
 void Sim::ProcessPause(void)
@@ -213,7 +210,7 @@ void Sim::ProcessPause(void)
         simVar.endSimGame = 1;
         simVar.restartGame = 1;
     } else {
-        if ((uint32)r - 4U >= 2U)
+        if (r - 4U >= 2U)
             return;
         if (r == 5)
             GameSetup::gData.pinkSlipsForfeit = Device::gPausePortIndex != 0;
@@ -234,7 +231,7 @@ void Sim::CheckForPause(sint32 checkInput)
     if (Replay::ReplayMode >= 2 || simVar.restartGame != 0 || simGlobal.gameTicks <= 32)
         return;
     if ((checkInput != 0 && Input::Interface(6, 1) != 0) || Device::gForcePause != 0) {
-        unPauseDelay = (sint32)((uint32)clock_realTime.time32Hz + 4U);
+        unPauseDelay = (clock_realTime.time32Hz + 4);
         AudioCmn::Pause();
         gSimQueue_BlockSelf = 1;
         simVar.pauseSim = 1;
@@ -247,7 +244,7 @@ void Sim::MainGameLoop(void)
     FUNCTION_MARKER(0x800B6D4C, "NFS4.EXE");
     quitType = 1;
     sint32 lastGoalTick = 0;
-    sint32 lastRealTick = (sint32)((uint32)clock_realTime.time64Hz + 10000U);
+    sint32 lastRealTick = (clock_realTime.time64Hz + 10000);
     simGlobal.time32Hz = Input::gTime;
     for (;;) {
         if (simVar.endSimGame != 0) {
@@ -257,14 +254,14 @@ void Sim::MainGameLoop(void)
         }
         systemtask(0);
         sint32 realTick = clock_realTime.time64Hz;
-        simVar.goalClockTicks = (sint32)((uint32)gSimQueue_Ticker << 1);
-        sint32 diffReal = (sint32)((uint32)realTick - (uint32)lastRealTick);
-        sint32 diffGoal = (sint32)((uint32)simVar.goalClockTicks - (uint32)lastGoalTick);
+        simVar.goalClockTicks = ((uint32)gSimQueue_Ticker << 1);
+        sint32 diffReal = (realTick - lastRealTick);
+        sint32 diffGoal = (simVar.goalClockTicks - lastGoalTick);
         if (diffGoal < diffReal)
-            simVar.goalClockTicks = (sint32)((uint32)simVar.goalClockTicks + 1U);
+            simVar.goalClockTicks = (simVar.goalClockTicks + 1);
         lastGoalTick = simVar.goalClockTicks;
         lastRealTick = realTick;
-        if ((sint32)((uint32)Input::gTime - (uint32)simGlobal.time32Hz) > 16)
+        if ((Input::gTime - simGlobal.time32Hz) > 16)
             simGlobal.time32Hz = Input::gTime;
         while (simGlobal.time32Hz <= Input::gTime && simVar.endSimGame == 0) {
             if (Replay::ReplayMode == 2 && simVar.pauseSim == 0) {
@@ -302,8 +299,7 @@ void Sim::MainGameLoop(void)
                             simVar.keyRelease = 0;
                     } else {
                         for (sint32 i = 0; i <= (sint32)(GameSetup::gData.commMode == 1); ++i) {
-                            if (Input::Interface(i == 0 ? 0x1A : 0x1B, 1) != 0 &&
-                                Replay::ReplayMode < 2)
+                            if (Input::Interface(i == 0 ? 0x1A : 0x1B, 1) != 0 && Replay::ReplayMode < 2)
                                 Camera::NextMode(i);
                             if (Input::Interface(i == 0 ? 0x1C : 0x1D, 1) != 0)
                                 DashHUD::ToggleHud(i);
@@ -313,7 +309,7 @@ void Sim::MainGameLoop(void)
                     }
                 }
             }
-            simGlobal.time32Hz = (sint32)((uint32)simGlobal.time32Hz + 1U);
+            simGlobal.time32Hz = (simGlobal.time32Hz + 1);
         }
         skipRender = 0;
         if (simVar.pauseSim == 0 && simVar.quickPauseSim == 0 && simVar.endSimGame == 0) {
@@ -324,9 +320,7 @@ void Sim::MainGameLoop(void)
                     if ((simVar.currentClockTicks & 1) == 0)
                         SimQueue::SetCurrentInput(simVar.currentClockTicks >> 1);
                     InBetween = 0;
-                    if (Replay::ReplayMode == 2 && Replay::ReplayInterface.speed != 2 &&
-                        (Replay::ReplayInterface.speed != 1 || (simVar.currentClockTicks & 1) != 0) &&
-                        (Replay::ReplayInterface.speed != 0 || (simVar.currentClockTicks & 3) != 0)) {
+                    if (Replay::ReplayMode == 2 && Replay::ReplayInterface.speed != 2 && (Replay::ReplayInterface.speed != 1 || (simVar.currentClockTicks & 1) != 0) && (Replay::ReplayInterface.speed != 0 || (simVar.currentClockTicks & 3) != 0)) {
                         if (Replay::ReplayInterface.speed == 3) {
                             ProcessSimSchedules();
                             ProcessSimSchedules();
@@ -337,7 +331,7 @@ void Sim::MainGameLoop(void)
                     } else {
                         ProcessSimSchedules();
                     }
-                    simVar.currentClockTicks = (sint32)((uint32)simVar.currentClockTicks + 1U);
+                    simVar.currentClockTicks = (simVar.currentClockTicks + 1);
                 } while (simVar.currentClockTicks <= simVar.goalClockTicks);
             }
         } else {

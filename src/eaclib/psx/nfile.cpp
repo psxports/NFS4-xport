@@ -32,7 +32,7 @@ sint32 XPORT_UNPLACED::FILE::initwithmem(sint32 fileCount, sint32 bufferSize, si
     gFileDevice.operations = static_cast<NativeFileOperation *>(memory);
     sint32 bytes = overhead(fileCount, bufferSize, operationCount);
     blockclear(memory, bytes);
-    gFileDevice.files = reinterpret_cast<NativeFileSlot *>(static_cast<char *>(memory) + (uint32)operationCount * 48);
+    gFileDevice.files = reinterpret_cast<NativeFileSlot *>(static_cast<char *>(memory) + (uint32)operationCount * sizeof(NativeFileOperation));
     initfileio();
     return 1;
 }
@@ -46,9 +46,9 @@ sint32 XPORT_UNPLACED::FILE::overhead(sint32 fileCount, sint32 bufferSize, sint3
         bufferSize = 2048;
     if (operationCount == 0)
         operationCount = 10;
-    uint32 bytes = ((uint32)fileCount * 5 + (uint32)operationCount * 3) << 4;
+    uint32 bytes = fileCount * (uint32)sizeof(NativeFileSlot) + operationCount * (uint32)sizeof(NativeFileOperation);
     bytes += (uint32)bufferSize * 20;
-    return (sint32)bytes;
+    return bytes;
 }
 
 sint32 XPORT_UNPLACED::FILE::opstatus(sint32 handle)
@@ -90,8 +90,7 @@ void XPORT_UNPLACED::FILE::priorityop(uint32 operation, sint32 priority)
     sint32 interruptsWereEnabled = EnterCriticalSectionPSX();
     sint32 previousPriority = request->priority;
     request->priority = priority;
-    if ((sint32)gFileDevice.queuedCount >= 2 && request != gFileDevice.active &&
-        request->status == 0 && previousPriority != priority)
+    if ((sint32)gFileDevice.queuedCount >= 2 && request != gFileDevice.active && request->status == 0 && previousPriority != priority)
     {
         NativeFileOperation *previous = 0;
         NativeFileOperation *current = gFileDevice.queue;
@@ -189,18 +188,18 @@ sint32 XPORT_UNPLACED::FILE::waitop(uint32 operation)
     return request->status;
 }
 
-sint32 XPORT_UNPLACED::FILE::completeop(sint32 handle)
+intptr XPORT_UNPLACED::FILE::completeop(sint32 handle)
 {
     FUNCTION_MARKER(0x800EC2B0, "NFS4.EXE");
     NativeFileOperation *operation = gFileDevice.operations + ((uint32)handle >> 24);
-    sint32 result = 0;
+    intptr result = 0;
     if (operation->status == 1)
     {
         switch ((operation->key >> 20) & 15)
         {
         case 2:
         case 9:
-            result = (sint32)(uintptr_t)operation->file;
+            result = reinterpret_cast<intptr>(operation->file);
             break;
         case 3:
         case 7:
@@ -241,14 +240,14 @@ uint32 XPORT_UNPLACED::FILE::open(const char *name, sint32 mode, sint32 priority
     return operation->key;
 }
 
-uint32 XPORT_UNPLACED::FILE::close(sint32 filehandle, sint32 priority, void *userData)
+uint32 XPORT_UNPLACED::FILE::close(NativeFileSlot *filehandle, sint32 priority, void *userData)
 {
     FUNCTION_MARKER(0x800EC42C, "NFS4.EXE");
     NativeFileOperation *operation = reserveop();
     NativeBigArchive *archive = gFileDevice.archives;
     operation->priority = priority;
     operation->userData = userData;
-    operation->file = reinterpret_cast<NativeFileSlot *>((uintptr_t)(uint32)filehandle);
+    operation->file = filehandle;
     operation->key = (operation->key & 0xFF0FFFFF) | 0x300000;
     while (archive != 0)
     {
@@ -264,7 +263,7 @@ uint32 XPORT_UNPLACED::FILE::close(sint32 filehandle, sint32 priority, void *use
     return operation->key;
 }
 
-sint32 XPORT_UNPLACED::FILE::read(sint32 filehandle, sint32 offset, void *destination, sint32 size, sint32 priority, void *userData)
+sint32 XPORT_UNPLACED::FILE::read(NativeFileSlot *filehandle, sint32 offset, void *destination, sint32 size, sint32 priority, void *userData)
 {
     FUNCTION_MARKER(0x800EC4EC, "NFS4.EXE");
     NativeFileOperation *operation = reserveop();
@@ -276,11 +275,11 @@ sint32 XPORT_UNPLACED::FILE::read(sint32 filehandle, sint32 offset, void *destin
         operation->error = 6;
         iFILE_perror(operation);
     }
-    NativeFileSlot *file = reinterpret_cast<NativeFileSlot *>((uintptr_t)(uint32)filehandle);
+    NativeFileSlot *file = filehandle;
     operation->file = file;
-    if (file->length < (sint32)((uint32)offset + (uint32)size))
+    if (file->length < (offset + size))
     {
-        size = (sint32)((uint32)file->length - (uint32)offset);
+        size = (file->length - offset);
         if (size < 0)
             size = 0;
     }
@@ -288,10 +287,10 @@ sint32 XPORT_UNPLACED::FILE::read(sint32 filehandle, sint32 offset, void *destin
     operation->destination = destination;
     operation->offset = offset;
     iFILE_ExecCommand(operation);
-    return (sint32)operation->key;
+    return operation->key;
 }
 
-uint32 XPORT_UNPLACED::FILE::size(sint32 filehandle, sint32 priority, void *userData)
+uint32 XPORT_UNPLACED::FILE::size(NativeFileSlot *filehandle, sint32 priority, void *userData)
 {
     FUNCTION_MARKER(0x800EC5D0, "NFS4.EXE");
     NativeFileOperation *operation = reserveop();
@@ -303,7 +302,7 @@ uint32 XPORT_UNPLACED::FILE::size(sint32 filehandle, sint32 priority, void *user
         operation->error = 6;
         iFILE_perror(operation);
     }
-    operation->file = reinterpret_cast<NativeFileSlot *>((uintptr_t)(uint32)filehandle);
+    operation->file = filehandle;
     iFILE_ExecCommand(operation);
     return operation->key;
 }
@@ -311,7 +310,6 @@ uint32 XPORT_UNPLACED::FILE::size(sint32 filehandle, sint32 priority, void *user
 void iFILE::addbigreadcallback(uint32 operation, uint32 status, void *userData)
 {
     FUNCTION_MARKER(0x800EC660, "NFS4.EXE");
-    (void)status;
     NativeBigArchive *archive = static_cast<NativeBigArchive *>(userData);
     NativeFileOperation *request = gFileDevice.operations + (operation >> 24);
     NativeFileOperation *owner = archive->operation;
@@ -329,7 +327,7 @@ void iFILE::addbigreadcallback(uint32 operation, uint32 status, void *userData)
         blockmove(archive->indexData, expanded, 0x800);
         purgememadr(archive->indexData);
         archive->indexData = expanded;
-        uint32 next = XPORT_UNPLACED::FILE::read((sint32)(uintptr_t)archive->file, 0x800, expanded + 0x800, (sint32)((uint32)size - 0x800), priority, archive);
+        uint32 next = XPORT_UNPLACED::FILE::read(archive->file, 0x800, expanded + 0x800, (size - 0x800), priority, archive);
         XPORT_UNPLACED::FILE::callbackop(next, addbigreadcallback);
     }
     else
@@ -345,7 +343,7 @@ void iFILE::addbigopencallback(uint32 operation, uint32 status, void *userData)
     FUNCTION_MARKER(0x800EC7A0, "NFS4.EXE");
     NativeBigArchive *archive = static_cast<NativeBigArchive *>(userData);
     sint32 priority = gFileDevice.operations[operation >> 24].priority;
-    sint32 file = XPORT_UNPLACED::FILE::completeop(operation);
+    NativeFileSlot *file = reinterpret_cast<NativeFileSlot *>(XPORT_UNPLACED::FILE::completeop(operation));
     if (status == 1)
     {
         uint32 next = XPORT_UNPLACED::FILE::read(file, 0, archive->indexData, 0x800, priority, archive);
@@ -371,7 +369,7 @@ uint32 XPORT_UNPLACED::FILE::addbig(const char *name, uint32 flags, sint32 prior
         if (strncmp(name, existing->file->name, 64) == 0) {
             operation->file = existing->file;
             iFILE_ExecCommand(operation);
-            return reinterpret_cast<uintptr_t>(operation);
+            return operation->key;
         }
     }
     NativeBigArchive *archive = ::new (reservememadr(name, sizeof(NativeBigArchive), flags)) NativeBigArchive;
@@ -385,18 +383,17 @@ uint32 XPORT_UNPLACED::FILE::addbig(const char *name, uint32 flags, sint32 prior
 void iFILE::delbigclosecallback(uint32 operation, uint32 status, void *userData)
 {
     FUNCTION_MARKER(0x800EC980, "NFS4.EXE");
-    (void)status;
     NativeFileOperation *owner = static_cast<NativeFileOperation *>(userData);
     XPORT_UNPLACED::FILE::completeop(operation);
     iFILE_ExecCommand(owner);
 }
 
-uint32 XPORT_UNPLACED::FILE::delbig(sint32 handle, sint32 priority, void *userData)
+uint32 XPORT_UNPLACED::FILE::delbig(NativeFileSlot *handle, sint32 priority, void *userData)
 {
     FUNCTION_MARKER(0x800EC9AC, "NFS4.EXE");
     NativeBigArchive *archive = gFileDevice.archives;
     NativeFileOperation *operation = reserveop();
-    NativeFileSlot *file = reinterpret_cast<NativeFileSlot *>((uintptr_t)(uint32)handle);
+    NativeFileSlot *file = handle;
     NativeFileSlot *slot = gFileDevice.files;
     operation->userData = userData;
     operation->priority = priority;
@@ -412,7 +409,6 @@ uint32 XPORT_UNPLACED::FILE::delbig(sint32 handle, sint32 priority, void *userDa
             break;
         }
     }
-    NativeFileSlot *closeFile = archive->file;
     NativeBigArchive *previous = 0;
     while (archive != 0 && archive->file != file)
     {
@@ -421,13 +417,14 @@ uint32 XPORT_UNPLACED::FILE::delbig(sint32 handle, sint32 priority, void *userDa
     }
     if (archive == 0)
         operation->error = 1;
+    NativeFileSlot *closeFile = archive->file;
     if (previous == 0)
-        gFileDevice.archives = 0;
+        gFileDevice.archives = archive->next;
     else
         previous->next = archive->next;
     purgememadr(archive->indexData);
     purgememadr(archive);
-    uint32 next = close((sint32)(uintptr_t)closeFile, priority, operation);
+    uint32 next = close(closeFile, priority, operation);
     callbackop(next, iFILE::delbigclosecallback);
     return operation->key;
 }
@@ -435,7 +432,6 @@ uint32 XPORT_UNPLACED::FILE::delbig(sint32 handle, sint32 priority, void *userDa
 NativeFileAtomicResult XPORT_UNPLACED::FILE::atomic(NativeFileAtomicResult (*callback)(sint32, void *), uint32 unused, sint32 priority, void *userData)
 {
     FUNCTION_MARKER(0x800ECB40, "NFS4.EXE");
-    (void)unused;
     sint32 previousPriority = gFileDevice.priorityLimit;
     gFileDevice.priorityLimit = priority;
     NativeFileAtomicResult result = callback(priority, userData);
@@ -592,7 +588,7 @@ extern "C" void iFILE_ExecCommand(NativeFileOperation *operation)
             NativeFileSlot *file = operation->file;
             if (file->archiveOffset != 0)
             {
-                sint32 offset = (sint32)(file->archiveOffset + (uint32)operation->offset);
+                sint32 offset = (file->archiveOffset + operation->offset);
                 readfile(file->archive->file->stream, operation->destination, offset, operation->length);
             }
             else
@@ -656,7 +652,7 @@ extern "C" void freeop(NativeFileOperation *operation)
 {
     FUNCTION_MARKER(0x800ED1F8, "NFS4.EXE");
     sint32 interruptsWereEnabled = EnterCriticalSectionPSX();
-    blockclear(operation, 48);
+    blockclear(operation, sizeof(*operation));
     if (interruptsWereEnabled != 0)
         ExitCriticalSection();
 }
@@ -690,7 +686,7 @@ extern "C" void freehandle(NativeFileSlot *file)
 {
     FUNCTION_MARKER(0x800ED2F0, "NFS4.EXE");
     sint32 interruptsWereEnabled = EnterCriticalSectionPSX();
-    blockclear(file, 76);
+    blockclear(file, sizeof(*file));
     if (interruptsWereEnabled != 0)
         ExitCriticalSection();
 }

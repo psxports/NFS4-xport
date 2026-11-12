@@ -92,7 +92,7 @@ extern "C" sint32 iSNDstreamparseheader(SoundStreamPrefix *stream, uint32 *chunk
     iSNDpatchtohdr(reinterpret_cast<uint8 *>(chunk) + 12, &stream->nextFormat, reinterpret_cast<SoundAttributesPrefix *>(stream->nextAttributes), &frames);
     request->total = frames;
     STREAM::release(stream->streamHandle, chunk);
-    sint32 rounded = (sint32)(request->total + 27);
+    sint32 rounded = (request->total + 27);
     request->total = uint32(rounded / 28) * 28;
     request->dataRate = iSNDplatformcalcdatarate(&stream->nextFormat);
     if (memcmp(&stream->format, &stream->nextFormat, 4) != 0 || memcmp(stream->attributes, stream->nextAttributes, 20) != 0)
@@ -140,7 +140,7 @@ extern "C" sint32 iSNDstreamparsedata(SoundStreamPrefix *stream, uint32 *chunk)
         for (sint32 i = 0; i < stream->format.channels; ++i)
             packet.channels[i] = channelData + (sint32)chunk[4 + i];
     }
-    sint32 rounded = (sint32)(packet.frames + 27);
+    sint32 rounded = (packet.frames + 27);
     packet.frames = uint32(rounded / 28) * 28;
     sint32 index = (sint8)stream->parseIndex;
     SoundStreamRequestPrefix *requests = stream->requests;
@@ -208,13 +208,12 @@ extern "C" void iSNDstreamhotroddatachunks(void)
 {
     FUNCTION_MARKER(0x800E9438, "NFS4.EXE");
     SoundStreamPrefix *stream = sndss.stream;
-    if (soundStreamPaused || stream == 0 || stream->requestCount == 0 ||
-        stream->state != 1 || iSNDstreamisheld(stream) != 0)
+    if (soundStreamPaused || stream == 0 || stream->requestCount == 0 || stream->state != 1 || iSNDstreamisheld(stream) != 0)
         return;
     SoundStreamRequestPrefix *request = &stream->requests[(sint8)stream->parseIndex];
     if (request->chunks == 0 || request->queuedChunks == 0)
         return;
-    sint32 remaining = (sint32)(request->chunks - request->queuedChunks);
+    sint32 remaining = (request->chunks - request->queuedChunks);
     sint32 space = SNDPKTPLAY::submitspace(stream->packetHandle);
     if (remaining < space)
         space = remaining;
@@ -227,7 +226,7 @@ extern "C" void iSNDstreamhotroddatachunks(void)
         uint32 *chunk = STREAM::get(stream->streamHandle);
         if (chunk != 0)
         {
-            bytes = (sint32)((uint32)bytes + chunk[1]);
+            bytes = (bytes + chunk[1]);
             iSNDstreamparsedata(stream, chunk);
         }
     } while (space > 0 && bytes < 0x4000);
@@ -286,13 +285,13 @@ extern "C" sint32 iSNDstreamcreate(SNDPLAYOPTS *options, sint32 streams, sint32 
         return -9;
     uint8 *data = static_cast<uint8 *>(buffer);
     SoundStreamPrefix *stream = reinterpret_cast<SoundStreamPrefix *>(data);
-    uint8 *requestBuffer = data + 96;
-    uint32 requestBytes = uint32(streams) * 44;
+    uint8 *requestBuffer = data + sizeof(*stream);
+    uint32 requestBytes = (uint32(streams) * sizeof(SoundStreamRequestPrefix) + sizeof(void *) - 1U) & (~((uint32)sizeof(void *) - 1));
     stream->requests = reinterpret_cast<SoundStreamRequestPrefix *>(requestBuffer);
     uint8 *packetBuffer = requestBuffer + requestBytes;
     sint32 packetBytes = SNDPKTPLAY::overhead(chunks);
     uint8 *streamBuffer = packetBuffer + packetBytes;
-    uint32 remainingBytes = uint32(size) - 96 - requestBytes - uint32(packetBytes);
+    uint32 remainingBytes = uint32(size) - sizeof(*stream) - requestBytes - uint32(packetBytes);
     sint32 packetCapacity = SNDPKTPLAY::overhead(chunks);
     stream->packetHandle = SNDPKTPLAY::create(packetBuffer, packetCapacity, iSNDstreamreleasecallback, iSNDstreamnotifycallback);
     if (stream->packetHandle < 0)
@@ -300,10 +299,10 @@ extern "C" sint32 iSNDstreamcreate(SNDPLAYOPTS *options, sint32 streams, sint32 
     sndss.packetStreams[stream->packetHandle] = 0;
     if (shared == 0)
     {
-        stream->streamHandle = STREAM::create((sint32)(uint32(streams) + 1), 1, 1, streamBuffer, (sint32)remainingBytes);
+        stream->streamHandle = STREAM::create((streams + 1), 1, 1, streamBuffer, remainingBytes);
         stream->sharedStream = 0;
         sint32 bufferSize = STREAM::buffersize(stream->streamHandle);
-        SNDSTRM::setgreedylevel((sint32)reinterpret_cast<uintptr_t>(stream->streamHandle), bufferSize / 3);
+        STREAM::setgreedylevel(stream->streamHandle, bufferSize / 3);
     }
     else
     {
@@ -368,7 +367,7 @@ extern "C" sint32 iSNDstreamqueue(sint32 handle, sint32 delay, const void *sourc
     request->queuedChunks = 0;
     request->chunks = 0;
     iSNDleaveaudio();
-    return (sint32)request->id;
+    return request->id;
 }
 
 sint32 SNDSTRM::create(SNDPLAYOPTS *options, sint32 streams, sint32 chunks, void *buffer, sint32 size)

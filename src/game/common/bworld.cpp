@@ -65,11 +65,11 @@ void SetContext(sint32 contextHandle);
 sint32 xzsquaredist32(coorddef *c1, coorddef *c2)
 {
     FUNCTION_MARKER(0x8007D5C4, "NFS4.EXE");
-    sint32 x = (sint32)((uint32)c2->x - (uint32)c1->x) >> 12;
-    sint32 z = (sint32)((uint32)c2->z - (uint32)c1->z) >> 12;
-    sint32 xSquared = (sint32)((uint32)x * (uint32)x);
-    sint32 zSquared = (sint32)((uint32)z * (uint32)z);
-    return (sint32)((uint32)(xSquared >> 6) + (uint32)(zSquared >> 6));
+    sint32 x = (c2->x - c1->x) >> 12;
+    sint32 z = (c2->z - c1->z) >> 12;
+    sint32 xSquared = (x * x);
+    sint32 zSquared = (z * z);
+    return (((xSquared >> 6)) + (zSquared >> 6));
 }
 
 void UpdateContext(DRender::tView *Vi, sint32 contextHandle)
@@ -102,15 +102,15 @@ void SetupBuildMatrices(DRender::tView *Vi, Draw::DCache *sd)
         sint32 t2 = Vi->cview.mrotationInv.m[column * 3 + 1];
         sint32 t3 = Vi->cview.mrotationInv.m[column * 3 + 2];
         gWorldMat.m[column * 3] = t1;
-        gWorldMat.m[column * 3 + 1] = (sint32)(0U - (uint32)t2);
+        gWorldMat.m[column * 3 + 1] = (-t2);
         gWorldMat.m[column * 3 + 2] = t3;
     }
     if (gNight_renderNight == 0)
         return;
     transpose(&Camera::gInfo[Vi->player].target->orientMat, &gNightMat);
-    gNightMat.m[1] = (sint32)(0U - (uint32)gNightMat.m[1]);
-    gNightMat.m[7] = (sint32)(0U - (uint32)gNightMat.m[7]);
-    gNightMat.m[4] = (sint32)(0U - (uint32)gNightMat.m[4]);
+    gNightMat.m[1] = (-gNightMat.m[1]);
+    gNightMat.m[7] = (-gNightMat.m[7]);
+    gNightMat.m[4] = (-gNightMat.m[4]);
     DrawW::WorldSetUpMatrix(&gNightMat, &sd->matNight);
     BW::gCopCarObj = 0;
     if (GameSetup::gData.commMode == 1)
@@ -122,13 +122,13 @@ void SetupBuildMatrices(DRender::tView *Vi, Draw::DCache *sd)
         Car::tObj *theCar = i < 0 ? Cars::gList[0] : Cars::gCopCarList[i];
         if (theCar->N.active == 0 || (theCar->AIFlags & 2) == 0 || (theCar->render.damageParts & 4) != 0)
             continue;
-        sint32 dx = (sint32)((uint32)theCar->N.position.x - (uint32)Vi->cview.translation.x);
-        sint32 dz = (sint32)((uint32)theCar->N.position.z - (uint32)Vi->cview.translation.z);
+        sint32 dx = (theCar->N.position.x - Vi->cview.translation.x);
+        sint32 dz = (theCar->N.position.z - Vi->cview.translation.z);
         if (dx < 0)
-            dx = (sint32)(0U - (uint32)dx);
+            dx = (-dx);
         if (dz < 0)
-            dz = (sint32)(0U - (uint32)dz);
-        sint32 diff = dz < dx ? (sint32)((uint32)dx + (uint32)(dz >> 2)) : (sint32)((uint32)dz + (uint32)(dx >> 2));
+            dz = (-dz);
+        sint32 diff = dz < dx ? (dx + (dz >> 2)) : (dz + (dx >> 2));
         if (diff < maxdist)
         {
             maxdist = diff;
@@ -139,15 +139,15 @@ void SetupBuildMatrices(DRender::tView *Vi, Draw::DCache *sd)
     {
         Night::SetCopColor(BW::gCopCarObj->carInfo);
         static sint32 cop_angle = 0;
-        cop_angle = (sint32)((uint32)cop_angle + 64U);
+        cop_angle = (cop_angle + 64);
         matrixtdef rotY;
         xformy(&rotY, cop_angle);
         matrixtdef tm;
         transpose(&BW::gCopCarObj->N.orientMat, &tm);
         Math::fasttransmult(&tm, &rotY, &gCopMat);
-        gCopMat.m[1] = (sint32)(0U - (uint32)gCopMat.m[1]);
-        gCopMat.m[7] = (sint32)(0U - (uint32)gCopMat.m[7]);
-        gCopMat.m[4] = (sint32)(0U - (uint32)gCopMat.m[4]);
+        gCopMat.m[1] = (-gCopMat.m[1]);
+        gCopMat.m[7] = (-gCopMat.m[7]);
+        gCopMat.m[4] = (-gCopMat.m[4]);
         DrawW::WorldSetUpMatrix(&gCopMat, &sd->matCop);
     }
 }
@@ -175,9 +175,9 @@ sint32 SetupChunkBuildList(DRender::tView *Vi)
         if (chunkDist > gCurrContext->chunkFarZClipSq || ((uint16)*view & 0x800) != 0)
             continue;
         coorddef tmp;
-        tmp.x = (sint32)((uint32)pChunkCp->x - (uint32)Vi->cview.translation.x);
-        tmp.y = (sint32)((uint32)BWorldSm::slices[chunkInd * 8].center[1] - (uint32)Vi->cview.translation.y);
-        tmp.z = (sint32)((uint32)pChunkCp->z - (uint32)Vi->cview.translation.z);
+        tmp.x = (pChunkCp->x - Vi->cview.translation.x);
+        tmp.y = (BWorldSm::slices[chunkInd * 8].center[1] - Vi->cview.translation.y);
+        tmp.z = (pChunkCp->z - Vi->cview.translation.z);
         Chunk *chunkPtr = Track::chunkList + chunkInd;
         TrsProj::SetPsxTransZero();
         coorddef tmp2;
@@ -185,13 +185,9 @@ sint32 SetupChunkBuildList(DRender::tView *Vi)
         TrsProj::SetPsxTrans(&tmp2);
         coorddef tmpPts[4];
         TrsProj::TransPtN16(chunkPtr->boundPts, tmpPts, 4);
-        if (tmpPts[0].x > tmpPts[0].z && tmpPts[1].x > tmpPts[1].z &&
-            tmpPts[2].x > tmpPts[2].z && tmpPts[3].x > tmpPts[3].z)
+        if (tmpPts[0].x > tmpPts[0].z && tmpPts[1].x > tmpPts[1].z && tmpPts[2].x > tmpPts[2].z && tmpPts[3].x > tmpPts[3].z)
             continue;
-        if ((sint32)(0U - (uint32)tmpPts[0].x) > tmpPts[0].z &&
-            (sint32)(0U - (uint32)tmpPts[1].x) > tmpPts[1].z &&
-            (sint32)(0U - (uint32)tmpPts[2].x) > tmpPts[2].z &&
-            (sint32)(0U - (uint32)tmpPts[3].x) > tmpPts[3].z)
+        if (-tmpPts[0].x > tmpPts[0].z && -tmpPts[1].x > tmpPts[1].z && -tmpPts[2].x > tmpPts[2].z && -tmpPts[3].x > tmpPts[3].z)
             continue;
         if (tmpPts[0].z < 0 && tmpPts[1].z < 0 && tmpPts[2].z < 0 && tmpPts[3].z < 0)
             continue;
@@ -215,8 +211,8 @@ char *BWAllocMem(sint32 size)
     FUNCTION_MARKER(0x8007E3F8, "NFS4.EXE");
     static sint32 totalMem;
     static char name[] = "bworld";
-    totalMem = (sint32)((uint32)totalMem + (uint32)size);
-    return Platform::GetDCTBuffer((sint32)size, name);
+    totalMem = (totalMem + size);
+    return Platform::GetDCTBuffer(size, name);
 }
 
 void SetContext(sint32 contextHandle)
@@ -234,7 +230,7 @@ void BWorld::BuildGlareEffects(DRender::tView *Vi, Draw::DCache *sd, Group *grou
     for (sint32 i = 0; i < numObjects; ++i)
     {
         Trk::SFX *effect = objInstance + i;
-        uint16 pad = (uint16)effect->pad;
+        uint16 pad = effect->pad;
         sint16 type = effect->type;
         if (type == 100)
         {
@@ -313,11 +309,11 @@ sint32 BWorld::CheckChunkVisible(BWorldSm::Pos *slicePosSource, BWorldSm::Pos *s
         return 1;
     sint32 testChunkIndFwd = slicePosTest->slice + 2;
     if (testChunkIndFwd >= gNumSlices)
-        testChunkIndFwd = (sint32)((uint32)slicePosTest->slice - ((uint32)gNumSlices - 2u));
+        testChunkIndFwd = (slicePosTest->slice - (gNumSlices - 2));
     testChunkIndFwd = BWorldSm::slices[testChunkIndFwd].chunkIndex;
     sint32 testChunkIndBwd = slicePosTest->slice - 2;
     if (testChunkIndBwd < 0)
-        testChunkIndBwd = (sint32)((uint32)slicePosTest->slice + (uint32)gNumSlices - 2u);
+        testChunkIndBwd = ((slicePosTest->slice + gNumSlices) - 2);
     sint32 sourceChunkInd = slicePosSource->chunk;
     sint32 count = Track::gInViewCount[sourceChunkInd] - 1;
     testChunkIndBwd = BWorldSm::slices[testChunkIndBwd].chunkIndex;
@@ -445,7 +441,7 @@ sint32 BWorld::OpenContext(sint32 contextType, sint32 client)
         context->lowDetailDistSq = 0x8D04;
     }
     sint32 handle = gContextMan.count;
-    gContextMan.count = (sint32)((uint32)handle + 1);
+    gContextMan.count = (handle + 1);
     return handle;
 }
 
@@ -481,21 +477,21 @@ void BWorld::Init(void)
             sint32 draw = randPSX();
             sint32 laps = GameSetup::gData.numLaps;
             if (laps >= 2)
-                GameSetup::gData.SceneStartLap = (sint32)((uint32)draw * (uint32)laps) / 0x8000;
+                GameSetup::gData.SceneStartLap = (draw * laps) / 0x8000;
             else
                 GameSetup::gData.SceneStartLap = draw / 0x4000;
             draw = randPSX();
-            sint32 interval = (sint32)((uint32)draw * (uint32)GameSetup::gData.numLaps) / 0x8000;
+            sint32 interval = (draw * GameSetup::gData.numLaps) / 0x8000;
             sint32 start = GameSetup::gData.SceneStartLap;
-            sint32 end = (sint32)((uint32)start + (uint32)interval);
+            sint32 end = (start + interval);
             GameSetup::gData.SceneEndLap = end;
             if (start == end)
-                GameSetup::gData.SceneEndLap = (sint32)((uint32)start + 1u);
+                GameSetup::gData.SceneEndLap = (start + 1);
             if (GameSetup::gData.Weather != 0) {
-                GameSetup::gData.SceneNumber = (sint32)((uint32)GameSetup::gData.SceneNumber + 10u);
-                GameSetup::gData.SceneEndLap = (sint32)((uint32)GameSetup::gData.SceneEndLap + 5u);
+                GameSetup::gData.SceneNumber = (GameSetup::gData.SceneNumber + 10);
+                GameSetup::gData.SceneEndLap = (GameSetup::gData.SceneEndLap + 5);
             } else if (GameSetup::gData.trafficDensity != 0) {
-                GameSetup::gData.SceneNumber = (sint32)((uint32)GameSetup::gData.SceneNumber + 20u);
+                GameSetup::gData.SceneNumber = (GameSetup::gData.SceneNumber + 20);
             }
             SceneLoaded = 0;
         }

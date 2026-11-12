@@ -145,7 +145,7 @@ static void TransformVector(sint32 (&vect)[4], sint32 (&transform)[4][4], sint32
         result[I] = 0;
         for (sint16 J = 0; J < 4; ++J) {
             sint32 product = fixedmult(vect[J], transform[J][I]);
-            result[I] = (sint32)((uint32)result[I] + (uint32)product);
+            result[I] = (result[I] + product);
         }
     }
 }
@@ -161,12 +161,12 @@ void DrawCar(tCarInfo &carInfo, sint16 x, sint16 y, float camerax, float cameray
     sint32 the_simcarcolor = carInfo.fColor;
     gCarObj[player]->carInfo->carType = carInfo.fSimNumber;
     gCarObj[player]->carInfo->Country = carInfo.fCountry;
-    gMenuRotate[player] = (sint32)((uint32)gMenuRotate[player] + 3);
+    gMenuRotate[player] = (gMenuRotate[player] + 3);
     gCarObj[player]->carInfo->EngineMods = (carInfo.fUpgrades >> 2) & 1;
     gCarObj[player]->carInfo->WeightTransfer = (carInfo.fUpgrades >> 1) & 1;
     gCarObj[player]->carInfo->GroundEffects = carInfo.fUpgrades & 1;
     DrawC::MenuColorData(the_simcarcolor, gCarObj[player], player);
-    Draw::MenuRenderingView(gCarObj[player], &gCView, x, y, player, 0, (sint32)rotate, camerax, cameray, (uint8)brightness, reflection);
+    Draw::MenuRenderingView(gCarObj[player], &gCView, x, y, player, 0, rotate, camerax, cameray, (uint8)brightness, reflection);
 }
 
 void Front::ResetOverlayCarSelect(void)
@@ -257,8 +257,7 @@ void tScreenCarSelect::DrawOverlay(tOverlay *overlay)
         PSX_RECT temp = { (sint16)(pos.x + 15), (sint16)(pos.y + pos.h - 30), (sint16)(pos.w - 30), 23 };
         sint32 edge = temp.x + temp.w - 12;
         if (validCar) {
-            FETextRender::MenuTextPositionedJustify((sint8)carInfo.fCarID + 289,
-                (sint16)edge, (sint16)(pos.y + 2), 1, textState_Selected, textType_FramedInfo);
+            FETextRender::MenuTextPositionedJustify((sint8)carInfo.fCarID + 289, edge, (pos.y + 2), 1, textState_Selected, textType_FramedInfo);
         }
 
         sint16 text = (sint16)(139 + overlay->ID);
@@ -276,11 +275,9 @@ void tScreenCarSelect::DrawOverlay(tOverlay *overlay)
 
         sint16 center = (sint16)(temp.x + (temp.w >> 1));
         DrawMoney(edge, temp.y + 3, 6, value, moneyColor, 0x232323);
-        FETextRender::MenuTextPositionedJustify(text, center, (sint16)(temp.y + 3), 1,
-            textState_Selected, textType_FramedInfo);
+        FETextRender::MenuTextPositionedJustify(text, center, (temp.y + 3), 1, textState_Selected, textType_FramedInfo);
         DrawMoney(edge, temp.y + 13, 9, tournamentManager.fMoney, 0xBEBE, 0x232323);
-        FETextRender::MenuTextPositionedJustify(123, center, (sint16)(temp.y + 13), 1,
-            textState_Selected, textType_FramedInfo);
+        FETextRender::MenuTextPositionedJustify(123, center, (temp.y + 13), 1, textState_Selected, textType_FramedInfo);
         DrawShape::NFS4Rectangle(temp);
         PSXDrawSquare(0, pos.x, pos.y, pos.w, 10);
         break;
@@ -294,27 +291,22 @@ void tScreenCarSelect::DrawOverlay(tOverlay *overlay)
                 tDrawShapeExtended drawFlags;
                 drawFlags.tint[0] = 0xBEBE;
                 sint32 frame = ((sint32)ticks >> 4) % 10;
-                DrawShapeExtended(i * 10 + frame + 98, owned ? 0x410 : 0x411,
-                    pos.x + i * 40 + (description ? 133 : 33), pos.y + 6,
-                    owned ? 0 : 96, 1, &drawFlags);
+                DrawShapeExtended(i * 10 + frame + 98, owned ? 0x410 : 0x411, pos.x + i * 40 + (description ? 133 : 33), pos.y + 6, owned ? 0 : 96, 1, &drawFlags);
             }
             if (description) {
                 PSX_RECT temp = { (sint16)(pos.x + 30), (sint16)(pos.y + 35),
                     (sint16)(pos.w - 60), (sint16)(pos.h - 75) };
-                FETextRender::MenuTextPositionedJustify((sint16)(menuDefs->menuCarUpgrades.fCurrentItem + 150),
-                    (sint16)(pos.x + (pos.w >> 1)), (sint16)(pos.y + 24), 2,
-                    textState_Hilighted, textType_FramedInfo);
+                FETextRender::MenuTextPositionedJustify((menuDefs->menuCarUpgrades.fCurrentItem + 150), (pos.x + (pos.w >> 1)), (pos.y + 24), 2, textState_Hilighted, textType_FramedInfo);
                 sint32 descrItem = (sint16)menuDefs->menuCarUpgrades.fCurrentItem + 175;
                 if (descrItem == 176 && (carInfo.fCarID == 12 || carInfo.fCarID == 10))
                     descrItem = 65;
-                FETextRender::WordWrap((sint16)descrItem, temp, textState_Hilighted, textType_PopUpText);
+                FETextRender::WordWrap(descrItem, temp, textState_Hilighted, textType_PopUpText);
 
                 sint32 item = (sint16)menuDefs->menuCarUpgrades.fCurrentItem;
                 sint16 text = 160;
                 if (!(carInfo.fUpgrades & upgradeIcons[item]))
                     text = gPadinfo.buf[0].ID == 0x23 ? 159 : 158;
-                FETextRender::MenuTextPositionedJustify(text, (sint16)(pos.x + pos.w - 15),
-                    (sint16)(pos.y + pos.h - 20), 1, textState_Hilighted, textType_FramedInfo);
+                FETextRender::MenuTextPositionedJustify(text, (pos.x + pos.w - 15), (pos.y + pos.h - 20), 1, textState_Hilighted, textType_FramedInfo);
             }
         }
         if (description && pos.w >= 67 && pos.h >= 51) {
@@ -362,7 +354,7 @@ void tScreenCarSelect::SetState(sint32 state)
     }
     if (state != 0 && state != 2 && state != 5 && state != 6)
         return;
-    fInShowroom = (uint32)state - 5U < 2;
+    fInShowroom = state - 5U < 2;
     uint32 speechTicks = ticks;
     uint32 showroomTicks = ticks;
     gStopCommentaryNow = 1;
@@ -382,7 +374,7 @@ void tScreenCarSelect::SetState(sint32 state)
         fSplineInterval = 0;
         gKnots[1][4] = fCameraRotation & 0x3FF;
         for (sint16 i = 0; i < 5; ++i)
-            gKnots[0][i] = (sint32)((uint32)gKnots[1][i] * 2 - (uint32)gKnots[2][i]);
+            gKnots[0][i] = ((gKnots[1][i] * 2) - gKnots[2][i]);
         gRotateOffset[3] = 0x10000;
         gRotateOffset[2] = 0x10000;
         gRotateOffset[1] = 0x10000;
@@ -398,7 +390,7 @@ void tScreenCarSelect::CalcSplinePosition(sint32 knot1, sint32 knot2, sint32 kno
     sint32 G[4][4];
     sint32 Result1[4];
     sint32 Result2[4];
-    T[2] = fixeddiv((sint32)((uint32)elapsed << 16), 0x2580000);
+    T[2] = fixeddiv((elapsed << 16), 0x2580000);
     T[1] = fixedmult(T[2], T[2]);
     T[0] = fixedmult(T[1], T[2]);
     T[3] = 0x10000;
@@ -414,10 +406,10 @@ void tScreenCarSelect::CalcSplinePosition(sint32 knot1, sint32 knot2, sint32 kno
     camZ = Result2[1] >> 1;
     screenX = (Result2[2] >> 1) / 65536;
     screenY = (Result2[3] >> 1) / 65536;
-    G[0][0] = (sint32)((uint32)gKnots[knot1][4] + (uint32)gRotateOffset[0]);
-    G[1][0] = (sint32)((uint32)gKnots[knot2][4] + (uint32)gRotateOffset[1]);
-    G[2][0] = (sint32)((uint32)gKnots[knot3][4] + (uint32)gRotateOffset[2]);
-    G[3][0] = (sint32)((uint32)gKnots[knot4][4] + (uint32)gRotateOffset[3]);
+    G[0][0] = (gKnots[knot1][4] + gRotateOffset[0]);
+    G[1][0] = (gKnots[knot2][4] + gRotateOffset[1]);
+    G[2][0] = (gKnots[knot3][4] + gRotateOffset[2]);
+    G[3][0] = (gKnots[knot4][4] + gRotateOffset[3]);
     TransformVector(T, gCatmullRom, Result1);
     TransformVector(Result1, G, Result2);
     camRot = (Result2[0] >> 1) / 65536;
@@ -564,7 +556,6 @@ void tScreenCarSelect::ProcessInput(tPlayer, tInputKeyType &keyval, tMenuCommand
 void tScreenCarSelect::DrawVideoWall(sint16 y)
 {
     FUNCTION_MARKER(0x8003C118, "FRONT.BIN");
-    (void)y;
     tCarInfo carInfo;
     bool validCar = GetCar(carInfo);
     DrawBackgroundImage(0, 28, fPermShapes.fShapes, 150);
@@ -660,9 +651,7 @@ void tScreenCarSelect::DrawBackground(void)
     tCarInfo carInfo;
     if (GetCar(carInfo)) {
         IsShapeFileLoaded(fSwapShapes);
-        if (fSwapShapes.fFile != 0 && fVideoWall[0].fTransitionDirection != -1
-            && gCarObj[(uint8)FEApp->fPlayer]->async_handle == 0
-            && (sint32)((uint32)ticks - (uint32)fFadeTicks[0]) > 128) {
+        if (fSwapShapes.fFile != 0 && fVideoWall[0].fTransitionDirection != -1 && gCarObj[(uint8)FEApp->fPlayer]->async_handle == 0 && (sint32)((uint32)ticks - fFadeTicks[0]) > 128) {
             UploadSwapShapes(11);
             fVideoWall[0].TurnOn();
             if (fBrightness[0] == fDestBrightness[0])
@@ -677,7 +666,7 @@ void tScreenCarSelect::DrawSliders(tCarInfo &carInfo, sint16 x, sint16 y)
 {
     FUNCTION_MARKER(0x8003C66C, "FRONT.BIN");
     for (sint16 j = 0; j < 5; ++j) {
-        FETextRender::MenuTextPositioned(textVals[j], x, (sint16)(y + 4), textState_Unselected, textType_Default);
+        FETextRender::MenuTextPositioned(textVals[j], x, (y + 4), textState_Unselected, textType_Default);
         tCarStatType carStat = remap[j];
         uint8 upgrades = carInfo.fUpgrades;
         sint16 result = carInfo.fStats[0][carStat];
@@ -715,8 +704,7 @@ void tScreenCarSelect::DrawForeground(void)
     case 1:
         bShowStats = currentItem == &menuDefs->itemGarageCar;
         menuDefs->itemUpgradeCar.fFlags &= ~1U;
-        if (frontEnd.raceType == 2 && frontEnd.tier == 0 &&
-            FECheat::IsCheatEnabled(cheat_FinishedTournament))
+        if (frontEnd.raceType == 2 && frontEnd.tier == 0 && FECheat::IsCheatEnabled(cheat_FinishedTournament))
             menuDefs->itemOpponentUpgrades.fFlags &= ~1U;
         if (!validCar || carInfo.fCarClass >= 5) {
             menuDefs->itemUpgradeCar.fFlags |= 1U;
@@ -776,15 +764,14 @@ void tScreenCarSelect::DrawForeground(void)
 
     if ((uint16)fState - 5U >= 2U) {
         showRoomFlag = 0;
-        fCameraRotation = (uint32)fCameraRotation + 3U;
-        DrawCar(carInfo, 314, 84, 4.0f, -7.5f, (char)fBrightness[0], true,
-            fCameraRotation, kPlayerOne);
+        fCameraRotation = fCameraRotation + 3U;
+        DrawCar(carInfo, 314, 84, 4.0f, -7.5f, (char)fBrightness[0], true, fCameraRotation, kPlayerOne);
     } else {
-        sint32 elapsedticks = (sint32)((uint32)ticks - (uint32)fSpeechTicks - 256U);
+        sint32 elapsedticks = (sint32)((uint32)ticks - fSpeechTicks - 256U);
         sint32 speechCar = (sint8)carInfo.fSpeechCarID;
         if (elapsedticks >= 0 && speechCar >= 0) {
             sint32 textID = (elapsedticks >> 9) % 19 + 996 + speechCar * 19;
-            uint32 textTicks = (uint32)elapsedticks & 511U;
+            uint32 textTicks = elapsedticks & 511U;
             sint32 textColor = kRGBVals[(uint8)textDefinitions[TextSys::WordFlags((sint16)textID)][4]];
             if (textTicks < 128)
                 textColor = CalcFadeVal(textColor, (sint32)(128 - textTicks));
@@ -799,16 +786,16 @@ void tScreenCarSelect::DrawForeground(void)
         tDrawShapeExtended drawFlags;
         drawFlags.tint[0] = 0x551E00;
         drawFlags.custom_shapes = fSwapShapes.fShapes;
-        uint32 speechTicks = (uint32)fSpeechTicks;
+        uint32 speechTicks = fSpeechTicks;
         sint32 fadeVal = 128;
         if (speechTicks > 256)
             fadeVal = speechTicks <= 384 ? (sint32)(384 - speechTicks) : 0;
         DrawShapeExtended(10, 0x200, 0, 0, fadeVal, 0, &drawFlags);
 
-        uint32 elapsed = (uint32)ticks - (uint32)fShowroomTicks;
+        uint32 elapsed = (uint32)ticks - fShowroomTicks;
         while ((sint32)elapsed > 600) {
-            fShowroomTicks = (uint32)fShowroomTicks + 600U;
-            fSplineInterval = (sint32)((uint32)fSplineInterval + 1U);
+            fShowroomTicks = fShowroomTicks + 600U;
+            fSplineInterval = (fSplineInterval + 1);
             elapsed -= 600U;
             if (fSplineInterval > 6)
                 fSplineInterval -= 5;
@@ -834,20 +821,16 @@ void tScreenCarSelect::DrawForeground(void)
         sint32 screenX = 0;
         sint32 screenY = 0;
         sint32 camRot = 0;
-        CalcSplinePosition(knots[0], knots[1], knots[2], knots[3], elapsed,
-            cameraY, cameraZ, screenX, screenY, camRot);
+        CalcSplinePosition(knots[0], knots[1], knots[2], knots[3], elapsed, cameraY, cameraZ, screenX, screenY, camRot);
         showRoomFlag = 1;
-        DrawCar(carInfo, (sint16)screenX, (sint16)screenY, (float)cameraY * (1.0f / 65536.0f),
-            (float)cameraZ * (1.0f / 65536.0f), (char)fBrightness[0], true, (uint32)camRot, kPlayerOne);
-        if (validCar && (uint32)gettick() - (uint32)fSpeechTicks > 640U &&
-            !fSpeechPlayed && (sint8)carInfo.fSpeechCarID >= 0) {
+        DrawCar(carInfo, (sint16)screenX, (sint16)screenY, (float)cameraY * (1.0f / 65536.0f), (float)cameraZ * (1.0f / 65536.0f), (char)fBrightness[0], true, camRot, kPlayerOne);
+        if (validCar && gettick() - fSpeechTicks > 640U && !fSpeechPlayed && (sint8)carInfo.fSpeechCarID >= 0) {
             fSpeechPlayed = true;
             FeAudio::AsyncPlaySpeech(0, (sint8)carInfo.fSpeechCarID);
         }
     }
 
-    if (gCarObj[0]->async_handle == 0 && fBrightness[0] == fDestBrightness[0] &&
-        fBrightness[0] == 0 && (sint32)((uint32)ticks - (uint32)fFadeTicks[0]) > 128) {
+    if (gCarObj[0]->async_handle == 0 && fBrightness[0] == fDestBrightness[0] && fBrightness[0] == 0 && (sint32)((uint32)ticks - fFadeTicks[0]) > 128) {
         SetBrightness(carInfo.fAvailable != 0 ? 128 : 32, 0);
         fVideoWall[0].TurnOn();
     }
@@ -926,7 +909,7 @@ void tScreenCarSelectDuel::DrawVideoWall(sint16 y)
     tCarInfo carInfo;
     bool validCar = GetCar(carInfo);
     for (sint16 i = 0; i < 12; ++i)
-        DrawShapeExtended(i, 0, 0, -(sint32)y, fScreenFadeVal, 0, 0);
+        DrawShapeExtended(i, 0, 0, -y, fScreenFadeVal, 0, 0);
     if (fScreenFadeVal > 0 && fTransitionOff)
     {
         fVideoWall[0].TurnOffInstant();
@@ -951,7 +934,7 @@ void tScreenCarSelectDuel::DrawOpponentVideoWall(sint16 y)
 {
     FUNCTION_MARKER(0x8003D4BC, "FRONT.BIN");
     for (sint16 i = 0; i < 12; ++i)
-        DrawShapeExtended(i, 0, 0, -(sint32)y, fScreenFadeVal, 0, 0);
+        DrawShapeExtended(i, 0, 0, -y, fScreenFadeVal, 0, 0);
     if (fScreenFadeVal > 0 && fTransitionOff) {
         fVideoWall[1].TurnOffInstant();
         SetBrightness(0, 1);
@@ -1040,8 +1023,7 @@ void tScreenCarSelectDuel::DrawBackground(void)
     carInfo.fColor = carInfo.fColorOrder[carInfo.fDefaultColor];
     UpdateOpponentVideoWall(carInfo);
     IsShapeFileLoaded(fOpponentShapes);
-    if (fOpponentShapes.fFile != 0 && fVideoWall[1].fTransitionDirection != -1 &&
-        gCarObj[1]->async_handle == 0 && (sint32)((uint32)ticks - (uint32)fFadeTicks[1]) > 128)
+    if (fOpponentShapes.fFile != 0 && fVideoWall[1].fTransitionDirection != -1 && gCarObj[1]->async_handle == 0 && (sint32)((uint32)ticks - fFadeTicks[1]) > 128)
     {
         UploadShapes(fOpponentShapes, 0, 65, 5, 0);
         fOpponentTVsInitialized = 0;
@@ -1051,7 +1033,7 @@ void tScreenCarSelectDuel::DrawBackground(void)
     }
     fCameraRotation += 3;
     carInfo.fUpgrades = 0;
-    if (gCarObj[1]->async_handle != 0 && (sint32)((uint32)ticks - (uint32)fFadeTicks[1]) > 128)
+    if (gCarObj[1]->async_handle != 0 && (sint32)((uint32)ticks - fFadeTicks[1]) > 128)
     {
         SetBrightness(0, 1);
         fVideoWall[1].TurnOff();
@@ -1060,8 +1042,7 @@ void tScreenCarSelectDuel::DrawBackground(void)
     UpdateBrightness(1);
     showRoomFlag = 0;
     DrawCar(carInfo, 278, 184, 1.7f, -9.9f, (char)fBrightness[1], false, fCameraRotation, kPlayerTwo);
-    if (gCarObj[1]->async_handle == 0 && fBrightness[1] == fDestBrightness[1] &&
-        fBrightness[1] == 0 && (sint32)((uint32)ticks - (uint32)fFadeTicks[1]) > 128)
+    if (gCarObj[1]->async_handle == 0 && fBrightness[1] == fDestBrightness[1] && fBrightness[1] == 0 && (sint32)((uint32)ticks - fFadeTicks[1]) > 128)
     {
         SetBrightness(128, 1);
         fVideoWall[1].TurnOn();
@@ -1093,7 +1074,7 @@ void tScreenCarSelectDuel::DrawBackground(void)
     else
         carInfo.fCarID = (char)0xFF;
     UpdateVideoWall(carInfo);
-    if (gCarObj[0]->async_handle != 0 && (sint32)((uint32)ticks - (uint32)fFadeTicks[0]) > 128)
+    if (gCarObj[0]->async_handle != 0 && (sint32)((uint32)ticks - fFadeTicks[0]) > 128)
     {
         SetBrightness(0, 0);
         fVideoWall[0].TurnOff();
@@ -1102,8 +1083,7 @@ void tScreenCarSelectDuel::DrawBackground(void)
     UpdateBrightness(0);
     showRoomFlag = 0;
     DrawCar(carInfo, 278, 79, 1.7f, -9.9f, (char)fBrightness[0], false, fCameraRotation, kPlayerOne);
-    if (gCarObj[0]->async_handle == 0 && fBrightness[0] == fDestBrightness[0] &&
-        fBrightness[0] == 0 && (sint32)((uint32)ticks - (uint32)fFadeTicks[0]) > 128)
+    if (gCarObj[0]->async_handle == 0 && fBrightness[0] == fDestBrightness[0] && fBrightness[0] == 0 && (sint32)((uint32)ticks - fFadeTicks[0]) > 128)
     {
         SetBrightness(carInfo.fAvailable != 0 ? 128 : 32, 0);
         fVideoWall[0].TurnOn();
@@ -1111,8 +1091,7 @@ void tScreenCarSelectDuel::DrawBackground(void)
     if (validCar)
     {
         IsShapeFileLoaded(fSwapShapes);
-        if (fSwapShapes.fFile != 0 && fVideoWall[0].fTransitionDirection != -1 &&
-            gCarObj[0]->async_handle == 0 && (sint32)((uint32)ticks - (uint32)fFadeTicks[0]) > 128)
+        if (fSwapShapes.fFile != 0 && fVideoWall[0].fTransitionDirection != -1 && gCarObj[0]->async_handle == 0 && (sint32)((uint32)ticks - fFadeTicks[0]) > 128)
         {
             UploadSwapShapes(5);
             fVideoWall[0].TurnOn();
@@ -1131,7 +1110,7 @@ void tScreenCarSelectDuel::DrawForeground(void)
     bool validCar = GetCar(carInfo);
     for (sint16 i = 0; i < 2; ++i) {
         for (sint16 j = 0; j < 5; ++j) {
-            FETextRender::MenuTextPositionedJustify(text2PVals[j], 500, (sint16)(y + 4), 1, textState_Unselected, textType_ScreenInfo);
+            FETextRender::MenuTextPositionedJustify(text2PVals[j], 500, (y + 4), 1, textState_Unselected, textType_ScreenInfo);
             sint16 result = 0;
             if (validCar) {
                 tCarStatType carStat = remap[j];
@@ -1201,7 +1180,7 @@ void tScreenCarSelectTwoPlayer::DrawVideoWall(sint16 y)
     tCarInfo carInfo;
     bool validCar = GetCar(carInfo);
     for (sint16 i = 0; i < 12; ++i)
-        DrawShapeExtended(i, 0, 0, -(sint32)y, fScreenFadeVal, 0, 0);
+        DrawShapeExtended(i, 0, 0, -y, fScreenFadeVal, 0, 0);
     if ((fSwapShapes.fFlags & 1) != 0 && fTVsInitialized == 0)
     {
         sint16 offset = FEApp->fPlayer != 0 ? 105 : 0;
@@ -1293,9 +1272,7 @@ void tScreenCarSelectTwoPlayer::DrawBackground(void)
             SetBrightness(0, 0);
             fFadeTicks[0] = ticks;
         }
-        if (gCarObj[(uint8)FEApp->fPlayer]->async_handle == 0 &&
-            fBrightness[0] == fDestBrightness[0] && fBrightness[0] == 0 &&
-            (sint32)((uint32)ticks - (uint32)fFadeTicks[0]) > 128)
+        if (gCarObj[(uint8)FEApp->fPlayer]->async_handle == 0 && fBrightness[0] == fDestBrightness[0] && fBrightness[0] == 0 && (sint32)((uint32)ticks - fFadeTicks[0]) > 128)
         {
             SetBrightness(carInfo.fAvailable != 0 ? 128 : 32, 0);
             fVideoWall[0].TurnOn();
@@ -1308,15 +1285,12 @@ void tScreenCarSelectTwoPlayer::DrawBackground(void)
         fPreviousCarID = -1;
     }
     showRoomFlag = 0;
-    DrawCar(carInfo, 278, carY, 1.7f, -9.9f, (char)fBrightness[0], false,
-        fCameraRotation, (tPlayer)(uint8)FEApp->fPlayer);
+    DrawCar(carInfo, 278, carY, 1.7f, -9.9f, (char)fBrightness[0], false, fCameraRotation, (tPlayer)(uint8)FEApp->fPlayer);
     if (!validCar)
         TurnOffVideoWall();
 
     IsShapeFileLoaded(fSwapShapes);
-    if (fSwapShapes.fFile != 0 && fVideoWall[0].fTransitionDirection != -1 &&
-        gCarObj[(uint8)FEApp->fPlayer]->async_handle == 0 &&
-        (sint32)((uint32)ticks - (uint32)fFadeTicks[0]) > 128)
+    if (fSwapShapes.fFile != 0 && fVideoWall[0].fTransitionDirection != -1 && gCarObj[(uint8)FEApp->fPlayer]->async_handle == 0 && (sint32)((uint32)ticks - fFadeTicks[0]) > 128)
     {
         sint16 offset = (uint8)FEApp->fPlayer == 1 ? 65 : 0;
         UploadShapes(fSwapShapes, 0, offset, 5, 0);
@@ -1353,7 +1327,7 @@ void tScreenCarSelectTwoPlayer::DrawForeground(void)
     if (!gotcar || carInfo.fCarClass == 7)
         item->fFlags |= 1;
     for (sint16 j = 0; j < 5; ++j) {
-        FETextRender::MenuTextPositionedJustify(text2PVals[j], 500, (sint16)(yOffset + 4), 1, textState_Unselected, textType_Default);
+        FETextRender::MenuTextPositionedJustify(text2PVals[j], 500, (yOffset + 4), 1, textState_Unselected, textType_Default);
         sint16 result = 0;
         if (gotcar) {
             tCarStatType carStat = remap[j];
@@ -1465,9 +1439,7 @@ void tScreenPinkSlipsCarSelect::DoMemCardStuff(void)
         carManager.CheapestCarStockPrice();
         if (carManager.GetNumPinkSlipsCars((sint16)player) == 32)
             PinkSlipsScreenState[player] = TooManyCars;
-        else if (carManager.GetNumPinkSlipsCars((sint16)player) > 1 ||
-            (carManager.GetNumPinkSlipsCars((sint16)player) == 1 &&
-             carManager.CheapestCarStockPrice() <= frontEnd.pinkSlipsCash[player]))
+        else if (carManager.GetNumPinkSlipsCars((sint16)player) > 1 || (carManager.GetNumPinkSlipsCars((sint16)player) == 1 && carManager.CheapestCarStockPrice() <= frontEnd.pinkSlipsCash[player]))
             PinkSlipsScreenState[player] = CardLoadedFine;
         else
             PinkSlipsScreenState[player] = NotEnoughCars;
@@ -1556,8 +1528,7 @@ void tScreenPinkSlipsCarSelect::ProcessInput(tPlayer, tInputKeyType &keyval, tMe
     FUNCTION_MARKER(0x8003F590, "FRONT.BIN");
     if (keyval != kInput_KeyType_Triangle)
     {
-        if (keyval != kInput_KeyType_Circle &&
-            (PinkSlipsScreenState[0] != CardLoadedFine || PinkSlipsScreenState[1] != CardLoadedFine))
+        if (keyval != kInput_KeyType_Circle && (PinkSlipsScreenState[0] != CardLoadedFine || PinkSlipsScreenState[1] != CardLoadedFine))
             keyval = kInput_KeyType_AlreadyProcessed;
         if (keyval != kInput_KeyType_Triangle)
             return;

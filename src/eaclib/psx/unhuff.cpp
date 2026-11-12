@@ -23,13 +23,13 @@ void HuffInput::refill()
     uint32 low = next[1];
     next += 2;
     history = (history << 16) | (high << 8) | low;
-    look = history << ((0 - (uint32)available) & 31);
+    look = history << ((~(((uint32)available)) + 1) & 31);
     available += 16;
 }
 
 void HuffInput::consume(sint32 width)
 {
-    available = (sint32)((uint32)available - (uint32)width);
+    available = (available - width);
     look <<= (uint32)width & 31;
     if (available < 0)
         refill();
@@ -62,7 +62,7 @@ uint32 HuffInput::number()
             look <<= 1;
             ++width;
         } while ((sint32)look >= 0);
-        available = (sint32)((uint32)available + 1 - (uint32)width);
+        available = ((available + 1) - width);
         look <<= 1;
         if (available < 0)
             refill();
@@ -89,10 +89,8 @@ extern "C" uint32 unhuff(const uint8 *data, uint8 *destination, sint32 unpack)
         return 0;
 
     XASSERT(unpack != 0);
-    (void)unpack;
     HuffInput input;
-    input.history = (uint32(data[0]) << 24) | (uint32(data[1]) << 16) |
-        (uint32(data[2]) << 8) | data[3];
+    input.history = (uint32(data[0]) << 24) | (uint32(data[1]) << 16) | (uint32(data[2]) << 8) | data[3];
     uint32 signature = input.history >> 16;
     input.next = data + 4;
     input.available = 0;
@@ -123,7 +121,7 @@ extern "C" uint32 unhuff(const uint8 *data, uint8 *destination, sint32 unpack)
         code <<= 1;
         offsets[depth] = code - total;
         uint32 count = input.number() - 4;
-        counts[depth - 1] = (sint32)count;
+        counts[depth - 1] = count;
         total += count;
         code += count;
         uint32 threshold = count == 0 ? 0 : (code << ((16 - (uint32)depth) & 31)) & 0xffff;

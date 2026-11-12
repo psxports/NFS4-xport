@@ -15,15 +15,15 @@ void inittimer(sint32 frequency)
     {
         for (sint32 i = 0; i < 8; ++i)
             tmrsub[i] = 0;
-        timerevent = OpenEvent(0xF2000002u, 2, 0x1000, tmrint);
+        timerevent = OpenEvent(0xF2000002, 2, 0x1000, tmrint);
         EnableEvent(timerevent);
         timerflag = 1;
         addexit(restoretimer);
     }
     timerhz = frequency;
     reentryflag = 0;
-    SetRCnt(0xF2000002u, (uint16)(0x409980 / frequency), 0x1000);
-    StartRCnt(0xF2000002u);
+    SetRCnt(0xF2000002, (uint16)(0x409980 / frequency), 0x1000);
+    StartRCnt(0xF2000002);
     ExitCriticalSection();
     resettick();
     addexit(restoretimer);
@@ -42,7 +42,7 @@ sint32 tmrint(void)
     ticks = (sint32)((uint32)ticks + 1u);
     sint32 previousLibTicks = libticks;
     g_currentthread = 1;
-    libticks = (sint32)((uint32)previousLibTicks + 1u);
+    libticks = previousLibTicks + 1;
     for (sint32 i = 0; i < 8; ++i)
     {
         GameTimerCallback callback = tmrsub[i];

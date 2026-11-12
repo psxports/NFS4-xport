@@ -161,8 +161,7 @@ void tScreenMain::SwapBackground(sint32 num)
     StopMainMovie(*this);
     sint32 slot = fCurrentSlot;
     bVideoAborted = true;
-    if (fVideoShapes[slot].async_handle != 0 || fVideoShapes[slot].fFile != 0 ||
-        fVideoShapes[1 - slot].async_handle != 0 || fVideoShapes[1 - slot].fFile != 0)
+    if (fVideoShapes[slot].async_handle != 0 || fVideoShapes[slot].fFile != 0 || fVideoShapes[1 - slot].async_handle != 0 || fVideoShapes[1 - slot].fFile != 0)
         return;
     if (num == -1)
     {
@@ -189,10 +188,7 @@ bool tScreenMain::DoneLoadingBackground(void)
     FUNCTION_MARKER(0x800370DC, "FRONT.BIN");
 
     sint32 slot = fCurrentSlot;
-    return fVideoShapes[slot].async_handle == 0 &&
-        fVideoShapes[slot].fFile == 0 &&
-        fVideoShapes[1 - slot].async_handle == 0 &&
-        fVideoShapes[1 - slot].fFile == 0;
+    return fVideoShapes[slot].async_handle == 0 && fVideoShapes[slot].fFile == 0 && fVideoShapes[1 - slot].async_handle == 0 && fVideoShapes[1 - slot].fFile == 0;
 }
 
 void tScreenMain::SetState(tScreenMainState state)
@@ -221,8 +217,7 @@ void tScreenMain::SetState(tScreenMainState state)
         tvTransitions[i].v = (uint8)shape->shapey;
         tvTransitions[i].uw = (uint8)shape->width;
         tvTransitions[i].vh = (uint8)shape->height;
-        tvTransitions[i].tpage = (uint16)getTPage(shape->type & 3, 0,
-            (uint16)shape->shapex, (uint16)shape->shapey);
+        tvTransitions[i].tpage = (uint16)getTPage(shape->type & 3, 0, (uint16)shape->shapex, (uint16)shape->shapey);
         tvTransitions[i].clut = GetClut((shape->clutID & 63) << 4, shape->clutID >> 6);
         tvTransitions[i].flags = 0;
         tvTransitions[i].tint = 0x808080;
@@ -276,7 +271,7 @@ void tScreenMain::InitDynamicImages(void)
                         tvTransitions[index].tpage = GetTPage(2, 0, 512, 0);
                         tvTransitions[index].clut = 0;
                         tvTransitions[index].flags = 0x22;
-                        uint32 tint = (uint32)tintColors[fCurrentBG[fCurrentSlot]];
+                        uint32 tint = tintColors[fCurrentBG[fCurrentSlot]];
                         tvTransitions[index].state = kScreenMain_DynamicImage;
                         tvTransitions[index].bright = 128;
                         tvTransitions[index].tint = tint;
@@ -350,8 +345,7 @@ void tScreenMain::DrawBackground(void)
         for (sint16 j = 0; j < 16; ++j)
         {
             tScreenMainState state = tvStates[j];
-            if ((state != kScreenMain_StaticImage && state != kScreenMain_Credits) ||
-                tvTransitions[j].state != state || tvConfigs[j].clut != tvTransitions[j].clut)
+            if ((state != kScreenMain_StaticImage && state != kScreenMain_Credits) || tvTransitions[j].state != state || tvConfigs[j].clut != tvTransitions[j].clut)
                 bAllTVsOn = false;
         }
         if (bAllTVsOn)
@@ -364,12 +358,10 @@ void tScreenMain::DrawBackground(void)
     CreditManager.Draw(fState == kScreenMain_Credits);
     if (fState == kScreenMain_WarningImage)
     {
-        if (frontEnd.raceType != 6 &&
-            FEApp->fCurrentMenu[0]->fItemList[FEApp->fCurrentMenu[0]->fCurrentItem] != &menuDefs->itemTwoPlayerPinkSlips)
+        if (frontEnd.raceType != 6 && FEApp->fCurrentMenu[0]->fItemList[FEApp->fCurrentMenu[0]->fCurrentItem] != &menuDefs->itemTwoPlayerPinkSlips)
             SetState(kScreenMain_StaticImage);
     }
-    else if (frontEnd.raceType == 6 ||
-        FEApp->fCurrentMenu[0]->fItemList[FEApp->fCurrentMenu[0]->fCurrentItem] == &menuDefs->itemTwoPlayerPinkSlips)
+    else if (frontEnd.raceType == 6 || FEApp->fCurrentMenu[0]->fItemList[FEApp->fCurrentMenu[0]->fCurrentItem] == &menuDefs->itemTwoPlayerPinkSlips)
         SetState(kScreenMain_WarningImage);
     bool drawWarning = false;
     if (fState == kScreenMain_WarningImage)
@@ -423,7 +415,7 @@ void tScreenMain::DrawBackground(void)
                 fMovieTicks = ticks;
             }
             hVideo = 2;
-            fFrame = (sint32)(uint32(fFrame) + 1U);
+            fFrame = (fFrame + 1);
         }
         else if (result < 0)
         {
@@ -432,7 +424,7 @@ void tScreenMain::DrawBackground(void)
 #endif
         }
     }
-    else if (uint32(ticks) - uint32(fStartTicks) > 640U && fState == kScreenMain_StaticImage)
+    else if (uint32(ticks) - fStartTicks > 640U && fState == kScreenMain_StaticImage)
     {
         PSX_RECT r = { 512, 0, 80, 160 };
         ClearImage(&r, 0, 0, 0);
@@ -457,7 +449,7 @@ void tScreenMain::DrawBackground(void)
     DrawBackgroundImage(2, 28, fPermShapes.fShapes, 0);
     DrawDropShadow();
     DrawVideoLines();
-    uint32 deltaTicks = uint32(ticks) - uint32(fAnimTicks);
+    uint32 deltaTicks = uint32(ticks) - fAnimTicks;
     if (deltaTicks > 1500 && fState != kScreenMain_WarningImage)
     {
         sint32 async = fSwapShapes.async_handle;
@@ -486,8 +478,8 @@ void tScreenMain::DrawBackground(void)
         fAnimLocation = (sint16)(fAnimTicks & 3);
     }
     if (deltaTicks < 128)
-        animFade = (sint16)(128U - deltaTicks);
-    else if (uint32(deltaTicks - 672) < 128)
+        animFade = (sint16)(128 - deltaTicks);
+    else if ((deltaTicks - 672) < 128)
         animFade = (sint16)(deltaTicks - 672);
     if (deltaTicks < 800 && fAnimationUploaded != 0)
     {
@@ -500,8 +492,7 @@ void tScreenMain::DrawBackground(void)
             if (drawAnimFade > 128)
                 drawAnimFade = 128;
         }
-        DrawShapeExtended((deltaTicks / 15) % 10, 0x611, animLocations[fAnimLocation].x,
-            animLocations[fAnimLocation].y, drawAnimFade, 1, &drawFlags);
+        DrawShapeExtended((deltaTicks / 15) % 10, 0x611, animLocations[fAnimLocation].x, animLocations[fAnimLocation].y, drawAnimFade, 1, &drawFlags);
     }
     sint16 y = 50;
     for (sint16 i = 0; i < 25 && y < 210; ++i, y = (sint16)(y + 8))
@@ -513,12 +504,11 @@ void tScreenMain::DrawBackground(void)
             DrawShapeExtended(((uint8)numberValues[index] >> j) & 1, 1, x, y, 64, 3, 0);
         }
     }
-    sint32 transitionLimit = (sint32)((uint32(ticks) - uint32(fStartTicks)) << 12) >> 16;
+    sint32 transitionLimit = (sint32)((uint32(ticks) - fStartTicks) << 12) >> 16;
     for (sint16 i = 0; i < 16 && i <= transitionLimit; ++i)
     {
         uint8 index = (uint8)tvOrder[i];
-        if ((tvStates[index] != tvTransitions[index].state || tvConfigs[index].clut != tvTransitions[index].clut) &&
-            tvConfigs[index].state == tv_StateOn)
+        if ((tvStates[index] != tvTransitions[index].state || tvConfigs[index].clut != tvTransitions[index].clut) && tvConfigs[index].state == tv_StateOn)
             TurnOffTV(tvConfigs[index]);
     }
     for (sint16 i = 0; i < 16; ++i)
@@ -536,7 +526,7 @@ void tScreenMain::DrawBackground(void)
         tvStates[i] = tvTransitions[i].state;
         TurnOnTV(tvConfigs[i]);
         tvConfigs[i].destBrightness = tvTransitions[i].bright;
-        fNumTVsInTransition = (sint32)(uint32(fNumTVsInTransition) - 1U);
+        fNumTVsInTransition = (fNumTVsInTransition - 1);
     }
     for (sint16 i = 0; i < 16; ++i)
         DrawTV(tvConfigs[i]);

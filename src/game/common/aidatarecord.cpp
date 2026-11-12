@@ -27,7 +27,6 @@ void AIDataRecord_t::operator delete(void *memory)
 AIDataRecord_t::AIDataRecord_t(AIDataRecord::WhichRecord_t whichIsThis, char *preBuffer)
 {
     FUNCTION_MARKER(0x8006CE24, "NFS4.EXE");
-    (void)whichIsThis;
     AddRecordToCollection();
     preAllocatedBuffer_ = preBuffer;
     recordMethod_ = AIDataRecord::NORMAL_M;
@@ -194,7 +193,7 @@ AIDataRecord_TrackCurve_t::AIDataRecord_TrackCurve_t(AIDataRecord::WhichRecord_t
 {
     FUNCTION_MARKER(0x8006D30C, "NFS4.EXE");
     numElements_ = gNumSlices;
-    bSize_ = (sint32)((uint32)numElements_ + 1);
+    bSize_ = (numElements_ + 1);
     if (recordMethod_ == AIDataRecord::NORMAL_M)
         sprintf(name_, "%sTr%02d.qcr", Paths_Paths[10], GameSetup::gData.track);
     else
@@ -227,7 +226,7 @@ sint32 AIDataRecord_CurveSpeedTable_t::Get(sint32 curve)
 {
     FUNCTION_MARKER(0x8006D44C, "NFS4.EXE");
     if (curve < 0)
-        curve = (sint32)(0U - (uint32)curve);
+        curve = (-curve);
     if (curve >= 256)
         curve = 255;
     return (uint8)dataBuffer_[curve] * 65536;
@@ -252,7 +251,6 @@ AIDataRecord_CurveSpeedTable_t::~AIDataRecord_CurveSpeedTable_t(void)
 sint32 AIDataRecord_CarTracking_t::Get(sint32 slice)
 {
     FUNCTION_MARKER(0x8006D50C, "NFS4.EXE");
-    (void)slice;
     return 0;
 }
 

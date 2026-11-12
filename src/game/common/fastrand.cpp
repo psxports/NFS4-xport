@@ -1,9 +1,9 @@
 #include "xport.h"
 #include "game/common/fastrand.h"
 
-uint32 fastRandom = 4168396545U;
+uint32 fastRandom = 4168396545;
 uint32 randtemp;
-uint32 randSeed = 1U;
+uint32 randSeed = 1;
 uint32 numRandCalls;
 
 void FastRandom::CleanUp(void)

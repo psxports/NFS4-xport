@@ -17,14 +17,14 @@ sint32 SNDSTRM::status(sint32 handle, SNDSTREAMSTATUS *result)
     result->outstandingrequests = (sint8)stream->requestCount;
     if (stream->requestCount != 0)
     {
-        result->currentrequest = (sint32)stream->requests->id;
+        result->currentrequest = stream->requests->id;
         if (stream->format.samplerate != 0)
         {
             uint32 frames = uint32(SNDPKTPLAY::unsafeframesoutstanding(stream->packetHandle));
             uint32 rate = stream->format.samplerate;
             if (rate == 0)
                 abort();
-            result->timebuffered = (sint32)((frames * 1000u) / rate);
+            result->timebuffered = ((frames * 1000u) / rate);
         }
     }
     iSNDleaveaudio();

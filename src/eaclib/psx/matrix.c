@@ -18,7 +18,7 @@ matrixtdef *addmatrix(matrixtdef *left, matrixtdef *right, matrixtdef *result)
     {
         sint32 rightValue = right->m[i];
         sint32 leftValue = left->m[i];
-        result->m[i] = (sint32)((uint32)leftValue + (uint32)rightValue);
+        result->m[i] = (leftValue + rightValue);
     }
     return result;
 }
@@ -30,7 +30,7 @@ matrixtdef *submatrix(matrixtdef *left, matrixtdef *right, matrixtdef *result)
     {
         sint32 rightValue = right->m[i];
         sint32 leftValue = left->m[i];
-        result->m[i] = (sint32)((uint32)leftValue - (uint32)rightValue);
+        result->m[i] = (leftValue - rightValue);
     }
     return result;
 }

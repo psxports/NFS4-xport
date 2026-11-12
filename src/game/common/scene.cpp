@@ -31,10 +31,10 @@ sint32 GetPlaneY(const coorddef *norm, const coorddef *pointOnPlane, const coord
     sint32 x = fixedmult(norm->x, pointOnPlane->x);
     sint32 y = fixedmult(norm->y, pointOnPlane->y);
     sint32 z = fixedmult(norm->z, pointOnPlane->z);
-    sint32 D = (sint32)(0u - ((uint32)x + (uint32)y + (uint32)z));
+    sint32 D = (-((x + y) + z));
     x = fixedmult(norm->x, testPoint->x);
     z = fixedmult(norm->z, testPoint->z);
-    sint32 numerator = (sint32)(0u - ((uint32)x + (uint32)z + (uint32)D));
+    sint32 numerator = (-((x + z) + D));
     return fixeddiv(numerator, norm->y);
 }
 
@@ -87,7 +87,7 @@ void Scene::LoadSceneFile(sint32 sceneFileIndex)
     FUNCTION_MARKER(0x800B6084, "NFS4.EXE");
     Object::ClearCustomObjects();
     char fname[128];
-    sint32 bigFile = 0;
+    NativeFileSlot *bigFile = 0;
     sprintf(fname, "%sscene.viv", Paths_Paths[6]);
     XPORT_UNPLACED::FILE::addbigsync(fname, 16, 100, &bigFile);
     sprintf(fname, "tr%02d%02d.scn", GameSetup::gData.track, sceneFileIndex);

@@ -32,7 +32,7 @@ sint32 shapename(const void *shape, uint32 index, char *name)
     memcpy(&count, (const uint8 *)shape + 8, sizeof(count));
     if (index < count)
     {
-        uint32 offset = index * 8U + 16U;
+        uint32 offset = index * 8 + 16U;
         memcpy(&value, (const uint8 *)shape + offset, sizeof(value));
     }
     memcpy(name, &value, sizeof(value));

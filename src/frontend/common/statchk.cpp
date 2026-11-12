@@ -41,8 +41,8 @@ bool StatChk::IsRecordLapTime(Car::tStats *dummyCars, sint16 nNumCars, sint16 *n
             purgememadr(TrackRecords);
             return false;
         }
-        if ((uint32)carInfo->fCarClass - 7U < 2)
-            nBestLapTimes[i] = (sint32)((uint32)(i + 1) * 144000U);
+        if (carInfo->fCarClass - 7U < 2)
+            nBestLapTimes[i] = ((i + 1) * 144000);
         else
             nBestLapTimes[i] = dummyCars[i].finalBestLap;
     }
@@ -81,7 +81,7 @@ void StatChk::SaveRecordLapTime(Car::tStats *dummyCars, sint16 nNumCars, sint16 
 {
     FUNCTION_MARKER(0x80049B7C, "FRONT.BIN");
     tCarInfo *carInfo = carManager.GetCarFromSimID((sint16)dummyCars[nBestCarIndex].carType);
-    if ((uint32)carInfo->fCarClass - 7U < 2)
+    if (carInfo->fCarClass - 7U < 2)
         return;
     tRecordBuffer *TrackRecords = static_cast<tRecordBuffer *>(reservememadr("trkrcrds", 360, 16));
     sint16 track = Front::GetTrackRaced();
@@ -132,7 +132,7 @@ sint16 StatChk::IsTopTime(Car::tStats *dummyCars, sint16 nNumCars)
             purgememadr(nRankCarTotalTimes);
             return 0;
         }
-        if ((uint32)carInfo->fCarClass - 7U < 2)
+        if (carInfo->fCarClass - 7U < 2)
             continue;
         if ((uint8)frontEnd.gameMode < 3 && (flags & 4) != 0 && dummyCars[nCar].finalFinishType == 2) {
             sint32 nCheckTotalTime = dummyCars[nCar].finalTotalTime;
@@ -200,10 +200,9 @@ void StatChk::SaveTopTime(Car::tStats *dummyCars, sint16 nNumCars)
     for (sint16 k = 0; k < nNumCars; ++k) {
         sint16 nCar = nRankCarTotalTimes[k];
         tCarInfo *carInfo = carManager.GetCarFromSimID((sint16)dummyCars[nCar].carType);
-        if ((uint32)carInfo->fCarClass - 7U < 2)
+        if (carInfo->fCarClass - 7U < 2)
             continue;
-        bool bDoRecordCheck = ((uint8)frontEnd.gameMode < 3 || nCar == GameSetup::gData.localCar)
-            && (dummyCars[nCar].carFlags & 4) != 0 && dummyCars[nCar].finalFinishType == 2;
+        bool bDoRecordCheck = ((uint8)frontEnd.gameMode < 3 || nCar == GameSetup::gData.localCar) && (dummyCars[nCar].carFlags & 4) != 0 && dummyCars[nCar].finalFinishType == 2;
         if (!bDoRecordCheck)
             continue;
         sint32 nCheckTotalTime = dummyCars[nCar].finalTotalTime;

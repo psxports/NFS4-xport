@@ -15,34 +15,14 @@ sint32 SNDSYS::getopts(SNDSYSOPTS *options)
     }
     if (sndgs.options.set.maxbanks == 0)
         sndgs.options.set.maxbanks = 16;
-    uint8 *source = reinterpret_cast<uint8 *>(&sndgs.options);
-    uint8 *destination = reinterpret_cast<uint8 *>(options);
-    for (sint32 i = 0; i < 48; i += 16)
-    {
-        uint8 block[16];
-        memcpy(block, source + i, 16);
-        memcpy(destination + i, block, 16);
-    }
-    uint8 last[12];
-    memcpy(last, source + 48, 12);
-    memcpy(destination + 48, last, 12);
+    *options = sndgs.options;
     return result;
 }
 
 sint32 SNDSYS::setopts(SNDSYSOPTS *options)
 {
     FUNCTION_MARKER(0x800F1E14, "NFS4.EXE");
-    uint8 *source = reinterpret_cast<uint8 *>(options) + 12;
-    uint8 *destination = reinterpret_cast<uint8 *>(&sndgs.options.set);
-    for (sint32 i = 0; i < 32; i += 16)
-    {
-        uint8 block[16];
-        memcpy(block, source + i, 16);
-        memcpy(destination + i, block, 16);
-    }
-    uint8 last[12];
-    memcpy(last, source + 32, 12);
-    memcpy(destination + 32, last, 12);
+    sndgs.options.set = options->set;
     sndgs.options.vec.issurfacelocked = options->vec.issurfacelocked;
     iSNDplatformoutputset();
     return 0;
@@ -59,12 +39,12 @@ sint32 SNDSYS::init(void *heap, sint32 size)
         getopts(&sndgs.options);
         setopts(&sndgs.options);
     }
-    void *voices = iSNDmalloc(sndgs.options.set.inputvoices * 100);
-    sint32 voiceBytes = sndgs.options.set.inputvoices * 100;
+    void *voices = iSNDmalloc(sndgs.options.set.inputvoices * sizeof(SoundVoicePrefix));
+    sint32 voiceBytes = sndgs.options.set.inputvoices * sizeof(SoundVoicePrefix);
     sndgs.voiceMemory = voices;
     memset(voices, 0, voiceBytes);
-    void *banks = iSNDmalloc(sndgs.options.set.maxbanks * 12);
-    sint32 bankBytes = sndgs.options.set.maxbanks * 12;
+    NativeSoundBank *banks = static_cast<NativeSoundBank *>(iSNDmalloc(sndgs.options.set.maxbanks * sizeof(NativeSoundBank)));
+    sint32 bankBytes = sndgs.options.set.maxbanks * sizeof(NativeSoundBank);
     sndgs.bankMemory = banks;
     memset(banks, 0, bankBytes);
     if (sndgs.server100hz == 0)
@@ -102,5 +82,5 @@ sint32 SNDSYS::restore(void)
         sndgs.removeBanks(-1, 0);
     iSNDrestore();
     sndgs.initialized = 0;
-    return (sint32)iSNDmemrestore();
+    return iSNDmemrestore();
 }

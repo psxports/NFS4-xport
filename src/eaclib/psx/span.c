@@ -20,8 +20,8 @@ sint32 SNDpan(sint32 handle, sint32 pan)
             sint32 factor = (sint8)voice->unknown33;
             voice->inputPan = (uint8)pan;
             if (factor != 1)
-                adjusted = (sint32)((((uint32)(pan)) - 64) * ((uint32)(factor)) + 64);
-            adjusted = (sint32)(((uint32)((sint8)voice->unknown2E)) + ((uint32)(adjusted)) - 64);
+                adjusted = ((((pan) - 64) * ((factor))) + 64);
+            adjusted = ((((((sint8)voice->unknown2E))) + (adjusted)) - 64);
             if (adjusted >= 128)
                 adjusted = 127;
             else if (adjusted < 0)

@@ -7,7 +7,6 @@ Udff::tInfo * Udff::Opena(char *name, char *mem, sint32 abortFlag)
 {
     FUNCTION_MARKER(0x800BBA08, "NFS4.EXE");
 
-    (void)abortFlag;
     tInfo *newHandle = (tInfo *)reservememadr("udffhandle", sizeof(tInfo), 0x10);
     if (newHandle == 0)
         return 0;

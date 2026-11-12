@@ -58,7 +58,7 @@ static void StopCommentary(bool restoreMusic)
         cSNDbankremove(ginfo.nHandle, 0);
     }
     if (restoreMusic)
-        AudioMus::Volume((sint32)(uint32(gMasterMusicLevel) * 70u) >> 7);
+        AudioMus::Volume((gMasterMusicLevel * 70) >> 7);
     if (ginfo.sSpeechData != 0)
     {
         purgememadr(ginfo.sSpeechData);
@@ -199,7 +199,7 @@ void FeAudio::systemtask(sint32 x)
 sint16 FeAudio::AsyncPlayCommentary(char *name)
 {
     FUNCTION_MARKER(0x80015BCC, "FRONT.BIN");
-    commentaryActualLevel = (sint32)(uint32(gMasterFENarrationLevel) * 110u) >> 7;
+    commentaryActualLevel = (gMasterFENarrationLevel * 110) >> 7;
     if (commentaryActualLevel > 90)
         commentaryActualLevel = 90;
     strncpy(ginfo.name, name, 4);
@@ -215,7 +215,7 @@ sint16 FeAudio::AsyncPlayCommentary(char *name)
     gCurrentVIV = (char)0xFF;
     ginfo.multiplay = (uint8)*name != 'c' ? 1 : 0;
     if (StartLoadPatch(&ginfo) != 0)
-        AudioMus::Volume((sint32)(uint32(gMasterMusicLevel) * 35u) >> 7);
+        AudioMus::Volume((gMasterMusicLevel * 35) >> 7);
     return 1;
 }
 
@@ -226,9 +226,9 @@ sint16 FeAudio::AsyncPlaySpeech(sint32 type, sint32 index)
     if (type == 2)
         sprintf(vivname, "%c%02d", 'c', index);
     else if (type == 0)
-        sprintf(vivname, "%c%ca", 'a', (sint32)(uint32(index) + 97u));
+        sprintf(vivname, "%c%ca", 'a', (index + 97));
     else
-        sprintf(vivname, "%c%ca", (sint32)(uint32(type) + 97u), (sint32)(uint32(index) + 48u));
+        sprintf(vivname, "%c%ca", (type + 97), (index + 48));
     return AsyncPlayCommentary(vivname);
 }
 
@@ -241,7 +241,7 @@ char * FeAudio::StartBigfileRead(char *fname, sint32 offset, sint32 length, sint
     if (streamBuffer == 0)
         return 0;
     setasyncfile(fname);
-    *vivHandle = (sint32)asyncloadsegment(offset, streamBuffer, length);
+    *vivHandle = asyncloadsegment(offset, streamBuffer, length);
     return streamBuffer;
 }
 
@@ -259,11 +259,9 @@ void FeAudio::LocateBigfile(LUMPYHEAD *bigfileHeader, char *name, sint32 *offset
         if (strcmp(name, info->name) == 0)
         {
             uint32 value = info->offset;
-            *offset = (sint32)((value << 24) | ((value & 0xFF00u) << 8) |
-                ((value & 0xFF0000u) >> 8) | (value >> 24));
+            *offset = ((value << 24) | ((value & 0xFF00u) << 8) | ((value & 0xFF0000u) >> 8) | (value >> 24));
             value = info->length;
-            *length = (sint32)((value << 24) | ((value & 0xFF00u) << 8) |
-                ((value & 0xFF0000u) >> 8) | (value >> 24));
+            *length = ((value << 24) | ((value & 0xFF00u) << 8) | ((value & 0xFF0000u) >> 8) | (value >> 24));
             return;
         }
         char *tempChar = info->name;
@@ -290,11 +288,11 @@ LUMPYHEAD * FeAudio::InitViv(char *fname)
     lumpHead.type = getm(&lumpHead.type, 4);
     lumpHead.hlen = getm(&lumpHead.hlen, 4);
     lumpHead.num = getm(&lumpHead.num, 4);
-    sint32 length = (sint32)((uint32)lumpHead.hlen + 32);
+    sint32 length = (lumpHead.hlen + 32);
     LUMPYHEAD *bigfileHeader = static_cast<LUMPYHEAD *>(reservememadr("lumpyhead", length, 0));
     if (bigfileHeader == 0)
         return 0;
-    vivHandle = asyncloadsegment(0, bigfileHeader, (sint32)((uint32)lumpHead.hlen + 32));
+    vivHandle = asyncloadsegment(0, bigfileHeader, (lumpHead.hlen + 32));
     do
     {
         systemtask(0);
@@ -329,8 +327,7 @@ void FeAudio::InitCommentary(sint32 language, sint32)
 void FeAudio::DeInitCommentary(void)
 {
     FUNCTION_MARKER(0x80016178, "FRONT.BIN");
-    if (ginfo.areLoading != 0 || ginfo.soundIsPlaying != 0 || ginfo.playNextOne != 0 ||
-        ginfo.sSpeechData != 0 || ginfo.lastSpeechData != 0 || ginfo.pBankHeader != 0)
+    if (ginfo.areLoading != 0 || ginfo.soundIsPlaying != 0 || ginfo.playNextOne != 0 || ginfo.sSpeechData != 0 || ginfo.lastSpeechData != 0 || ginfo.pBankHeader != 0)
         StopCommentary(false);
     if (speechfileHeader != 0)
     {

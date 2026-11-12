@@ -65,16 +65,16 @@ void Horizon_InterpolateLineSCoords(DVECTOR *sc, DVECTOR *s0, DVECTOR *s1, sint3
     {
         if (bPercentageArray != 0)
             p = *percentage;
-        uint32 product = (uint32)p * (uint32)((sint32)s1->vx - (sint32)s0->vx);
+        uint32 product = p * (uint32)(s1->vx - (sint32)s0->vx);
         if ((sint32)product < 0)
             product += 0xFFFFU;
-        sc->vx = (sint16)((uint16)s0->vx + ((sint32)product >> 16));
+        sc->vx = (sint16)((uint16)s0->vx + (product >> 16));
         if (bPercentageArray != 0)
             p = *percentage;
-        product = (uint32)p * (uint32)((sint32)s1->vy - (sint32)s0->vy);
+        product = p * (uint32)(s1->vy - (sint32)s0->vy);
         if ((sint32)product < 0)
             product += 0xFFFFU;
-        sc->vy = (sint16)((uint16)s0->vy + ((sint32)product >> 16));
+        sc->vy = (sint16)((uint16)s0->vy + (product >> 16));
         if (bPercentageArray != 0)
             ++percentage;
         ++s0;
@@ -93,7 +93,7 @@ void HrzSetPsxMatrix(matrixtdef *m)
         sint32 t2 = m->m[column * 3 + 1];
         sint32 t3 = m->m[column * 3 + 2];
         mpsx.m[0][column] = (sint16)(t1 >> 4);
-        mpsx.m[1][column] = (sint16)((sint32)(0U - (uint32)t2) >> 4);
+        mpsx.m[1][column] = (sint16)((~((uint32)t2) + 1) >> 4);
         mpsx.m[2][column] = (sint16)(t3 >> 4);
     }
     gte_SetRotMatrix(&mpsx);
@@ -106,25 +106,25 @@ void Sky::InitStars(void)
         return;
     uint32 oldSeed = random();
     seedrandom(gTrackSpec->starRandomSeed);
-    starPosInSky = static_cast<SVECTOR *>(reservememadr("stars", (sint32)((uint32)gTrackSpec->numStars << 3), 0));
-    starColors = static_cast<uint32 *>(reservememadr("starCols", (sint32)((uint32)gTrackSpec->numStars << 2), 0));
+    starPosInSky = static_cast<SVECTOR *>(reservememadr("stars", ((uint32)gTrackSpec->numStars << 3), 0));
+    starColors = static_cast<uint32 *>(reservememadr("starCols", ((uint32)gTrackSpec->numStars << 2), 0));
     for (sint32 i = 0; i < gTrackSpec->numStars; ++i) {
         sint32 latAngle = random() & 0xffff;
         uint32 sample = random();
-        uint32 angleRange = (uint32)gTrackSpec->starAngleHigh - (uint32)gTrackSpec->starAngleLow;
+        uint32 angleRange = gTrackSpec->starAngleHigh - (uint32)gTrackSpec->starAngleLow;
         if (angleRange == 0)
             abort();
-        sint32 heightAngle = (sint32)((uint32)gTrackSpec->starAngleLow + sample % angleRange);
+        sint32 heightAngle = (gTrackSpec->starAngleLow + sample % angleRange);
         sint32 height = fixedmult(fixedsin(heightAngle), 1000);
         sint32 radius = fixedmult(fixedcos(heightAngle), 1000);
         starPosInSky[i].vx = (sint16)fixedmult(fixedsin(latAngle), radius);
         starPosInSky[i].vy = (sint16)height;
         starPosInSky[i].vz = (sint16)fixedmult(fixedcos(latAngle), radius);
         sample = random();
-        uint32 brightnessRange = (uint32)gTrackSpec->starBrightMax - (uint32)gTrackSpec->starBrightMin;
+        uint32 brightnessRange = gTrackSpec->starBrightMax - (uint32)gTrackSpec->starBrightMin;
         if (brightnessRange == 0)
             abort();
-        uint32 starBright = (uint32)gTrackSpec->starBrightMin + sample % brightnessRange;
+        uint32 starBright = gTrackSpec->starBrightMin + sample % brightnessRange;
         starColors[i] = (starBright << 16) | (starBright << 8) | starBright;
     }
     seedrandom(oldSeed);
@@ -166,20 +166,15 @@ void Hrz::InitSky(void)
     FUNCTION_MARKER(0x800CFA3C, "NFS4.EXE");
     sunPosInSky.vx = (sint16)fixedmult(fixedcos(Sky::gTrackSpec->sunAngleInSky), 1000);
     sunPosInSky.vz = (sint16)fixedmult(fixedsin(Sky::gTrackSpec->sunAngleInSky), 1000);
-    sunPosInSky.vy = (sint16)((uint16)TrackSpec::gSpec.skyspec.sunHeightInSky +
-        (uint16)TrackSpec::gSpec.skyspec.yoffset);
+    sunPosInSky.vy = (sint16)((uint16)TrackSpec::gSpec.skyspec.sunHeightInSky + (uint16)TrackSpec::gSpec.skyspec.yoffset);
     moonPosInSky.vx = (sint16)fixedmult(fixedcos(Sky::gTrackSpec->moonAngleInSky), 1000);
     moonPosInSky.vz = (sint16)fixedmult(fixedsin(Sky::gTrackSpec->moonAngleInSky), 1000);
-    moonPosInSky.vy = (sint16)((uint16)TrackSpec::gSpec.skyspec.moonHeightInSky +
-        (uint16)TrackSpec::gSpec.skyspec.yoffset);
+    moonPosInSky.vy = (sint16)((uint16)TrackSpec::gSpec.skyspec.moonHeightInSky + (uint16)TrackSpec::gSpec.skyspec.yoffset);
     if (GameSetup::gData.commMode == 1) {
-        Draw::SetViewColor(Draw::gPlayer1View, Sky::gTrackSpec->clearcolor.r,
-            Sky::gTrackSpec->clearcolor.g, Sky::gTrackSpec->clearcolor.b);
-        Draw::SetViewColor(Draw::gPlayer2View, Sky::gTrackSpec->clearcolor.r,
-            Sky::gTrackSpec->clearcolor.g, Sky::gTrackSpec->clearcolor.b);
+        Draw::SetViewColor(Draw::gPlayer1View, Sky::gTrackSpec->clearcolor.r, Sky::gTrackSpec->clearcolor.g, Sky::gTrackSpec->clearcolor.b);
+        Draw::SetViewColor(Draw::gPlayer2View, Sky::gTrackSpec->clearcolor.r, Sky::gTrackSpec->clearcolor.g, Sky::gTrackSpec->clearcolor.b);
     } else {
-        Draw::SetViewColor(Draw::gPlayer1View, Sky::gTrackSpec->clearcolor.r,
-            Sky::gTrackSpec->clearcolor.g, Sky::gTrackSpec->clearcolor.b);
+        Draw::SetViewColor(Draw::gPlayer1View, Sky::gTrackSpec->clearcolor.r, Sky::gTrackSpec->clearcolor.g, Sky::gTrackSpec->clearcolor.b);
     }
     sint32 k = 0;
     for (sint32 i = 0; i < 5; ++i) {
@@ -193,7 +188,7 @@ void Hrz::InitSky(void)
         }
         sint32 height = fixedmult(fixedsin(angle), 1000);
         for (sint32 j = 0; j < 17; ++j, ++k) {
-            sint32 longitude = (sint32)(((uint32)j << 12) - (uint32)Sky::gTrackSpec->sunAngleInSky + 0x4000);
+            sint32 longitude = (((uint32)j << 12) - Sky::gTrackSpec->sunAngleInSky + 0x4000);
             gSkyMesh[k].vx = (sint16)fixedmult(fixedsin(longitude), radius);
             gSkyMesh[k].vy = (sint16)((uint16)Sky::gTrackSpec->yoffset + height);
             gSkyMesh[k].vz = (sint16)fixedmult(fixedcos(longitude), radius);
@@ -212,7 +207,7 @@ void Hrz::Init2DRing(void)
 {
     FUNCTION_MARKER(0x800CFD80, "NFS4.EXE");
     for (sint32 i = 0; i < 17; ++i) {
-        sint32 angle = (sint32)(((uint32)i << 12) + (uint32)gTrackSpec->angle);
+        sint32 angle = (((uint32)i << 12) + gTrackSpec->angle);
         gRngCoordTop[i].vx = (sint16)fixedmult(fixedsin(angle), 32000);
         gRngCoordTop[i].vy = 0;
         gRngCoordTop[i].vz = (sint16)fixedmult(fixedcos(angle), 32000);
@@ -373,7 +368,7 @@ void Hrz::BuildForkLightning(Draw::DCache *sd)
     FUNCTION_MARKER(0x800D0644, "NFS4.EXE");
     if (gHrz_Lightning.brightness <= 0)
         return;
-    sd->otz = (sint32)((uint32)Draw::gViewOtSize - 2U);
+    sd->otz = (Draw::gViewOtSize - 2);
     coorddef trans;
     memset(&trans, 0, sizeof(trans));
     HrzSetPsxTranslation(&trans);
@@ -396,7 +391,7 @@ void Hrz::BuildForkLightning(Draw::DCache *sd)
             TextureQuad(&pos, fork->pmxIndex, bright, sd);
         } while (i < (uint8)gHrz_Lightning.numForks);
     }
-    gHrz_Lightning.brightness = (sint32)((uint32)gHrz_Lightning.brightness - 16U);
+    gHrz_Lightning.brightness = (gHrz_Lightning.brightness - 16);
 }
 
 void HrzSetPsxTranslation(coorddef *t)
@@ -429,7 +424,7 @@ void Hrz::LightningFlicker(sint32 on)
 void Hrz::RotProj16(sint32 n, SVECTOR *s, sint32 *z, DVECTOR *p)
 {
     FUNCTION_MARKER(0x800D096C, "NFS4.EXE");
-    uint32 remaining = (uint32)n;
+    uint32 remaining = n;
     while (remaining != 0)
     {
         gte_ldv0(s);
@@ -497,7 +492,7 @@ void Hrz::BuildSky(void)
         }
     }
     if ((Sky::gTrackSpec->flags & 0x40) != 0)
-        SetDitheringPrim(0, (sint32)((uint32)Draw::gViewOtSize - 2U));
+        SetDitheringPrim(0, (Draw::gViewOtSize - 2));
     if ((TrackSpec::gSpec.skyspec.flags & 4) != 0)
     {
         sint32 otz_old;
@@ -508,22 +503,17 @@ void Hrz::BuildSky(void)
     for (sint32 i = 0; i < 64; ++i)
     {
         sint32 temp = (i * 17) / 16;
-        if (pSkyZ[temp + 17] == 0 && pSkyZ[temp + 18] == 0 &&
-            pSkyZ[temp + 1] == 0 && pSkyZ[temp] == 0)
+        if (pSkyZ[temp + 17] == 0 && pSkyZ[temp + 18] == 0 && pSkyZ[temp + 1] == 0 && pSkyZ[temp] == 0)
             continue;
         sint16 clipW = sd->head.clipW;
-        if (pSkyMesh[temp + 17].vx > clipW && pSkyMesh[temp + 18].vx > clipW &&
-            pSkyMesh[temp + 1].vx > clipW && pSkyMesh[temp].vx > clipW)
+        if (pSkyMesh[temp + 17].vx > clipW && pSkyMesh[temp + 18].vx > clipW && pSkyMesh[temp + 1].vx > clipW && pSkyMesh[temp].vx > clipW)
             continue;
-        if (pSkyMesh[temp + 17].vx < 0 && pSkyMesh[temp + 18].vx < 0 &&
-            pSkyMesh[temp + 1].vx < 0 && pSkyMesh[temp].vx < 0)
+        if (pSkyMesh[temp + 17].vx < 0 && pSkyMesh[temp + 18].vx < 0 && pSkyMesh[temp + 1].vx < 0 && pSkyMesh[temp].vx < 0)
             continue;
         sint16 clipH = sd->head.clipH;
-        if (pSkyMesh[temp + 17].vy > clipH && pSkyMesh[temp + 18].vy > clipH &&
-            pSkyMesh[temp + 1].vy > clipH && pSkyMesh[temp].vy > clipH)
+        if (pSkyMesh[temp + 17].vy > clipH && pSkyMesh[temp + 18].vy > clipH && pSkyMesh[temp + 1].vy > clipH && pSkyMesh[temp].vy > clipH)
             continue;
-        if (pSkyMesh[temp + 17].vy < 0 && pSkyMesh[temp + 18].vy < 0 &&
-            pSkyMesh[temp + 1].vy < 0 && pSkyMesh[temp].vy < 0)
+        if (pSkyMesh[temp + 17].vy < 0 && pSkyMesh[temp + 18].vy < 0 && pSkyMesh[temp + 1].vy < 0 && pSkyMesh[temp].vy < 0)
             continue;
         Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
         if (Sky::gTrackSpec->type == 1)
@@ -592,7 +582,7 @@ void Hrz::BuildSky(void)
         }
     }
     if ((Sky::gTrackSpec->flags & 0x40) != 0)
-        SetDitheringPrim(1, (sint32)((uint32)Draw::gViewOtSize - 2U));
+        SetDitheringPrim(1, (Draw::gViewOtSize - 2));
 }
 
 void Sky::RenderStars(Draw::SkyCache *sd, sint32 otz)
@@ -617,8 +607,7 @@ void Sky::RenderStars(Draw::SkyCache *sd, sint32 otz)
             gte_stsxy(&scnt);
             gte_stlvnl(&transformed);
             scnt.vy = (sint16)((transformed.vy >> 2) + pshift);
-            if (scnt.vx <= sd->head.clipW && scnt.vx >= 0 &&
-                scnt.vy <= sd->head.clipH && scnt.vy >= 0)
+            if (scnt.vx <= sd->head.clipW && scnt.vx >= 0 && scnt.vy <= sd->head.clipH && scnt.vy >= 0)
             {
                 Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
                 uint32 *ot = cprim->LastPrim + otz;
@@ -676,8 +665,8 @@ void Hrz::BuildHorizon(DRender::tView *Vi)
     gte_ldv0(&updown[0]);
     gte_rtps();
     gte_stsxy(&temp2d[0]);
-    sint32 dx = (sint32)temp2d[0].vx - (sint32)hsd->scptMidBot[farI].vx;
-    sint32 dy = (sint32)temp2d[0].vy - (sint32)hsd->scptMidBot[farI].vy;
+    sint32 dx = temp2d[0].vx - hsd->scptMidBot[farI].vx;
+    sint32 dy = temp2d[0].vy - hsd->scptMidBot[farI].vy;
     for (sint32 i = 0; i < 17; ++i)
     {
         if (hsd->vertexTop[i] > 0)
@@ -686,8 +675,8 @@ void Hrz::BuildHorizon(DRender::tView *Vi)
             hsd->scptTop[i].vy = (sint16)((uint16)hsd->scptMidBot[i].vy + dy);
         }
     }
-    dx = (sint32)temp2d[1].vx - (sint32)hsd->scptMidBot[farI].vx;
-    dy = (sint32)temp2d[1].vy - (sint32)hsd->scptMidBot[farI].vy;
+    dx = temp2d[1].vx - hsd->scptMidBot[farI].vx;
+    dy = temp2d[1].vy - hsd->scptMidBot[farI].vy;
     for (sint32 i = 0; i < 17; ++i)
     {
         if (hsd->vertexTop[i] > 0)
@@ -765,7 +754,7 @@ void Hrz::BuildHorizon(DRender::tView *Vi)
         Flare::Moon(&moonPosInSky, reinterpret_cast<Draw::FlareCache *>(hsd));
     }
     if ((TrackSpec::gSpec.skyspec.flags & 0x10) != 0)
-        Sky::RenderStars(&gNativeRenderCache.sky, (sint32)((uint32)Draw::gViewOtSize - 2U));
+        Sky::RenderStars(&gNativeRenderCache.sky, (Draw::gViewOtSize - 2));
     if (TrackSpec::gSpec.skystate != 0)
         BuildSky();
     if (hrz_projchange != 0)

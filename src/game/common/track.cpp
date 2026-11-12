@@ -88,7 +88,7 @@ void AllocArtResource(Track::tArtresource *artRes, sint32 numPmx)
     FUNCTION_MARKER(0x800B9398, "NFS4.EXE");
     artRes->id = -1;
     artRes->basePmxCount = 0;
-    artRes->pPmx = reinterpret_cast<Draw::tPixMap *>(BWAllocMem((sint32)((uint32)numPmx << 4)));
+    artRes->pPmx = reinterpret_cast<Draw::tPixMap *>(BWAllocMem(((uint32)numPmx << 4)));
     artRes->shapeCount = 0;
     artRes->shapeFile = 0;
 }
@@ -161,8 +161,7 @@ void LoadShapesAndMakePmx(char *shapefile, Draw::tPixMap *pmxList, sint32 loadFl
                 for (sint32 j = 0; j < 128; ++j)
                 {
                     const Track::MultiPalette &base = gTempMultiPalInfo[j];
-                    if (base.palnum == 0 &&
-                        base.charcode[0] == palette.charcode[0] && base.charcode[1] == palette.charcode[1])
+                    if (base.palnum == 0 && base.charcode[0] == palette.charcode[0] && base.charcode[1] == palette.charcode[1])
                     {
                         palette.origshapeindex = base.origshapeindex;
                         break;
@@ -242,11 +241,11 @@ void TexturesLoadInitial(void)
     if (gInitialArt.shapeFile == 0)
         for (;;) {}
     Texture::ResetPaletteSharing();
-    gInitialArt.shapeCount = (sint32)shapecount(gInitialArt.shapeFile);
+    gInitialArt.shapeCount = shapecount(gInitialArt.shapeFile);
     LoadShapesAndMakePmx(gInitialArt.shapeFile, gInitialArt.pPmx, 0x40, 0x100, 0);
     Draw::tPixMap spike = *gSpikeBeltPixmap;
     gInitialArt.pPmx[gInitialArt.shapeCount] = spike;
-    gInitialArt.shapeCount = (sint32)((uint32)gInitialArt.shapeCount + 1);
+    gInitialArt.shapeCount = (gInitialArt.shapeCount + 1);
     gInitialArt.pmxCount = gInitialArt.shapeCount;
     gInitialArt.basePmxCount = gInitialArt.shapeCount;
     purgememadr(gInitialArt.shapeFile);
@@ -267,7 +266,7 @@ void ReduceObjectPrecision(Group *instGroup, Group *defGroup, sint32 bits)
     Trk::SimpleInst *inst = reinterpret_cast<Trk::SimpleInst *>(instGroup + 1);
     sint32 count = instGroup->m_num_elements;
     Trk::ObjectDef **objDefs = Track::gObjDefs;
-    while ((count = (sint32)((uint32)count - 1)) != -1) {
+    while ((count = (count - 1)) != -1) {
         if (defGroup != 0) {
             Trk::ObjectDef *objDef = objDefs[inst->pad];
             CCOORD16 *pts = reinterpret_cast<CCOORD16 *>(objDef + 1);
@@ -290,7 +289,7 @@ void InvalidatePersistentCollideBoomObjects(Group *instGroup, Group *defGroup)
         return;
     sint32 count = instGroup->m_num_elements;
     Trk::SimpleInst *inst = reinterpret_cast<Trk::SimpleInst *>(instGroup + 1);
-    while ((count = (sint32)((uint32)count - 1)) != -1) {
+    while ((count = (count - 1)) != -1) {
         if (Track::gObjDefs[inst->pad]->id != -1)
             inst->type = 0;
         inst = reinterpret_cast<Trk::SimpleInst *>(reinterpret_cast<uint8 *>(inst) + inst->size);
@@ -329,8 +328,8 @@ void CalcObjectBoundingSphere(Group *defGroup, Group *boundingSphereGroup)
         bSphere->cp.x = (sint16)cp.x;
         bSphere->cp.y = (sint16)cp.y;
         bSphere->cp.z = (sint16)cp.z;
-        bSphere->radius = (sint16)((uint32)fixedsqrt((sint32)((uint32)radius << 10)) >> 7);
-        boundingSphereGroup->m_num_elements = (sint32)((uint32)boundingSphereGroup->m_num_elements + 1);
+        bSphere->radius = (sint16)((uint32)fixedsqrt(((uint32)radius << 10)) >> 7);
+        boundingSphereGroup->m_num_elements = (boundingSphereGroup->m_num_elements + 1);
     }
 }
 
@@ -338,14 +337,17 @@ void CalcObjDefPtrs(void)
 {
     FUNCTION_MARKER(0x800BA5C8, "NFS4.EXE");
     Group *defs = gPersistObjDef;
-    Trk::ObjectDef **objDefs = reinterpret_cast<Trk::ObjectDef **>(gObjDefOffsetsGroup + 1);
+    Trk::ObjectDef **objDefs = static_cast<Trk::ObjectDef **>(reservememadr("objDefs", (sint32)((uint32)defs->m_num_elements * sizeof(*objDefs)), 0));
+    if (objDefs == 0)
+        abort();
+    const uint8 *offsets = reinterpret_cast<const uint8 *>(gObjDefOffsetsGroup + 1);
     objDefs[0] = reinterpret_cast<Trk::ObjectDef *>(defs + 1);
     for (sint32 i = 1; i < defs->m_num_elements; ++i) {
         sint32 offset;
-        memcpy(&offset, &objDefs[i], sizeof(offset));
+        memcpy(&offset, offsets + i * sizeof(offset), sizeof(offset));
         objDefs[i] = reinterpret_cast<Trk::ObjectDef *>(reinterpret_cast<uint8 *>(objDefs[i - 1]) + offset);
     }
-    Track::gObjDefs = reinterpret_cast<Trk::ObjectDef **>(gObjDefOffsetsGroup + 1);
+    Track::gObjDefs = objDefs;
 }
 
 char * Track::MakeTrackDataPathName(char *ext)
@@ -361,7 +363,7 @@ void Track::AnimateTextures(void)
     FUNCTION_MARKER(0x800B99DC, "NFS4.EXE");
     tMaterialController *controlPtr = gMatController;
     sint32 controlCount = gControllerCount;
-    while ((controlCount = (sint32)((uint32)controlCount - 1)) != -1) {
+    while ((controlCount = (controlCount - 1)) != -1) {
         if (controlPtr->type == 0x80) {
             sint32 interval = controlPtr->interval;
             if (interval == 0)
@@ -435,7 +437,7 @@ void Track::AssociateSingleMaterial(Trk::Material *inputMat, Track::tMaterial *o
             ProcessFlipAndUVFlags(inputMat->uvFlag, &originalPmx, &art->pPmx[art->pmxCount]);
             if (animCount == 0)
                 outputMat->pmxIndex = (sint16)art->pmxCount;
-            art->pmxCount = (sint32)((uint32)art->pmxCount + 1);
+            art->pmxCount = (art->pmxCount + 1);
         } else {
             sint32 shapeIndex = inputMat->shapeIndex;
             if (inputMat->flag & 2)
@@ -459,7 +461,7 @@ void Track::LinkMaterials(SerializedGroup *group, sint32 length, Track::tMateria
         if (mats[i].flag & 0x84)
             ++gControllerCount;
     if (gControllerCount != 0)
-        gMatController = reinterpret_cast<tMaterialController *>(BWAllocMem((sint32)((uint32)gControllerCount << 4)));
+        gMatController = reinterpret_cast<tMaterialController *>(BWAllocMem(((uint32)gControllerCount << 4)));
     sint32 controlIndex = 0;
     for (sint32 i = 0; i < matCount; ++i, ++mats, ++matList) {
         AssociateSingleMaterial(mats, matList, &gInitialArt);
@@ -492,17 +494,16 @@ void Track::LinkMaterials(SerializedGroup *group, sint32 length, Track::tMateria
         if (TrackSpec::gSpec.fogstate != 0) {
             for (sint32 mm = 0; mm < 32; ++mm) {
                 MipMap *info = &gTempMipMapInfo[mm];
-                if ((info->code[0] != 0xffff || info->code[1] != 0xffff) &&
-                    info->shapeParentIndex == mats->shapeIndex) {
-                    sint32 mipmap_offset = (sint32)((uint32)info->mipMapIndex - (uint32)info->shapeParentIndex);
+                if ((info->code[0] != 0xffff || info->code[1] != 0xffff) && info->shapeParentIndex == mats->shapeIndex) {
+                    sint32 mipmap_offset = (info->mipMapIndex - info->shapeParentIndex);
                     matList->flag |= 8;
                     if (mats->shapeIndex == matList->pmxIndex) {
                         matList->mipmap_offset = (char)mipmap_offset;
                     } else {
-                        sint32 shapeIndex = (sint32)((uint32)mats->shapeIndex + (uint32)mipmap_offset);
+                        sint32 shapeIndex = (mats->shapeIndex + mipmap_offset);
                         Draw::tPixMap originalPmx = gInitialArt.pPmx[shapeIndex];
                         ProcessFlipAndUVFlags(mats->uvFlag, &originalPmx, &gInitialArt.pPmx[gInitialArt.pmxCount]);
-                        gInitialArt.pmxCount = (sint32)((uint32)gInitialArt.pmxCount + 1);
+                        gInitialArt.pmxCount = (gInitialArt.pmxCount + 1);
                         matList->mipmap_offset = 1;
                     }
                 }
@@ -520,8 +521,8 @@ void Track::InitPersistentData(SerializedGroup *perGroup)
 {
     FUNCTION_MARKER(0x800BA62C, "NFS4.EXE");
     gObjDefOffsetsGroup = 0;
-    uint32 bytes = ((((uint32)perGroup->m_num_elements << 5) >> 3) + 7) & ~(uint32)7;
-    SerializedGroup **persistentGroups = static_cast<SerializedGroup **>(malloc(bytes ? bytes : 4));
+    size_t bytes = (size_t)(uint32)perGroup->m_num_elements * sizeof(SerializedGroup *);
+    SerializedGroup **persistentGroups = static_cast<SerializedGroup **>(malloc(bytes ? bytes : sizeof(SerializedGroup *)));
     if (persistentGroups == 0)
         abort();
     for (sint32 i = 0; i < perGroup->m_num_elements; ++i)
@@ -532,7 +533,7 @@ void Track::InitPersistentData(SerializedGroup *perGroup)
         SerializedGroup *group = persistentGroups[i];
         switch (group->m_type) {
         case 2:
-            LinkMaterials(group, (sint32)((uint32)group->m_length - 16), materials);
+            LinkMaterials(group, (group->m_length - 16), materials);
             break;
         case 7:
             gPersistObjInst = group->CreateLiteGroup(group, mem);
@@ -566,7 +567,14 @@ void Track::Init(char *tempName)
     sint32 trackFileSize = filesize(tempName);
     Chunk::lightTable = static_cast<CVECTOR *>(reservememadr("lighttbl", 0x404, 0));
     TextureProcess::Init();
-    sint32 size = (sint32)((uint32)trackFileSize + 0x9080);
+    void *trackData = malloc(trackFileSize);
+    if (trackData == 0)
+        abort();
+    SerializedGroup *trackGroup = static_cast<SerializedGroup *>(loadfileatadr(trackName, trackData));
+    SerializedGroup *sourceHeaderGroup = trackGroup->LocateGroupType(0x1f, 0);
+    TrackHeader *sourceHeader = reinterpret_cast<TrackHeader *>(sourceHeaderGroup + 1);
+    sint32 nativeChunkExtra = (sint32)(sizeof(Chunk) - 112);
+    sint32 size = (sint32)((uint32)trackFileSize + 0x9080 + sourceHeader->chunkCount * (uint32)nativeChunkExtra + sizeof(void *));
     InitArtResources();
     TexturesLoadInitial();
     SimpleMem *pool = new (reservememadr(0, sizeof(SimpleMem), 0)) SimpleMem;
@@ -576,8 +584,6 @@ void Track::Init(char *tempName)
         size = 0;
     pool->freeMemSize = size;
     mem = pool;
-    char *loadAt = static_cast<char *>(mem->FeignAlloc(trackFileSize)) + 0x9080;
-    SerializedGroup *trackGroup = static_cast<SerializedGroup *>(loadfileatadr(trackName, loadAt));
     Group *headerGroup = trackGroup->LocateCreateGroupType(0x1f, mem, 0);
     header = reinterpret_cast<TrackHeader *>(headerGroup + 1);
     Group *centerGroup = trackGroup->LocateCreateGroupType(0x20, mem, 0);
@@ -586,15 +592,16 @@ void Track::Init(char *tempName)
     memcpy(Chunk::lightTable, lightGroup + 1, 0x400);
     lightGroup = trackGroup->LocateGroupType(0x23, 0);
     Chunk::numLight = ((uint32)lightGroup->m_length - 16) >> 2;
-    gInViewList = static_cast<sint16 (*)[32]>(mem->Alloc((sint32)((uint32)header->chunkCount * 72), 0));
+    gInViewList = static_cast<sint16 (*)[32]>(mem->Alloc((header->chunkCount * 72), 0));
     gInViewCount = static_cast<uint8 *>(mem->Alloc(header->chunkCount, 0));
-    chunkList = static_cast<Chunk *>(mem->Alloc((sint32)((uint32)header->chunkCount * 112), 0));
+    mem->Alloc((sint32)(((~(reinterpret_cast<uintptr_t>(mem->freeMem)) + 1)) & (sizeof(void *) - 1)), 0);
+    chunkList = static_cast<Chunk *>(mem->Alloc((sint32)((uint32)header->chunkCount * sizeof(*chunkList)), 0));
     SerializedGroup *persistentGroup = trackGroup->LocateGroupType(0x21, 0);
     SerializedGroup *chunkGroup = trackGroup->LocateGroupType(0x1d, 0);
     for (sint32 i = 0; i < header->chunkCount; ++i) {
         Chunk *chunkDat = &chunkList[i];
         SerializedGroup *nextChunkGroup = 0;
-        if (i < (sint32)((uint32)header->chunkCount - 1))
+        if (i < (header->chunkCount - 1))
             nextChunkGroup = chunkGroup->LocateNextGroupType(0x1d);
         chunkDat->InstanceGroup(chunkGroup, mem);
         SerializedGroup *group = chunkGroup->LocateGroupType(4, 0);
@@ -607,7 +614,7 @@ void Track::Init(char *tempName)
         for (sint32 srcDataInd = 0; srcDataInd < count; ++srcDataInd) {
             uint16 value = src[srcDataInd];
             if ((value & 0x3ff) < header->chunkCount)
-                visList[j++] = (sint16)value;
+                visList[j++] = value;
         }
         gInViewCount[i] = j;
         while (j < 36)
@@ -615,11 +622,11 @@ void Track::Init(char *tempName)
         chunkGroup = nextChunkGroup;
     }
     InitPersistentData(persistentGroup);
+    free(trackData);
     mem->ResizeToFit();
     static char groupExt[] = ".grp";
     MakeTrackPathName(groupExt);
-    gPersistObjDefBoundingSpheres = static_cast<Group *>(reservememadr("bsphere",
-        (sint32)(((uint32)gPersistObjDef->m_num_elements << 3) | 4), 0));
+    gPersistObjDefBoundingSpheres = static_cast<Group *>(reservememadr("bsphere", (((uint32)gPersistObjDef->m_num_elements << 3) | 4), 0));
     CalcObjectBoundingSphere(gPersistObjDef, gPersistObjDefBoundingSpheres);
     ReduceObjectPrecision(gPersistMidgroundObjInst, gPersistObjDef, 2);
     InvalidatePersistentCollideBoomObjects(gPersistObjInst, gPersistObjDef);
@@ -654,6 +661,9 @@ void Track::DeInit(void)
     gPersistMidgroundObjInst = 0;
     gPersistObjInst = 0;
     gPersistObjDef = 0;
+    purgememadr(gObjDefs);
+    gObjDefs = 0;
+    gObjDefOffsetsGroup = 0;
 }
 
 void Track::AnimateTrackLighting(void)
@@ -732,7 +742,7 @@ SaveSurface::SaveSurface(sint32 numEntries)
     FUNCTION_MARKER(0x800BAF70, "NFS4.EXE");
     fMaxCount = (sint16)numEntries;
     fCount = 0;
-    fStack = static_cast<tSaveSurface *>(reservememadr("Surface Save", (sint32)((uint32)numEntries << 3), 0));
+    fStack = static_cast<tSaveSurface *>(reservememadr("Surface Save", ((uint32)numEntries << 3), 0));
 }
 
 void SaveSurface::operator delete(void *memory)

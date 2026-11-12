@@ -65,17 +65,16 @@ void tScreenTrackRecords::DrawOneRecord(sint32 index, bool newrecord, sint32 y)
     {
         sint32 x = TextSys::WordX(0x247);
         sint32 intensity = flare_intensity;
-        sint32 doubleIntensity = (sint32)((uint32)intensity << 1);
-        Flare::_2DHalo(x + 3, (sint32)((uint32)y + 4), intensity / 2, doubleIntensity / 3, 0x17);
+        sint32 doubleIntensity = ((uint32)intensity << 1);
+        Flare::_2DHalo(x + 3, (y + 4), intensity / 2, doubleIntensity / 3, 0x17);
         x = TextSys::WordX(0x247);
         DrawShapeExtended(0, 0, x, y, 0, 0, 0);
     }
     sint16 x = TextSys::WordX(0x24B);
-    FETextRender::FullText(TrackRecords[index].sName, x, (sint16)y, textType_TrackRecords,
-        newrecord ? textState_Hilighted : textState_Selected, 0);
-    char *sMenuText = TextSys::Word((sint32)((uint32)TrackRecords[index].nCar + 0x153));
+    FETextRender::FullText(TrackRecords[index].sName, x, y, textType_TrackRecords, newrecord ? textState_Hilighted : textState_Selected, 0);
+    char *sMenuText = TextSys::Word((TrackRecords[index].nCar + 0x153));
     x = TextSys::WordX(0x24C);
-    FETextRender::FullText(sMenuText, x, (sint16)y, textType_TrackRecords, textState, 0);
+    FETextRender::FullText(sMenuText, x, y, textType_TrackRecords, textState, 0);
     char sBuildOutput[80];
     sint32 time = TrackRecords[index].nTime;
     if (time != 0)
@@ -83,24 +82,23 @@ void tScreenTrackRecords::DrawOneRecord(sint32 index, bool newrecord, sint32 y)
     else
         sprintf(sBuildOutput, TextSys::Word(0x261));
     x = TextSys::WordX(0x24D);
-    FETextRender::FullText(sBuildOutput, x, (sint16)y, textType_TrackRecords,
-        newrecord ? textState_Hilighted : (index != 0 ? textState_Selected : textState_Unselected), 0);
+    FETextRender::FullText(sBuildOutput, x, y, textType_TrackRecords, newrecord ? textState_Hilighted : (index != 0 ? textState_Selected : textState_Unselected), 0);
     Stattool::ParseTime(TrackRecords[index].nBestLap, sBuildOutput);
     x = TextSys::WordX(0x24E);
     if (index == 0 && textState == textState_Unselected)
         textState = textState_Selected;
-    FETextRender::FullText(sBuildOutput, x, (sint16)y, textType_TrackRecords, textState, 0);
+    FETextRender::FullText(sBuildOutput, x, y, textType_TrackRecords, textState, 0);
 }
 
 void tScreenTrackRecords::DrawRecords(sint16 maxitem)
 {
     FUNCTION_MARKER(0x80042968, "FRONT.BIN");
-    flareextra = (sint32)((uint32)flareextra + 1);
+    flareextra = (flareextra + 1);
     if (flareextra > 60)
         flareextra = 0;
     sint32 intensity = flareextra > 30 ? 60 - flareextra : flareextra;
     flare_intensity = intensity / 2;
-    flare_intensity = (sint32)(((uint32)flare_intensity + 20) << 7);
+    flare_intensity = (((uint32)flare_intensity + 20) << 7);
     sint16 nLapIndicator = Front::GetLapsForType() == 2 ? 1 : 9;
     for (sint16 k = 0; k < 8 && k < maxitem; ++k)
     {
@@ -183,13 +181,13 @@ void tScreenTrackRecords::DrawBackground(void)
     {
         sint32 x = TextSys::WordX(j + 0x24C);
         char *label = TextSys::Word(j + 0x252);
-        FETextRender::FullTextRGB(label, (sint16)x, (sint16)(boxy + 4), ColTextSel, 0, 0);
+        FETextRender::FullTextRGB(label, x, (boxy + 4), ColTextSel, 0, 0);
         if (maxitem > 0)
             PSXDrawSquare(Col, x - 6, boxy + 2, 2, (128 - linefadeval) / 16);
     }
     char *label = TextSys::Word(0x262);
     sint16 x = TextSys::WordX(0x249);
-    FETextRender::FullTextRGB(label, x, (sint16)(midy + 3), ColTextSel, 0, 0);
+    FETextRender::FullTextRGB(label, x, (midy + 3), ColTextSel, 0, 0);
     PSXDrawBrightEndLine(Col, boxx, boxy + 3, boxw, -1, 2, linefadeval, 0x23);
     sint32 columnX = TextSys::WordX(0x24C);
     PSXDrawBrightEndLine(Col, columnX - 6, boxy + 4, 2, midy - 12 - boxy, 1, linefadeval, 0);

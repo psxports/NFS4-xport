@@ -11,7 +11,7 @@ uint8 *SQVd;
 void chase(uint32 symbol)
 {
     FUNCTION_MARKER(0x800F5530, "NFS4.EXE");
-    sint32 index = symbol & 0xFFu;
+    sint32 index = symbol & 0xFF;
     if (SQVclue[index] != 0)
     {
         chase(SQVleft[index]);
@@ -44,7 +44,7 @@ sint32 unbtree(const uint8 *data, uint8 *destination)
     first = *SQVs++;
     second = *SQVs++;
     uint32 third = *SQVs++;
-    sint32 size = ((sint32)((first << 16) + (second << 8) + third));
+    sint32 size = (((first << 16) + (second << 8) + third));
     for (sint32 i = 0; i < 256; ++i)
         SQVclue[i] = 0;
     uint32 escape = *SQVs++;

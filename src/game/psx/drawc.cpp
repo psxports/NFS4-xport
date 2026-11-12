@@ -41,7 +41,7 @@ struct Draw::tVertex
 };
 
 NativeRenderCache gNativeRenderCache;
-static uint32 hilight_colors[5] = { 0x00700A00UL, 0x00400A00UL, 0x00300300UL, 0x00180300UL, 0x00180300UL };
+static uint32 hilight_colors[5] = { 0x00700A00, 0x00400A00, 0x00300300, 0x00180300, 0x00180300 };
 Draw::CarCache &DrawC::carCache = gNativeRenderCache.car;
 sint32 DrawC::gEnvMapMax;
 sint32 DrawC::gShadowMax;
@@ -80,7 +80,7 @@ void DrawC::ReadLightingData(void)
     char *ScaneData = RenderingFileData;
     sint32 count = Risk_ReadNextValue(&ScaneData);
     gEnvMapMax = count;
-    gEnvMap = (tEnvMap *)reservememadr("envmap", (sint32)((uint32)count * 6U), 0);
+    gEnvMap = (tEnvMap *)reservememadr("envmap", ((count * 6)), 0);
     for (sint32 i = 0; i < gEnvMapMax; ++i)
     {
         sint32 value = Risk_ReadNextValue(&ScaneData);
@@ -91,7 +91,7 @@ void DrawC::ReadLightingData(void)
         gEnvMap[i].extra = (sint16)((uint32)value << 8);
         value = Risk_ReadNextValue(&ScaneData);
         tEnvMap *entry = &gEnvMap[i];
-        entry->extra = (sint16)((uint32)(uint16)entry->extra + (uint32)value);
+        entry->extra = (sint16)(((uint16)entry->extra) + (uint32)value);
         if (entry->slice < 0)
         {
             entry->slice = 0x7FFF;
@@ -100,7 +100,7 @@ void DrawC::ReadLightingData(void)
     }
     count = Risk_ReadNextValue(&ScaneData);
     gShadowMax = count;
-    gShadow = (tEnvMap *)reservememadr("Shadow", (sint32)((uint32)count * 6U), 0);
+    gShadow = (tEnvMap *)reservememadr("Shadow", ((count * 6)), 0);
     for (sint32 i = 0; i < gShadowMax; ++i)
     {
         sint32 value = Risk_ReadNextValue(&ScaneData);
@@ -111,7 +111,7 @@ void DrawC::ReadLightingData(void)
         gShadow[i].extra = (sint16)((uint32)value << 8);
         value = Risk_ReadNextValue(&ScaneData);
         tEnvMap *entry = &gShadow[i];
-        entry->extra = (sint16)((uint32)(uint16)entry->extra + (uint32)value);
+        entry->extra = (sint16)(((uint16)entry->extra) + (uint32)value);
         if (entry->slice < 0)
         {
             entry->slice = 0x7FFF;
@@ -150,9 +150,9 @@ void DrawC::NightHeadlight(Car::tObj *carObj)
     if ((Cars::gList[gCView.player]->control.lights & 6) != 0)
     {
         coorddef tmp;
-        tmp.x = (sint32)((uint32)carObj->N.position.x - (uint32)Cars::gHumanRaceCarList[gCView.player]->N.position.x);
-        tmp.y = (sint32)((uint32)carObj->N.position.y - (uint32)Cars::gHumanRaceCarList[gCView.player]->N.position.y);
-        tmp.z = (sint32)((uint32)carObj->N.position.z - (uint32)Cars::gHumanRaceCarList[gCView.player]->N.position.z);
+        tmp.x = (carObj->N.position.x - Cars::gHumanRaceCarList[gCView.player]->N.position.x);
+        tmp.y = (carObj->N.position.y - Cars::gHumanRaceCarList[gCView.player]->N.position.y);
+        tmp.z = (carObj->N.position.z - Cars::gHumanRaceCarList[gCView.player]->N.position.z);
         coorddef tmp2;
         transform(&tmp, &gNightMat, &tmp2);
         MATRIX nightMat;
@@ -192,12 +192,11 @@ void DrawC::MenuColorData(sint32 color, Car::tObj *carObj, sint32 player)
         GameSetup::tCarData *carInfo = carObj->carInfo;
         if (carObj->render.currentCarType != carInfo->carType)
             return;
-        carObj->render.upgradeFlags = (char)((uint8)carInfo->EngineMods +
-            (uint8)carInfo->WeightTransfer * 2U + (uint8)carInfo->GroundEffects * 4U);
-        if ((uint32)(uint16)carObj->render.currentCarType - 16U < 3U)
+        carObj->render.upgradeFlags = (char)((uint8)carInfo->EngineMods + (uint8)carInfo->WeightTransfer * 2U + (uint8)carInfo->GroundEffects * 4U);
+        if (((uint16)carObj->render.currentCarType) - 16U < 3U)
             carObj->render.upgradeFlags = 7;
         uint8 upgrade = (uint8)carObj->render.upgradeFlags;
-        sint32 menuColor = (sint32)((uint32)color + (uint32)(upgrade & 1) * 256U + (uint32)(upgrade & 2) * 256U);
+        sint32 menuColor = ((color + ((upgrade & 1) * 256)) + ((upgrade & 2) * 256));
         if (gMenuColor[player] == menuColor)
             return;
         gMenuColor[player] = menuColor;
@@ -243,7 +242,7 @@ sint32 DrawC::PrimStart(Draw::tVertex *center, Car::tObj *carObj, sint32 lightAv
 {
     FUNCTION_MARKER(0x800BED44, "NFS4.EXE");
     sint32 carType = carObj->render.currentCarType;
-    bool cop_flag = (uint32)carType - 22U < 6U;
+    bool cop_flag = carType - 22U < 6U;
     sint32 half = 0;
     gte_SetRotMatrix(&gScreenMat);
     gte_SetTransMatrix(&gScreenMat);
@@ -256,7 +255,7 @@ sint32 DrawC::PrimStart(Draw::tVertex *center, Car::tObj *carObj, sint32 lightAv
     if (R3DCar::InMenu == 0)
     {
         sd->sub_otz = sub_otz >> 1;
-        if (sd->sub_otz < 0 || sd->sub_otz > (sint32)((uint32)Draw::gViewOtSize - 3U))
+        if (sd->sub_otz < 0 || sd->sub_otz > (Draw::gViewOtSize - 3))
             return -1;
     }
     else
@@ -268,7 +267,7 @@ sint32 DrawC::PrimStart(Draw::tVertex *center, Car::tObj *carObj, sint32 lightAv
     {
         sd->sub_ot = sort_carObj->render.sub_ot;
         sd->sub_otSize = sort_carObj->render.sub_otSize;
-        sd->sub_otz = (sint32)(((uint32)sd->sub_otz - (uint32)sort_carObj->render.world_otz) << 1);
+        sd->sub_otz = ((sd->sub_otz - (uint32)sort_carObj->render.world_otz) << 1);
         sub_otOffset = sort_carObj->render.sub_otOffset;
     }
     else
@@ -279,9 +278,9 @@ sint32 DrawC::PrimStart(Draw::tVertex *center, Car::tObj *carObj, sint32 lightAv
         sd->sub_otz = 0;
         sub_otOffset = carObj->render.sub_otOffset;
     }
-    sd->sub_otz = (sint32)((uint32)sd->sub_otz << 2);
-    carObj->render.sub_otz = (sint32)((uint32)sd->sub_otz + (uint32)sub_otOffset - ((uint32)sub_otz << 2));
-    sd->sub_otSize = (sint32)((uint32)sd->sub_otSize - 1U);
+    sd->sub_otz = ((uint32)sd->sub_otz << 2);
+    carObj->render.sub_otz = (sd->sub_otz + (uint32)sub_otOffset - ((uint32)sub_otz << 2));
+    sd->sub_otSize = (sd->sub_otSize - 1);
     sd->pmxStart = CarIO::carPixMap + carObj->render.textureStartIndex;
     sd->offsetU0 = (uint8)carObj->render.textureOffsetU;
     sd->offsetV0 = (uint8)carObj->render.textureOffsetV;
@@ -472,14 +471,14 @@ sint32 DrawC::PrimStart(Draw::tVertex *center, Car::tObj *carObj, sint32 lightAv
         if ((sint16)shadow < 0)
         {
             eSpeed = 0;
-            shadow = 0U - shadow;
+            shadow = (~(shadow) + 1);
         }
         if ((sint16)shadow > 10)
         {
             shadow -= 10U;
             tpageShadow = 1;
         }
-        sint32 envIndex = (sint16)(envMap - 1U);
+        sint32 envIndex = (sint16)(envMap - 1);
         if (envIndex < 0)
         {
             sd->ePmx0.u0 = 0;
@@ -491,7 +490,7 @@ sint32 DrawC::PrimStart(Draw::tVertex *center, Car::tObj *carObj, sint32 lightAv
             Draw::tPixMap map = Track::gReflectionMaps[envIndex];
             sd->ePmx0 = map;
         }
-        sint32 shadowIndex = (sint16)(shadow - 1U);
+        sint32 shadowIndex = (sint16)(shadow - 1);
         if (shadowIndex < 0)
         {
             sd->ePmx1.u0 = 0;
@@ -519,8 +518,8 @@ sint32 DrawC::PrimStart(Draw::tVertex *center, Car::tObj *carObj, sint32 lightAv
         sd->eAddZ = ((carObj->N.positionXZ >> (eSpeed + 3)) & 63) + gEnvMapOffset[sd->ePmx1.v0 >> 6];
         if (GameSetup::gData.Weather != 0 && BWorldSm::TunnelFlagSm(&carObj->N.simRoadInfo) != 1 && Cars::kSkidMarkSurface[carObj->N.driveSurfaceType] == 1)
             gWetRoad = 1;
-        sint32 height = (sint32)((uint32)carObj->N.dimension.y * 3U) >> 1;
-        gReflectOffset = (sint16)((sint32)((uint32)height + (uint32)carObj->N.objAltitude) >> 8);
+        sint32 height = (carObj->N.dimension.y * 3) >> 1;
+        gReflectOffset = (sint16)((height + (uint32)carObj->N.objAltitude) >> 8);
     }
     else
     {
@@ -534,20 +533,20 @@ sint32 DrawC::PrimStart(Draw::tVertex *center, Car::tObj *carObj, sint32 lightAv
     sint32 eColor;
     if (R3DCar::InMenu == 0)
     {
-        eColor = (sint32)((uint32)(lightAvg >> 2) * R3DCar::eMapColour.r) >> 7;
+        eColor = ((lightAvg >> 2) * R3DCar::eMapColour.r) >> 7;
         if (half != 0)
             eColor = (sint32)((uint32)eColor << 1) / 3;
-        sint32 eColor2 = (sint32)((uint32)eColor * 3U) >> 2;
-        sd->eColor2 = (sint32)((uint32)eColor2 * 0x10101U);
+        sint32 eColor2 = (eColor * 3) >> 2;
+        sd->eColor2 = (eColor2 * 0x10101);
     }
     else
         eColor = lightAvg >> 1;
-    sd->eColor0 = (sint32)((uint32)eColor * 0x10101U);
+    sd->eColor0 = (eColor * 0x10101);
     if (carObj->render.currentCarType == 1)
         eColor >>= 2;
     else
-        eColor = (sint32)((uint32)eColor * 3U) >> 2;
-    sd->eColor1 = (sint32)((uint32)eColor * 0x10101U);
+        eColor = (eColor * 3) >> 2;
+    sd->eColor1 = (eColor * 0x10101);
     return carObj->render.world_otz;
 }
 
@@ -563,7 +562,7 @@ void DrawC::PrimStop(Car::tObj *carObj, Draw::CarCache *sd)
     {
         if (sort_carObj->render.sort_flag != 0)
         {
-            sort_carObj->render.sort_flag = (sint16)((uint16)sort_carObj->render.sort_flag - 1U);
+            sort_carObj->render.sort_flag = (sint16)((uint16)sort_carObj->render.sort_flag - 1);
             if (sort_carObj->render.sort_flag != 0)
                 return;
         }
@@ -575,7 +574,7 @@ void DrawC::PrimStop(Car::tObj *carObj, Draw::CarCache *sd)
         sub_otSize = carObj->render.sub_otSize;
         worldZ = carObj->render.world_otz;
     }
-    sint32 tailIndex = (sint32)((uint32)sub_otSize - 1U);
+    sint32 tailIndex = (sub_otSize - 1);
     uint32 *ot = sd->head.cprim.LastPrim + worldZ;
     setaddr(sd->sub_ot, getaddr(ot));
     ot = sd->head.cprim.LastPrim + worldZ;
@@ -608,7 +607,7 @@ void DrawC::Prim(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transformer
             gte_stlvnl(&sd->tv);
             uint32 v = sd->tv.vz;
             if (sd->tv.vz < 0)
-                v = 0U - v;
+                v = (~(v) + 1);
             sd->tV[i].u = (uint8)sd->tv.vx;
             sd->tV[i].v = (uint8)v;
         }
@@ -627,7 +626,7 @@ void DrawC::Prim(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transformer
         sd->matB.m[1][column] = (sint16)-sd->matB.m[1][column];
     sint32 shift = TrsProj::precision & 31;
     sd->matB.t[0] = t->x >> shift;
-    sd->matB.t[1] = (sint32)(0U - (uint32)(t->y >> shift));
+    sd->matB.t[1] = (-(t->y >> shift));
     sd->matB.t[2] = t->z >> shift;
     TrsProj::ResetTransPrecision();
     gte_SetRotMatrix(&sd->matB);
@@ -637,7 +636,7 @@ void DrawC::Prim(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transformer
     for (sint32 i = 0; i < count; ++i)
         sd->tV[i].vt = vertice[i];
     sint32 renderMode = envmap & 9;
-    for (sint32 i = (sint32)obj->numFacet - 1; i >= 0; --i)
+    for (sint32 i = obj->numFacet - 1; i >= 0; --i)
     {
         Transformer::zFacet *facet = obj->facet + i;
         sint32 id0 = facet->vertexId0;
@@ -651,7 +650,7 @@ void DrawC::Prim(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transformer
         gte_swc2(24, &sd->bfct);
         sint32 bfct = sd->bfct;
         if (sd->head.mirror != 0)
-            bfct = (sint32)(0U - (uint32)bfct);
+            bfct = (-bfct);
         if (bfct <= 0)
             continue;
         if ((renderMode & 1) != 0)
@@ -667,9 +666,9 @@ void DrawC::Prim(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transformer
             {
                 sint16 facet_flag = facet->flag;
                 overlayFlag = facet_flag < 0 ? overlayWord >> 8 : overlayWord & 0xFF;
-                sint32 sd_otz = (sint32)((uint32)sd->otz + (uint32)sd->sub_otz);
+                sint32 sd_otz = (sd->otz + sd->sub_otz);
                 if (renderMode == 8 && (overlayFlag & 0x40) != 0)
-                    sd_otz = (sint32)((uint32)sd_otz - 2U);
+                    sd_otz = (sd_otz - 2);
                 if (sd_otz < 0 || sd_otz > sd->sub_otSize)
                     continue;
                 facetFlag = (uint16)facet_flag & 0xFFF;
@@ -684,7 +683,7 @@ void DrawC::Prim(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transformer
             }
             else
             {
-                sd->otz = (sint32)((uint32)sd->otz + (uint32)sd->sub_otz);
+                sd->otz = (sd->otz + sd->sub_otz);
                 if (sd->otz < 0 || sd->otz > sd->sub_otSize)
                     continue;
                 facetFlag = (uint16)facet->flag & 0xFFF;
@@ -692,7 +691,7 @@ void DrawC::Prim(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transformer
         }
         else
         {
-            sd->otz = (sint32)((uint32)sd->otz + (uint32)sd->sub_otz);
+            sd->otz = (sd->otz + sd->sub_otz);
             if (sd->otz < 0 || sd->otz > sd->sub_otSize)
                 continue;
         }
@@ -896,21 +895,17 @@ void DrawC::DividePrim(COORD16 *vt0, COORD16 *vt1, COORD16 *vt2, uint16 *u0, uin
     gte_swc2(24, &sd->bfct);
     sint32 bfct = sd->bfct;
     if (sd->head.mirror != 0)
-        bfct = (sint32)(0U - (uint32)bfct);
+        bfct = (-bfct);
     if (bfct <= 0)
         return;
     gte_stsxy3(&sd->dvx0, &sd->dvx1, &sd->dvx2);
     sint32 clipW = sd->head.clipW;
     sint32 clipH = sd->head.clipH;
-    if ((sd->dvx0 > clipW && sd->dvx1 > clipW && sd->dvx2 > clipW) ||
-        (sd->dvx0 < 0 && sd->dvx1 < 0 && sd->dvx2 < 0) ||
-        (sd->dvy0 > clipH && sd->dvy1 > clipH && sd->dvy2 > clipH) ||
-        (sd->dvy0 < 0 && sd->dvy1 < 0 && sd->dvy2 < 0) ||
-        (vt0->z < 0 && vt1->z < 0 && vt2->z < 0))
+    if ((sd->dvx0 > clipW && sd->dvx1 > clipW && sd->dvx2 > clipW) || (sd->dvx0 < 0 && sd->dvx1 < 0 && sd->dvx2 < 0) || (sd->dvy0 > clipH && sd->dvy1 > clipH && sd->dvy2 > clipH) || (sd->dvy0 < 0 && sd->dvy1 < 0 && sd->dvy2 < 0) || (vt0->z < 0 && vt1->z < 0 && vt2->z < 0))
         return;
     gte_avsz3();
     gte_stotz(&sd->otz);
-    sd->otz = (sint32)((uint32)sd->otz + (uint32)sd->sub_otz);
+    sd->otz = (sd->otz + sd->sub_otz);
     if (sd->otz < 0 || sd->otz > sd->sub_otSize)
         return;
     POLY_FT3 *prim = (POLY_FT3 *)sd->head.cprim.PrimPtr;
@@ -966,7 +961,7 @@ void DrawC::PrimClip(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transfo
             gte_stlvnl(&sd->tv);
             uint32 v = sd->tv.vz;
             if (sd->tv.vz < 0)
-                v = 0U - v;
+                v = (~(v) + 1);
             sd->tV[i].u = (uint8)sd->tv.vx;
             sd->tV[i].v = (uint8)v;
         }
@@ -1008,7 +1003,7 @@ void DrawC::PrimClip(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transfo
     sint32 renderMode = envmap & 9;
     if (renderMode == 0 && (envmap & 0x20) != 0)
     {
-        for (sint32 i = (sint32)obj->numFacet - 1; i >= 0; --i)
+        for (sint32 i = obj->numFacet - 1; i >= 0; --i)
         {
             Transformer::zFacet *facet = obj->facet + i;
             sint32 id0 = facet->vertexId0;
@@ -1060,7 +1055,7 @@ void DrawC::PrimClip(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transfo
         }
         return;
     }
-    for (sint32 i = (sint32)obj->numFacet - 1; i >= 0; --i)
+    for (sint32 i = obj->numFacet - 1; i >= 0; --i)
     {
         Transformer::zFacet *facet = obj->facet + i;
         sint32 id0 = facet->vertexId0;
@@ -1074,7 +1069,7 @@ void DrawC::PrimClip(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transfo
         gte_swc2(24, &sd->bfct);
         sint32 bfct = sd->bfct;
         if (sd->head.mirror != 0)
-            bfct = (sint32)(0U - (uint32)bfct);
+            bfct = (-bfct);
         if (bfct <= 0)
             continue;
         gte_stsxy3(&sd->dvx0, &sd->dvx1, &sd->dvx2);
@@ -1086,11 +1081,7 @@ void DrawC::PrimClip(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transfo
         sd->vt2.z = z2;
         sint32 clipW = sd->head.clipW;
         sint32 clipH = sd->head.clipH;
-        if ((sd->dvx0 > clipW && sd->dvx1 > clipW && sd->dvx2 > clipW) ||
-            (sd->dvx0 < 0 && sd->dvx1 < 0 && sd->dvx2 < 0) ||
-            (sd->dvy0 > clipH && sd->dvy1 > clipH && sd->dvy2 > clipH) ||
-            (sd->dvy0 < 0 && sd->dvy1 < 0 && sd->dvy2 < 0) ||
-            (sd->vt0.z < 0 && sd->vt1.z < 0 && sd->vt2.z < 0))
+        if ((sd->dvx0 > clipW && sd->dvx1 > clipW && sd->dvx2 > clipW) || (sd->dvx0 < 0 && sd->dvx1 < 0 && sd->dvx2 < 0) || (sd->dvy0 > clipH && sd->dvy1 > clipH && sd->dvy2 > clipH) || (sd->dvy0 < 0 && sd->dvy1 < 0 && sd->dvy2 < 0) || (sd->vt0.z < 0 && sd->vt1.z < 0 && sd->vt2.z < 0))
             continue;
         gte_avsz3();
         gte_stotz(&sd->otz);
@@ -1103,9 +1094,9 @@ void DrawC::PrimClip(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transfo
             {
                 sint16 facet_flag = facet->flag;
                 overlayFlag = facet_flag < 0 ? overlayWord >> 8 : overlayWord & 0xFF;
-                sint32 sd_otz = (sint32)((uint32)sd->otz + (uint32)sd->sub_otz);
+                sint32 sd_otz = (sd->otz + sd->sub_otz);
                 if (renderMode == 8 && (overlayFlag & 0x40) != 0)
-                    sd_otz = (sint32)((uint32)sd_otz - 2U);
+                    sd_otz = (sd_otz - 2);
                 if (sd_otz < 0 || sd_otz > sd->sub_otSize)
                     continue;
                 facetFlag = (uint16)facet_flag & 0xFFF;
@@ -1120,7 +1111,7 @@ void DrawC::PrimClip(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transfo
             }
             else
             {
-                sd->otz = (sint32)((uint32)sd->otz + (uint32)sd->sub_otz);
+                sd->otz = (sd->otz + sd->sub_otz);
                 if (sd->otz < 0 || sd->otz > sd->sub_otSize)
                     continue;
                 facetFlag = (uint16)facet->flag & 0xFFF;
@@ -1128,7 +1119,7 @@ void DrawC::PrimClip(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transfo
         }
         else
         {
-            sd->otz = (sint32)((uint32)sd->otz + (uint32)sd->sub_otz);
+            sd->otz = (sd->otz + sd->sub_otz);
             if (sd->otz < 0 || sd->otz > sd->sub_otSize)
                 continue;
         }
@@ -1337,7 +1328,7 @@ void DrawC::PrimMenu(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transfo
             gte_stlvnl(&sd->tv);
             uint32 v = sd->tv.vz;
             if (sd->tv.vz < 0)
-                v = 0U - v;
+                v = (~(v) + 1);
             sd->tV[i].u = (uint8)sd->tv.vx;
             sd->tV[i].v = (uint8)v;
         }
@@ -1356,7 +1347,7 @@ void DrawC::PrimMenu(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transfo
         sd->matB.m[1][column] = (sint16)-sd->matB.m[1][column];
     sint32 shift = TrsProj::precision & 31;
     sd->matB.t[0] = t->x >> shift;
-    sd->matB.t[1] = (sint32)(0U - (uint32)(t->y >> shift));
+    sd->matB.t[1] = (-(t->y >> shift));
     sd->matB.t[2] = t->z >> shift;
     TrsProj::ResetTransPrecision();
     gte_SetRotMatrix(&sd->matB);
@@ -1365,7 +1356,7 @@ void DrawC::PrimMenu(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transfo
     sint32 count = obj->numVertex;
     for (sint32 i = 0; i < count; ++i)
         sd->tV[i].vt = vertice[i];
-    for (sint32 i = (sint32)obj->numFacet - 1; i >= 0; --i)
+    for (sint32 i = obj->numFacet - 1; i >= 0; --i)
     {
         Transformer::zFacet *facet = obj->facet + i;
         sint32 id0 = facet->vertexId0;
@@ -1379,17 +1370,17 @@ void DrawC::PrimMenu(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transfo
         gte_swc2(24, &sd->bfct);
         sint32 bfct = sd->bfct;
         if (sd->head.mirror != 0)
-            bfct = (sint32)(0U - (uint32)bfct);
+            bfct = (-bfct);
         if (bfct <= 0)
             continue;
         gte_stsxy3(&sd->dvx0, &sd->dvx1, &sd->dvx2);
         gte_avsz3();
         gte_stotz(&sd->otz);
-        sd->otz = (sint32)((uint32)sd->otz + (uint32)sd->sub_otz);
+        sd->otz = (sd->otz + sd->sub_otz);
         if (sd->otz < 0 || sd->otz > sd->sub_otSize)
             continue;
         sint32 textureIndex = facet->textureIndex;
-        uint16 facetFlag = (uint16)facet->flag;
+        uint16 facetFlag = facet->flag;
         sint32 overlayWord = gOverlay[textureIndex];
         sint32 overlayFlag = 0;
         if (overlayWord != 0)
@@ -1537,10 +1528,10 @@ void DrawC::PrimHalo(matrixtdef *m, coorddef *t, Transformer::zObj *obj, sint32 
         sd->matB.m[1][column] = (sint16)-sd->matB.m[1][column];
     sint32 shift = TrsProj::precision & 31;
     sd->matB.t[0] = t->x >> shift;
-    sd->matB.t[1] = (sint32)(0U - (uint32)(t->y >> shift));
+    sd->matB.t[1] = (-(t->y >> shift));
     sd->matB.t[2] = t->z >> shift;
     TrsProj::ResetTransPrecision();
-    for (sint32 i = (sint32)obj->numFacet - 1; i >= 0; --i)
+    for (sint32 i = obj->numFacet - 1; i >= 0; --i)
     {
         Transformer::zFacet *facet = obj->facet + i;
         sint32 id0 = facet->vertexId0;
@@ -1557,15 +1548,15 @@ void DrawC::PrimHalo(matrixtdef *m, coorddef *t, Transformer::zObj *obj, sint32 
         gte_swc2(24, &sd->bfct);
         sint32 bfct = sd->bfct;
         if (sd->head.mirror != 0)
-            bfct = (sint32)(0U - (uint32)bfct);
+            bfct = (-bfct);
         if (bfct <= 0)
             continue;
         gte_avsz3();
         gte_stotz(&sd->otz);
-        sd->otz = (sint32)((uint32)sd->otz + (uint32)sd->sub_otz);
+        sd->otz = (sd->otz + sd->sub_otz);
         if (sd->otz < 0 || sd->otz > sd->sub_otSize)
             continue;
-        uint32 selectedType = (uint32)type & 0xFFBF;
+        uint32 selectedType = type & 0xFFBF;
         if (index >= 0)
         {
             sint32 overlayFlag = facet->flag < 0 ? (sint8)((uint16)gOverlay[index] >> 8) : (uint8)gOverlay[index];
@@ -1610,8 +1601,8 @@ void DrawC::ShadowPrim(Draw::tVertex *shadowVT, Draw::CarCache *sd)
     gte_stsxy3(&projected->p[1].xy, &projected->p[3].xy, &projected->p[2].xy);
     gte_avsz4();
     gte_stotz(&sd->otz);
-    sd->otz = (sint32)((uint32)(sd->otz >> 1) + 40U);
-    if (sd->otz < 0 || sd->otz > (sint32)((uint32)Draw::gViewOtSize - 3U))
+    sd->otz = (((sd->otz >> 1)) + 40);
+    if (sd->otz < 0 || sd->otz > (Draw::gViewOtSize - 3))
         return;
     POLY_FT4 *prim = (POLY_FT4 *)sd->head.cprim.PrimPtr;
     uint32 *ot = sd->head.cprim.LastPrim + sd->otz;
@@ -1652,8 +1643,8 @@ void DrawC::DivideShadowPrim(COORD16 *vt0, COORD16 *vt1, COORD16 *vt2, COORD16 *
     {
         gte_avsz4();
         gte_stotz(&sd->otz);
-        sd->otz = (sint32)((uint32)(sd->otz >> 3) + 40U);
-        if (sd->otz < 0 || sd->otz > (sint32)((uint32)Draw::gViewOtSize - 3U))
+        sd->otz = (((sd->otz >> 3)) + 40);
+        if (sd->otz < 0 || sd->otz > (Draw::gViewOtSize - 3))
             return;
     }
     else
@@ -1761,7 +1752,7 @@ void DrawC::SpotPrims(matrixtdef *m, coorddef *t, Draw::CarCache *sd)
         sd->matB.m[1][column] = (sint16)-sd->matB.m[1][column];
     sint32 shift = TrsProj::precision & 31;
     sd->matB.t[0] = t->x >> shift;
-    sd->matB.t[1] = (sint32)(0U - (uint32)(t->y >> shift));
+    sd->matB.t[1] = (-(t->y >> shift));
     sd->matB.t[2] = t->z >> shift;
     TrsProj::ResetTransPrecision();
     gte_SetRotMatrix(&sd->matB);
@@ -1813,10 +1804,10 @@ void DrawC::ShowroomPrims(matrixtdef *m, coorddef *t, Draw::CarCache *sd)
     sint32 tick = gettick();
     sint32 quotient = tick >> 8;
     if (tick < 0)
-        quotient = (sint32)((uint32)tick + 255U) >> 8;
+        quotient = (tick + 255) >> 8;
     sint32 hilight[2];
     sint32 hilight_direction[2];
-    hilight[0] = (sint32)((uint32)tick - ((uint32)quotient << 8)) >> 3;
+    hilight[0] = (sint32)(tick - ((uint32)quotient << 8)) >> 3;
     hilight_direction[0] = -1;
     if (gMenuLightsDirection == 0)
     {
@@ -1853,7 +1844,7 @@ void DrawC::ShowroomPrims(matrixtdef *m, coorddef *t, Draw::CarCache *sd)
         sd->matB.m[1][column] = (sint16)-sd->matB.m[1][column];
     sint32 shift = TrsProj::precision & 31;
     sd->matB.t[0] = t->x >> shift;
-    sd->matB.t[1] = (sint32)(0U - (uint32)(t->y >> shift));
+    sd->matB.t[1] = (-(t->y >> shift));
     sd->matB.t[2] = t->z >> shift;
     TrsProj::ResetTransPrecision();
     gte_SetRotMatrix(&sd->matB);

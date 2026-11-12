@@ -7,12 +7,10 @@ sint32 iSNDbankalloc(void)
     sint32 count = sndgs.options.set.maxbanks;
     if (count == 0)
         return -9;
-    const uint8 *bank = ((const uint8 *)(sndgs.bankMemory));
-    for (sint32 i = 0; i < count; ++i, bank += 12)
+    const NativeSoundBank *bank = sndgs.bankMemory;
+    for (sint32 i = 0; i < count; ++i, ++bank)
     {
-        uint32 state;
-        memcpy(&state, bank, sizeof(state));
-        if (state == 0)
+        if (bank->header == 0)
             return i;
     }
     return -9;

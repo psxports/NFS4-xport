@@ -4,6 +4,7 @@
 #include "xport.h"
 #include "eaclib/psx/memstd.h"
 
+typedef struct NativeFileSlot NativeFileSlot;
 typedef struct NativeStreamHandle NativeStreamHandle;
 typedef struct NativeStreamRequest NativeStreamRequest;
 typedef struct NativeStreamRule NativeStreamRule;
@@ -58,7 +59,7 @@ struct NativeStreamControl
     NativeStreamRequest *unknown54;
     NativeStreamRequest *unknown58;
     uint8 unknown5C[64];
-    sint32 unknown9C;
+    NativeFileSlot *unknown9C;
     sint32 offset;
     uint32 fileOperation;
     sint32 readLength;

@@ -29,6 +29,6 @@ sint32 SNDsetlimits(struct SNDLIMITS *limits)
     uint8 last[8];
     memcpy(last, ((uint8 *)(limits)) + 12, 8);
     memcpy(((uint8 *)(&sndpsxlimits)) + 12, last, 8);
-    sndpsxlimits.packetbufsize = (sint32)(((uint32)(sndpsxlimits.packetbufsize)) & 0xFFFFE000u);
+    sndpsxlimits.packetbufsize = (((sndpsxlimits.packetbufsize)) & 0xFFFFE000u);
     return 0;
 }

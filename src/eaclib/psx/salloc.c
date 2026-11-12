@@ -85,7 +85,7 @@ sint32 iSNDallocchan(uint32 mask, sint32 channels, sint32 priority, sint32 *play
     }
     if (selected != channels)
         return -9;
-    *playHandle = (sint32)(soundChannelGeneration | ((uint32)(sndchanreserved[0])));
+    *playHandle = (soundChannelGeneration | ((sndchanreserved[0])));
     sint32 result = sndchanreserved[0];
     for (sint32 i = 0; i < selected; ++i)
     {
@@ -111,10 +111,10 @@ sint32 iSNDallocchan(uint32 mask, sint32 channels, sint32 priority, sint32 *play
     for (sint32 i = 1; i < selected; ++i)
     {
         SoundVoicePrefix *parent = &((SoundVoicePrefix *)(sndgs.voiceMemory))[sndchanreserved[0]];
-        parent->unknown04[i - 1] = (uint8)sndchanreserved[i];
+        parent->unknown04[i - 1] = sndchanreserved[i];
         SoundVoicePrefix *child = &((SoundVoicePrefix *)(sndgs.voiceMemory))[sndchanreserved[i]];
         child->playHandle = -1;
-        child->unknown3C = (uint8)sndchanreserved[0];
+        child->unknown3C = sndchanreserved[0];
     }
     return result;
 }

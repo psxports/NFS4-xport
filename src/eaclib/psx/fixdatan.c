@@ -11,16 +11,16 @@
 sint32 fixedatan(sint32 x, sint32 z)
 {
     FUNCTION_MARKER(0x800ED528, "NFS4.EXE");
-    uint32 numerator = (uint32)x;
-    uint32 denominator = (uint32)z;
+    uint32 numerator = x;
+    uint32 denominator = z;
     sint32 quadrant = 0;
     if (z < 0) {
         quadrant = 2;
-        denominator = 0u - denominator;
+        denominator = (~(denominator) + 1);
     }
     if (x < 0) {
         quadrant |= 4;
-        numerator = 0u - numerator;
+        numerator = (~(numerator) + 1);
     }
     sint32 angle;
     if (numerator == denominator) {
@@ -33,10 +33,10 @@ sint32 fixedatan(sint32 x, sint32 z)
             quadrant |= 1;
         }
         sint64 scaled;
-        make64(&scaled, (sint32)numerator, 32);
-        uint32 quotient = divu64((uint64)scaled, denominator);
+        make64(&scaled, numerator, 32);
+        uint32 quotient = divu64(scaled, denominator);
         sint32 index = quotient >> 24;
-        sint32 fraction = (quotient >> 8) & 0xFFFFu;
+        sint32 fraction = (quotient >> 8) & 0xFFFF;
         sint32 first = fatantbl[index];
         sint32 difference = fatantbl[index + 1] - first;
         angle = first + ((difference * fraction) >> 16);

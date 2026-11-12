@@ -68,10 +68,10 @@ void FECheat::HandleActivation(tCheatCode cheat)
         break;
     case cheat_MoreMoney:
     case cheat_BonusMoney:
-        tournamentManager.fMoney = (sint32)((uint32)tournamentManager.fMoney + 50000);
+        tournamentManager.fMoney = (tournamentManager.fMoney + 50000);
         break;
     case cheat_LotsaMoney:
-        tournamentManager.fMoney = (sint32)((uint32)tournamentManager.fMoney + 100000000);
+        tournamentManager.fMoney = (tournamentManager.fMoney + 100000000);
         break;
     case cheat_NFSTeamRecords:
         Stattool::GetAllDefaultRecords(Stats::gTrackRecords, true);

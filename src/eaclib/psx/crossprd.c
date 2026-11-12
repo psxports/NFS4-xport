@@ -14,12 +14,12 @@ coorddef *crossproduct(coorddef *left, coorddef *right, coorddef *result)
 
     sint32 first = fixedmult(left->y, right->z);
     sint32 second = fixedmult(left->z, right->y);
-    result->x = (sint32)((uint32)first - second);
+    result->x = (first - second);
     first = fixedmult(left->x, right->z);
     second = fixedmult(left->z, right->x);
-    result->y = (sint32)((uint32)second - first);
+    result->y = (second - first);
     first = fixedmult(left->x, right->y);
     second = fixedmult(left->y, right->x);
-    result->z = (sint32)((uint32)first - second);
+    result->z = (first - second);
     return result;
 }

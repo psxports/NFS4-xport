@@ -161,7 +161,7 @@ void tFEApplication::DrawHelpIcons(void)
     sint32 Col = 0x786e14;
     flags.tint[0] = Col;
     sint32 x = 14;
-    sint32 y = (sint32)((uint32)screenheight - 25);
+    sint32 y = (screenheight - 25);
     if (fCurrentMenu[0] != 0 && fCurrentMenu[0]->VertHelp != 0)
     {
         char string[12];
@@ -171,24 +171,22 @@ void tFEApplication::DrawHelpIcons(void)
         for (sint32 i = (sint32)strlen(string) - 1; i >= 0; --i)
         {
             sint16 textY = (sint16)y;
-            y = (sint32)((uint32)y - 8);
+            y = (y - 8);
             string2[0] = string[i];
             FETextRender::FullTextRGB(string2, 14, textY, Col, 0, 0);
         }
-        y = (sint32)((uint32)y + 8);
-        if ((gPadinfo.buf[0].nopad == 0 && gPadinfo.buf[0].ID != 0x23) ||
-            (gPadinfo.buf[4].nopad == 0 && gPadinfo.buf[4].ID != 0x23))
+        y = (y + 8);
+        if ((gPadinfo.buf[0].nopad == 0 && gPadinfo.buf[0].ID != 0x23) || (gPadinfo.buf[4].nopad == 0 && gPadinfo.buf[4].ID != 0x23))
         {
-            y = (sint32)((uint32)y - 8);
+            y = (y - 8);
             DrawShapeExtended(53, 0x18, x, y, 0, 0, &flags);
         }
         if (gPadinfo.buf[0].ID == 0x23 || gPadinfo.buf[4].ID == 0x23)
-            DrawShapeExtended(54, 0x18, 13, (sint32)((uint32)y - 9), 0, 0, &flags);
+            DrawShapeExtended(54, 0x18, 13, ((y - 9)), 0, 0, &flags);
     }
     else
     {
-        if ((gPadinfo.buf[0].nopad == 0 && gPadinfo.buf[0].ID != 0x23) ||
-            (gPadinfo.buf[4].nopad == 0 && gPadinfo.buf[4].ID != 0x23))
+        if ((gPadinfo.buf[0].nopad == 0 && gPadinfo.buf[0].ID != 0x23) || (gPadinfo.buf[4].nopad == 0 && gPadinfo.buf[4].ID != 0x23))
         {
             DrawShapeExtended(53, 0x18, x, y, 0, 0, &flags);
             x += 14;
@@ -198,24 +196,23 @@ void tFEApplication::DrawHelpIcons(void)
             DrawShapeExtended(54, 0x18, x, y, 0, 0, &flags);
             x += 15;
         }
-        FETextRender::FullTextRGB(TextSys::Word(252), (sint16)x, (sint16)y, Col, 0, 0);
+        FETextRender::FullTextRGB(TextSys::Word(252), x, y, Col, 0, 0);
         sint32 pixels = textpixels(TextSys::Word(252));
         sint32 length = (sint32)strlen(TextSys::Word(252));
-        x = (sint32)((uint32)x + 5 + (uint32)pixels - (uint32)length);
+        x = (((x + 5) + pixels) - length);
         if (fCurrentMenu[0]->fOptionsMenu != 0 || (fCurrentMenu[1] != 0 && fCurrentMenu[1]->fOptionsMenu != 0))
         {
-            if ((gPadinfo.buf[0].nopad == 0 && gPadinfo.buf[0].ID != 0x23) ||
-                (gPadinfo.buf[4].nopad == 0 && gPadinfo.buf[4].ID != 0x23))
+            if ((gPadinfo.buf[0].nopad == 0 && gPadinfo.buf[0].ID != 0x23) || (gPadinfo.buf[4].nopad == 0 && gPadinfo.buf[4].ID != 0x23))
             {
                 DrawShapeExtended(55, 0x18, x, y, 0, 0, &flags);
-                x = (sint32)((uint32)x + 14);
+                x = (x + 14);
             }
             if (gPadinfo.buf[0].ID == 0x23 || gPadinfo.buf[4].ID == 0x23)
             {
                 DrawShapeExtended(56, 0x18, x, y, 0, 0, &flags);
-                x = (sint32)((uint32)x + 15);
+                x = (x + 15);
             }
-            FETextRender::FullTextRGB(TextSys::Word(253), (sint16)x, (sint16)y, Col, 0, 0);
+            FETextRender::FullTextRGB(TextSys::Word(253), x, y, Col, 0, 0);
         }
     }
 }
@@ -320,7 +317,7 @@ static void FreeHelpShapeCluts(void)
     {
         if (gHelpShapes[i].clutID != 0)
         {
-            Texture::MenuReleaseClutId((sint16)gHelpShapes[i].clutID);
+            Texture::MenuReleaseClutId(gHelpShapes[i].clutID);
             gHelpShapes[i].clutID = 0;
         }
     }
@@ -355,7 +352,7 @@ void tFEApplication::SetMenu(sint16 i, tMenu *menu)
     {
         if (i == 0)
         {
-            uint32 music = menu->fFlags & 0xF000U;
+            uint32 music = menu->fFlags & 0xF000;
             if (music != fCurrentMusic)
             {
                 fCurrentMusic = music;
@@ -512,7 +509,7 @@ tAppCommand tFEApplication::MainLoop(tMenu *newMenu)
                 else
                 {
                     doRedraw = false;
-                    backDepth[(uint8)fPlayer] = (sint32)((uint32)backDepth[(uint8)fPlayer] - 1);
+                    backDepth[(uint8)fPlayer] = (backDepth[(uint8)fPlayer] - 1);
                 }
                 demoLoopLastInputTick = ticks;
             }
@@ -580,7 +577,7 @@ tAppCommand tFEApplication::MainLoop(tMenu *newMenu)
                 continue;
             sint32 debounce = fCurrentMenu[(uint8)fPlayer]->DebounceKeys();
             for (sint32 input = inputStartPlayer; (sint16)input <= inputEndPlayer;
-                input = (sint32)((uint32)input + 1))
+                input = (input + 1))
             {
                 sint16 player = (sint16)input;
                 command[player].type = kMenu_Command_None;
@@ -612,7 +609,7 @@ tAppCommand tFEApplication::MainLoop(tMenu *newMenu)
                 case kMenu_Command_GoToMenu:
                     AudioCmn::PlayFESFX(0);
                     backList[(uint8)fPlayer][backDepth[(uint8)fPlayer]] = fCurrentMenu[(uint8)fPlayer];
-                    backDepth[(uint8)fPlayer] = (sint32)((uint32)backDepth[(uint8)fPlayer] + 1);
+                    backDepth[(uint8)fPlayer] = (backDepth[(uint8)fPlayer] + 1);
                     SetMenu((uint8)fPlayer, command[player].nextMenu);
                     break;
                 case kMenu_Command_GoToMenuOneWay:
@@ -624,14 +621,13 @@ tAppCommand tFEApplication::MainLoop(tMenu *newMenu)
                     AudioCmn::PlayFESFX(0);
                     backList[(uint8)fPlayer][backDepth[(uint8)fPlayer]] = fCurrentMenu[(uint8)fPlayer];
                     needToSetChildMenu = true;
-                    backDepth[(uint8)fPlayer] = (sint32)((uint32)backDepth[(uint8)fPlayer] + 1);
+                    backDepth[(uint8)fPlayer] = (backDepth[(uint8)fPlayer] + 1);
                     stackBackupPin = (sint16)backDepth[(uint8)fPlayer];
                     SetMenu((uint8)fPlayer, command[player].nextMenu);
                     backDepth[1] = 0;
                     break;
                 case kMenu_Command_BackupMenu:
-                    if (((uint8)fPlayer != 0 || backDepth[0] <= stackBackupPin) &&
-                        ((uint8)fPlayer != 1 || backDepth[(uint8)fPlayer] <= 0))
+                    if (((uint8)fPlayer != 0 || backDepth[0] <= stackBackupPin) && ((uint8)fPlayer != 1 || backDepth[(uint8)fPlayer] <= 0))
                     {
                         if (waitingForOtherPlayer[(uint8)fPlayer] != 0)
                         {
@@ -667,10 +663,10 @@ tAppCommand tFEApplication::MainLoop(tMenu *newMenu)
                     if (backDepth[(uint8)fPlayer] > 0)
                     {
                         AudioCmn::PlayFESFX(1);
-                        backDepth[(uint8)fPlayer] = (sint32)((uint32)backDepth[(uint8)fPlayer] - 1);
+                        backDepth[(uint8)fPlayer] = (backDepth[(uint8)fPlayer] - 1);
                         SetMenu((uint8)fPlayer, backList[(uint8)fPlayer][backDepth[(uint8)fPlayer]]);
                         if (fCurrentMenu[(uint8)fPlayer]->IsSubMenu())
-                            backDepth[(uint8)fPlayer] = (sint32)((uint32)backDepth[(uint8)fPlayer] + 1);
+                            backDepth[(uint8)fPlayer] = (backDepth[(uint8)fPlayer] + 1);
                     }
                     else if ((uint8)fPlayer == 1)
                         AudioCmn::PlayFESFX(1);
@@ -766,7 +762,7 @@ tAppCommand tFEApplication::RunPostGame(void)
         }
         Car::tStats *dummyCars = Cars::gNewCarStatsList;
         sint16 nBestCarIndex;
-        if (StatChk::IsRecordLapTime(dummyCars, (sint16)Cars::gNumRaceCars, &nBestCarIndex))
+        if (StatChk::IsRecordLapTime(dummyCars, Cars::gNumRaceCars, &nBestCarIndex))
         {
             if (frontEnd.gameMode == 1)
                 speechToPlay[nBestCarIndex] = nBestCarIndex == 0 ? 7 : 8;
@@ -774,7 +770,7 @@ tAppCommand tFEApplication::RunPostGame(void)
                 speechToPlay[nBestCarIndex] = 6;
             needName[nBestCarIndex] = 1;
         }
-        sint32 ret = StatChk::IsTopTime(dummyCars, (sint16)Cars::gNumRaceCars);
+        sint32 ret = StatChk::IsTopTime(dummyCars, Cars::gNumRaceCars);
         if (ret != 0)
         {
             if (frontEnd.gameMode == 1)

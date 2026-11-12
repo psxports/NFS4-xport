@@ -41,7 +41,7 @@ uint32 crc16(const uint8 *data, sint32 length)
     FUNCTION_MARKER(0x800F614C, "NFS4.EXE");
     uint32 low = 0xEA;
     uint32 high = 0xFB;
-    sint32 remaining = (sint32)((uint32)length - 4u);
+    sint32 remaining = (length - 4);
     while (remaining >= 0)
     {
         uint32 first = data[0];
@@ -63,7 +63,7 @@ uint32 crc16(const uint8 *data, sint32 length)
         remaining -= 4;
         data += 4;
     }
-    remaining = (sint32)((uint32)remaining + 3u);
+    remaining = (remaining + 3);
     while (remaining >= 0)
     {
         uint32 index = *data ^ low;

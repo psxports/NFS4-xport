@@ -26,9 +26,9 @@ void CameraLookAt(matrixtdef *mat, coorddef *camPoint)
     coorddef fwdVec;
     coorddef rightVec;
     coorddef upVec = { 0, 65536, 0 };
-    fwdVec.x = (sint32)(0U - (uint32)camPoint->x);
-    fwdVec.y = (sint32)(0U - (uint32)camPoint->y);
-    fwdVec.z = (sint32)(0U - (uint32)camPoint->z);
+    fwdVec.x = (-camPoint->x);
+    fwdVec.y = (-camPoint->y);
+    fwdVec.z = (-camPoint->z);
     Math::NormalizeVector(&fwdVec);
     crossproduct(&upVec, &fwdVec, &rightVec);
     crossproduct(&fwdVec, &rightVec, &upVec);
@@ -50,9 +50,9 @@ void Fe3D::InitShowroom(void)
     sint32 angle = 0;
     for (i = 0; i < 32; ++i, angle += 0x80)
     {
-        spotVertex[i].x = (sint16)((sint32)((uint32)csin((sint32)angle) * 48U) >> 8);
+        spotVertex[i].x = (sint16)((csin(angle) * 48) >> 8);
         spotVertex[i].y = 0;
-        spotVertex[i].z = (sint16)((sint32)((uint32)ccos((sint32)angle) * 48U) >> 8);
+        spotVertex[i].z = (sint16)((ccos(angle) * 48) >> 8);
     }
     spotVertex[i].x = 0;
     spotVertex[i].y = 0;
@@ -62,14 +62,14 @@ void Fe3D::InitShowroom(void)
     for (i = 0; i < 32; ++i, angle += 0x20)
     {
         sint16 iPlus = (sint16)(i * 2);
-        sint32 angle_sin = fastintsin((sint32)angle) >> 3;
-        sint32 angle_cos = fastintcos((sint32)angle) >> 3;
-        lightsVertex[iPlus].x = (sint16)(((uint32)angle_sin * 3U) >> 5);
+        sint32 angle_sin = fastintsin(angle) >> 3;
+        sint32 angle_cos = fastintcos(angle) >> 3;
+        lightsVertex[iPlus].x = (sint16)((angle_sin * 3U) >> 5);
         lightsVertex[iPlus].y = 0;
-        lightsVertex[iPlus].z = (sint16)(((uint32)angle_cos * 3U) >> 5);
-        lightsVertex[iPlus + 1].x = (sint16)((sint32)((uint32)angle_sin * 21U) >> 8);
+        lightsVertex[iPlus].z = (sint16)((angle_cos * 3U) >> 5);
+        lightsVertex[iPlus + 1].x = (sint16)((angle_sin * 21U) >> 8);
         lightsVertex[iPlus + 1].y = 0;
-        lightsVertex[iPlus + 1].z = (sint16)((sint32)((uint32)angle_cos * 21U) >> 8);
+        lightsVertex[iPlus + 1].z = (sint16)((angle_cos * 21U) >> 8);
     }
 }
 
@@ -79,9 +79,9 @@ void Draw::MenuRenderingView(Car::tObj *carObj, DRender::tView *Vi, sint32 posX,
     TrsProj::ResetTransPrecision();
     if (showRoomFlag != 0)
         posY = 140;
-    TrsProj::SetMenuProjection((sint32)((uint32)posX - 256), (sint32)((uint32)posY - 128), 512, 256);
+    TrsProj::SetMenuProjection((posX - 256), (posY - 128), 512, 256);
     sint32 showroom = showRoomFlag;
-    gMenuRotate[player] = (sint32)((uint32)gMenuRotate[player] + rotation);
+    gMenuRotate[player] = (gMenuRotate[player] + rotation);
     matrixtdef temp;
     if (showroom != 0)
     {
@@ -93,7 +93,7 @@ void Draw::MenuRenderingView(Car::tObj *carObj, DRender::tView *Vi, sint32 posX,
         matrixtdef temp1;
         CameraLookAt(&temp1, &targetPos);
         matrixtdef temp2;
-        fixedxformy(&temp2, (sint32)((uint32)camRot << 6));
+        fixedxformy(&temp2, ((uint32)camRot << 6));
         Math::fasttransmult(&temp1, &temp2, &temp);
         uint64 z = psx_double_bits(__extendsfdf2(camZ));
         uint64 y = psx_double_bits(__extendsfdf2(camY));
@@ -103,7 +103,7 @@ void Draw::MenuRenderingView(Car::tObj *carObj, DRender::tView *Vi, sint32 posX,
         camY = 0;
     }
     else
-        fixedxformy(&temp, (sint32)((uint32)camRot << 6));
+        fixedxformy(&temp, ((uint32)camRot << 6));
     matrixtdef correct = { { 65536, 0, 0, 0, 0x8980, 0, 0, 0, 65536 } };
     Math::fasttransmult(&correct, &temp, &Vi->cview.mrotation);
     transpose(&Vi->cview.mrotation, &Vi->cview.mrotationInv);
@@ -112,9 +112,9 @@ void Draw::MenuRenderingView(Car::tObj *carObj, DRender::tView *Vi, sint32 posX,
     pos.y = __fixsfsi(psx_float_value(__mulsf3PSX(psx_float_bits(camY), 0x47800000)));
     pos.z = __fixsfsi(psx_float_value(__mulsf3PSX(psx_float_bits(camZ), 0x47800000)));
     transform(&pos, &Vi->cview.mrotation, &Vi->cview.translation);
-    pos.x = (sint32)(0U - (uint32)Vi->cview.translation.x);
-    pos.y = (sint32)(0U - (uint32)Vi->cview.translation.y);
-    pos.z = (sint32)(0U - (uint32)Vi->cview.translation.z);
+    pos.x = (-Vi->cview.translation.x);
+    pos.y = (-Vi->cview.translation.y);
+    pos.z = (-Vi->cview.translation.z);
     transform(&pos, &Vi->cview.mrotationInv, &Vi->cview.translationInv);
     carObj->N.orientMat.m[0] = 65536;
     carObj->N.orientMat.m[4] = 65536;
@@ -134,7 +134,7 @@ void Draw::MenuRenderingView(Car::tObj *carObj, DRender::tView *Vi, sint32 posX,
         {
             sint32 ticks = generic128HzClock;
             R3DCar::Clock = 1;
-            R3DCar::ClockLast = (sint32)((uint32)ticks + 5);
+            R3DCar::ClockLast = (ticks + 5);
         }
         else
             R3DCar::Clock = 0;

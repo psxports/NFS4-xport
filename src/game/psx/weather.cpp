@@ -86,7 +86,6 @@ sint32 Weather::gLastProcessTime[2];
 sint32 Weather::GetNumParticles(sint32 player)
 {
     FUNCTION_MARKER(0x800E1DC0, "NFS4.EXE");
-    (void)player;
     return gSys.num[0];
 }
 
@@ -171,11 +170,11 @@ void Weather::InitSplats(void)
     {
         uint32 ySize = GameSetup::gData.commMode == 1 ? 120U : 240U;
         uint32 value = random();
-        gSplatInfo[i].pos.vx = (sint16)(value % 320U);
+        gSplatInfo[i].pos.vx = (sint16)(value % 320);
         value = random();
         gSplatInfo[i].pos.vy = (sint16)(value % ySize);
         value = random();
-        gSplatInfo[i].startTick = (sint32)(value % 300U);
+        gSplatInfo[i].startTick = (value % 300U);
     }
 }
 
@@ -190,30 +189,30 @@ void Weather::ChangeDensityState(void)
 {
     FUNCTION_MARKER(0x800E212C, "NFS4.EXE");
     sint32 statechange = GetNewState();
-    sint32 next = (sint32)((uint32)gDensityGoalState + (uint32)statechange);
+    sint32 next = (gDensityGoalState + statechange);
     if (next >= 4)
         statechange = -1;
     else if (next < 0)
         statechange = 1;
     gDensityChangeFactor = statechange;
-    gDensityGoalState = (sint32)((uint32)gDensityGoalState + (uint32)statechange);
+    gDensityGoalState = (gDensityGoalState + statechange);
     if (statechange == 0)
-        gDensityTimerGoal = (sint32)((uint32)simGlobal.gameTicks + 0x400U);
+        gDensityTimerGoal = (simGlobal.gameTicks + 0x400);
 }
 
 void Weather::ChangeIntensityState(void)
 {
     FUNCTION_MARKER(0x800E21A0, "NFS4.EXE");
     sint32 statechange = GetNewState();
-    sint32 next = (sint32)((uint32)gIntensityGoalState + (uint32)statechange);
+    sint32 next = (gIntensityGoalState + statechange);
     if (next > gTrackIntensityLimit)
         statechange = -1;
     else if (next < 0)
         statechange = 1;
     gIntensityChangeFactor = statechange;
-    gIntensityGoalState = (sint32)((uint32)gIntensityGoalState + (uint32)statechange);
+    gIntensityGoalState = (gIntensityGoalState + statechange);
     if (statechange == 0)
-        gIntensityTimerGoal = (sint32)((uint32)simGlobal.gameTicks + 0x400U);
+        gIntensityTimerGoal = (simGlobal.gameTicks + 0x400);
 }
 
 void Weather::ChangeDensityBasedOnTime(void)
@@ -228,7 +227,7 @@ void Weather::ChangeDensityBasedOnTime(void)
         change = simGlobal.gameTicks > gDensityTimerGoal;
     if (change)
         ChangeDensityState();
-    gSys.num[0] = (sint32)((uint32)gSys.num[0] + (uint32)gDensityChangeFactor);
+    gSys.num[0] = (gSys.num[0] + gDensityChangeFactor);
     if (gSys.num[0] <= 0)
         gSys.num[0] = 0;
 }
@@ -245,8 +244,7 @@ void Weather::ChangeIntensityBasedOnTime(void)
         change = simGlobal.gameTicks > gIntensityTimerGoal;
     if (change)
         ChangeIntensityState();
-    gSys.velocity.vy = (sint16)((uint32)(uint16)gSys.velocity.vy +
-        (uint32)(uint16)gIntensityChangeFactor);
+    gSys.velocity.vy = (sint16)(((uint16)gSys.velocity.vy) + (uint32)(uint16)gIntensityChangeFactor);
     gType = gSys.velocity.vy < -32 ? kRain : kSnow;
 }
 
@@ -272,7 +270,7 @@ void Weather::InitStateControls(void)
     sint32 count = gDensityTbl[3];
     gIntensityChangeFactor = 0;
     gDensityChangeFactor = 0;
-    sint32 timer = (sint32)((uint32)ticks + 0x400U);
+    sint32 timer = (ticks + 0x400);
     gIntensityTimerGoal = timer;
     gSys.num[0] = count;
     gDensityTimerGoal = timer;
@@ -338,11 +336,11 @@ void Weather::Init(void)
     for (sint32 i = 0; i < 152; ++i)
     {
         uint32 value = random();
-        sv->vx = (sint16)((value % (uint32)(sint32)gSys.width) * 2U - (uint32)(uint16)gSys.width);
+        sv->vx = (sint16)((value % (gSys.width)) * 2U - (uint32)(uint16)gSys.width);
         value = random();
-        sv->vy = (sint16)((uint32)(uint16)gSys.bottom + value % (uint32)(sint32)gSys.height);
+        sv->vy = (sint16)(((uint16)gSys.bottom) + value % ((sint32)gSys.height));
         value = random();
-        sv->vz = (sint16)((uint32)(uint16)gSys.znear + value % (uint32)(sint32)gSys.length);
+        sv->vz = (sint16)(((uint16)gSys.znear) + value % ((sint32)gSys.length));
         ++sv;
     }
     for (sint32 i = 0; i < 152; ++i)
@@ -407,55 +405,55 @@ sint16 Weather::CheckAndResetParticles(SVECTOR *pt)
     {
         pt->vx = (sint16)(64 - (uint16)gSys.width);
         uint32 value = random();
-        pt->vy = (sint16)((uint32)(uint16)gSys.bottom + value % (uint32)(sint32)gSys.height);
+        pt->vy = (sint16)(((uint16)gSys.bottom) + value % ((sint32)gSys.height));
         value = random();
-        pt->vz = (sint16)((uint32)(uint16)gSys.znear + value % (uint32)(sint32)gSys.length);
+        pt->vz = (sint16)(((uint16)gSys.znear) + value % ((sint32)gSys.length));
         flag = 1;
     }
-    else if (pt->vx < -(sint32)gSys.width)
+    else if (pt->vx < -gSys.width)
     {
         pt->vx = (sint16)((uint16)gSys.width - 64);
         uint32 value = random();
-        pt->vy = (sint16)((uint32)(uint16)gSys.bottom + value % (uint32)(sint32)gSys.height);
+        pt->vy = (sint16)(((uint16)gSys.bottom) + value % ((sint32)gSys.height));
         value = random();
-        pt->vz = (sint16)((uint32)(uint16)gSys.znear + value % (uint32)(sint32)gSys.length);
+        pt->vz = (sint16)(((uint16)gSys.znear) + value % ((sint32)gSys.length));
         flag = 2;
     }
     if (pt->vz > gSys.zfar)
     {
         pt->vz = (sint16)((uint16)gSys.znear + 64);
         uint32 value = random();
-        pt->vx = (sint16)((value % (uint32)(sint32)gSys.width) * 2 - (uint16)gSys.width);
+        pt->vx = (sint16)((value % (gSys.width)) * 2 - (uint16)gSys.width);
         value = random();
-        pt->vy = (sint16)((uint32)(uint16)gSys.bottom + value % (uint32)(sint32)gSys.height);
+        pt->vy = (sint16)(((uint16)gSys.bottom) + value % ((sint32)gSys.height));
         flag = 3;
     }
     else if (pt->vz < gSys.znear)
     {
         flag = 4;
         uint32 value = random();
-        pt->vz = (sint16)((uint32)(uint16)gSys.znear + value % (uint32)(gSys.zfar / 2));
+        pt->vz = (sint16)(((uint16)gSys.znear) + value % (gSys.zfar / 2));
         value = random();
-        pt->vx = (sint16)((value % (uint32)(sint32)gSys.width) * 2 - (uint16)gSys.width);
+        pt->vx = (sint16)((value % (gSys.width)) * 2 - (uint16)gSys.width);
         value = random();
-        pt->vy = (sint16)((uint32)(uint16)gSys.bottom + value % (uint32)(sint32)gSys.height);
+        pt->vy = (sint16)(((uint16)gSys.bottom) + value % ((sint32)gSys.height));
     }
     if (pt->vy > gSys.top)
     {
         pt->vy = (sint16)((uint16)gSys.bottom + 64);
         uint32 value = random();
-        pt->vx = (sint16)((value % (uint32)(sint32)gSys.width) * 2 - (uint16)gSys.width);
+        pt->vx = (sint16)((value % (gSys.width)) * 2 - (uint16)gSys.width);
         value = random();
-        pt->vz = (sint16)((uint32)(uint16)gSys.znear + value % (uint32)(sint32)gSys.length);
+        pt->vz = (sint16)(((uint16)gSys.znear) + value % ((sint32)gSys.length));
         flag = 5;
     }
     else if (pt->vy < gSys.bottom)
     {
         pt->vy = (sint16)((uint16)gSys.top - 64);
         uint32 value = random();
-        pt->vx = (sint16)((value % (uint32)(sint32)gSys.width) * 2 - (uint16)gSys.width);
+        pt->vx = (sint16)((value % (gSys.width)) * 2 - (uint16)gSys.width);
         value = random();
-        pt->vz = (sint16)((uint32)(uint16)gSys.znear + value % (uint32)(sint32)gSys.length);
+        pt->vz = (sint16)(((uint16)gSys.znear) + value % ((sint32)gSys.length));
         flag = 6;
     }
     return flag;
@@ -478,9 +476,9 @@ void Weather::QuickReOrthogonalize(matrixtdef *rot, matrixtdef *rotNew)
     sint32 px = fixedmult(upvector.x, rot->m[6]);
     sint32 py = fixedmult(upvector.y, rot->m[7]);
     sint32 pz = fixedmult(upvector.z, rot->m[8]);
-    sint32 dot = (sint32)((uint32)px + (uint32)py + (uint32)pz);
+    sint32 dot = ((px + py) + pz);
     if (dot <= 0)
-        dot = (sint32)(0U - (uint32)dot);
+        dot = (-dot);
     if (dot > 0xfd70)
     {
         upvector.x = rot->m[3];
@@ -489,26 +487,26 @@ void Weather::QuickReOrthogonalize(matrixtdef *rot, matrixtdef *rotNew)
     }
     sint32 first = fixedmult(upvector.y, rotNew->m[8]);
     sint32 second = fixedmult(upvector.z, rotNew->m[7]);
-    rotNew->m[0] = (sint32)((uint32)first - (uint32)second);
+    rotNew->m[0] = (first - second);
     first = fixedmult(upvector.z, rotNew->m[6]);
     second = fixedmult(upvector.x, rotNew->m[8]);
-    rotNew->m[1] = (sint32)((uint32)first - (uint32)second);
+    rotNew->m[1] = (first - second);
     first = fixedmult(upvector.x, rotNew->m[7]);
     second = fixedmult(upvector.y, rotNew->m[6]);
-    rotNew->m[2] = (sint32)((uint32)first - (uint32)second);
+    rotNew->m[2] = (first - second);
     coorddef nrotx;
     memcpy(&nrotx, rotNew->m, sizeof(nrotx));
     Math::NormalizeVector(&nrotx);
     memcpy(rotNew->m, &nrotx, sizeof(nrotx));
     first = fixedmult(rotNew->m[7], rotNew->m[2]);
     second = fixedmult(rotNew->m[8], rotNew->m[1]);
-    rotNew->m[3] = (sint32)((uint32)first - (uint32)second);
+    rotNew->m[3] = (first - second);
     first = fixedmult(rotNew->m[8], rotNew->m[0]);
     second = fixedmult(rotNew->m[6], rotNew->m[2]);
-    rotNew->m[4] = (sint32)((uint32)first - (uint32)second);
+    rotNew->m[4] = (first - second);
     first = fixedmult(rotNew->m[6], rotNew->m[1]);
     second = fixedmult(rotNew->m[7], rotNew->m[0]);
-    rotNew->m[5] = (sint32)((uint32)first - (uint32)second);
+    rotNew->m[5] = (first - second);
 }
 
 void Weather::ProcessParticles(DRender::tView *Vi, sint32 num, SVECTOR *wpt, char *wd)
@@ -524,11 +522,11 @@ void Weather::ProcessParticles(DRender::tView *Vi, sint32 num, SVECTOR *wpt, cha
     SetMatrix(rot);
     SVECTOR temp_vector;
     coorddef *cp = prevCamPos + Vi->player;
-    sint32 n = (sint32)((uint32)Vi->cview.translation.x - (uint32)cp->x);
+    sint32 n = (Vi->cview.translation.x - cp->x);
     temp_vector.vx = (sint16)(n / 1024);
-    n = (sint32)((uint32)Vi->cview.translation.y - (uint32)cp->y);
+    n = (Vi->cview.translation.y - cp->y);
     temp_vector.vy = (sint16)(n / 1024);
-    n = (sint32)((uint32)Vi->cview.translation.z - (uint32)cp->z);
+    n = (Vi->cview.translation.z - cp->z);
     temp_vector.vz = (sint16)(n / 1024);
     gte_ldv0(&temp_vector);
     gte_rt();
@@ -673,8 +671,8 @@ void Weather::CreateSplat(Weather::tSplatInfo *splat)
     setlen(prim, 9);
     prim->rgbc.code = 0x2e;
     sint32 size = (splat->pos.vx & 1) != 0 ? 12 : 18;
-    sint32 splatTick = (sint32)((uint32)simGlobal.gameTicks - (uint32)splat->startTick);
-    uint8 color = (uint8)(128U - ((uint32)splatTick << 2));
+    sint32 splatTick = (simGlobal.gameTicks - splat->startTick);
+    uint8 color = (uint8)(128 - ((uint32)splatTick << 2));
     sint32 expand = splatTick >> 3;
     prim->rgbc.b = color;
     prim->rgbc.g = color;
@@ -713,7 +711,7 @@ void Weather::DoSplats(sint32 num, Weather::tSplatInfo *splats)
         sint32 startTick = splats->startTick;
         if (startTick > ticks)
             continue;
-        if ((sint32)((uint32)startTick + 32) < ticks)
+        if ((startTick + 32) < ticks)
         {
             if (gCurrentNumSplats > num && i == gCurrentNumSplats - 1)
             {
@@ -726,7 +724,7 @@ void Weather::DoSplats(sint32 num, Weather::tSplatInfo *splats)
             value = random();
             splats->pos.vy = (sint16)(split ? (value % 240) >> 1 : value % 240);
             value = random();
-            splats->startTick = (sint32)((uint32)simGlobal.gameTicks + value % 100);
+            splats->startTick = (simGlobal.gameTicks + value % 100);
         }
         else
             CreateSplat(splats);
@@ -745,7 +743,7 @@ void Weather::DoWeather(DRender::tView *Vi)
     if (GameSetup::gData.commMode != 1)
     {
         sint32 ticks = simGlobal.gameTicks;
-        if ((sint32)((uint32)ticks - (uint32)timechange) > 32)
+        if ((ticks - timechange) > 32)
         {
             timechange = ticks;
             if (gSnowTrack == 0)
@@ -767,7 +765,7 @@ void Weather::DoWeather(DRender::tView *Vi)
         for (sint32 i = 0; i < gSys.num[player]; ++i)
             wd[i] = 0;
     sint32 ticks = simGlobal.gameTicks;
-    if ((sint32)((uint32)ticks - (uint32)gLastProcessTime[player]) > 1)
+    if ((ticks - gLastProcessTime[player]) > 1)
     {
         gLastProcessTime[player] = ticks;
         ProcessParticles(Vi, gSys.num[player], wpt, wd);

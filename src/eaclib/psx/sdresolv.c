@@ -21,7 +21,7 @@ sint32 iSNDplatformresolve(uint8 *tags, const uint8 *sampleData, void *sampleTab
         else if (tag == 0x82)
             channels = value;
         else if (tag == 0x85)
-            frames = (sint32)value;
+            frames = value;
     }
     if (sampleData == 0)
         return 7;
@@ -48,7 +48,7 @@ sint32 iSNDplatformresolve(uint8 *tags, const uint8 *sampleData, void *sampleTab
     sint32 blocks = frames / 28;
     if (frames != blocks * 28)
         ++blocks;
-    sint32 size = (sint32)(((uint32)(blocks)) * (channels << 4));
+    sint32 size = (((blocks)) * (channels << 4));
     sint32 address = iSNDpsxmalloc(size);
     if (address == 0)
         return -6;
@@ -95,6 +95,6 @@ sint32 iSNDplatformremove(uint8 *tags, void *sampleTable)
     memcpy(entry, &address, sizeof(address));
     memcpy(&address, sample, sizeof(address));
     if (address != 0)
-        iSNDpsxfree((sint32)address);
+        iSNDpsxfree(address);
     return 0;
 }

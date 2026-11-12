@@ -25,12 +25,11 @@ void iSNDdmtransfer(void)
         sndpd.active = 1;
         sndpd.completed = 0;
         uint32 priority = 0;
-        uint32 token = 0xFFFFFFFFu;
+        uint32 token = 0xFFFFFFFF;
         for (sint32 i = 0; i < 10; ++i)
         {
             const SoundDmaRequest *candidate = &(sndpd.requests[i]);
-            if (candidate->token != 0 &&
-                (candidate->priority > priority || (candidate->priority == priority && candidate->token < token)))
+            if (candidate->token != 0 && (candidate->priority > priority || (candidate->priority == priority && candidate->token < token)))
             {
                 sndpd.current = (sint8)i;
                 priority = candidate->priority;
@@ -46,12 +45,12 @@ void iSNDdmtransfer(void)
             if (callback != 0)
                 callback();
         }
-        request->deadline = sndgs.clock + 15u;
+        request->deadline = sndgs.clock + 15;
         WriteSoundRegister(0x1A6, request->destinationUnits);
         WriteSoundRegister(0x1AA, (ReadSoundRegister(0x1AA) & 0xFFCFu) | 0x20u);
 
-        uint32 address = (uint32)request->destinationUnits << 3;
-        uint32 rounded = (uint32)request->lengthUnits << 6;
+        uint32 address = request->destinationUnits << 3;
+        uint32 rounded = request->lengthUnits << 6;
         uint32 bytes = request->sourceBytes;
         if (bytes > rounded)
             abort();
@@ -60,7 +59,7 @@ void iSNDdmtransfer(void)
         if (rounded > bytes)
         {
             static const uint8 padding[64] = { 0 };
-            UploadSoundDmaSpan((address + bytes) & (SPU_RAM_SIZE - 1u), padding, rounded - bytes);
+            UploadSoundDmaSpan((address + bytes) & (SPU_RAM_SIZE - 1), padding, rounded - bytes);
         }
         sndpd.completed = 1;
     }
@@ -80,16 +79,16 @@ void iSNDdmcallback(void)
         iterations = iterations + 1;
     }
     uint32 control;
-    if (!spu_mmio_read(0, 0x1F801DAAu, 2, &control))
+    if (!spu_mmio_read(0, 0x1F801DAA, 2, &control))
         abort();
-    if (!spu_mmio_write(0, 0x1F801DAAu, 2, control & 0xFFCFu, 3))
+    if (!spu_mmio_write(0, 0x1F801DAA, 2, control & 0xFFCF, 3))
         abort();
-    if (!spu_mmio_read(0, 0x1F801DAAu, 2, &control))
+    if (!spu_mmio_read(0, 0x1F801DAA, 2, &control))
         abort();
     if ((control & 0x30u) != 0)
         for (sint32 poll = 1; poll < 4001; ++poll)
         {
-            if (!spu_mmio_read(0, 0x1F801DAAu, 2, &control))
+            if (!spu_mmio_read(0, 0x1F801DAA, 2, &control))
                 abort();
             if ((control & 0x30u) == 0)
                 break;
@@ -106,7 +105,7 @@ void iSNDdmcallback(void)
                 callback();
         }
         sndpd.requests[sndpd.current].token = 0;
-        sndpd.queued = (sint8)((uint8)sndpd.queued - 1u);
+        sndpd.queued = (sint8)((uint8)sndpd.queued - 1);
         if (sndpd.queued <= 0)
         {
             sndpd.active = 0;
@@ -132,7 +131,7 @@ void iSNDdmservice(void)
 uint32 iSNDdmqueue(const uint8 *source, sint32 spuAddress, sint32 size, sint32 priority, sint32 notify)
 {
     FUNCTION_MARKER(0x8010ACA0, "NFS4.EXE");
-    uint32 length = (uint32)size;
+    uint32 length = size;
     if ((length & 63u) != 0)
         length += 64u;
     sndpd.generation += 1u;
@@ -145,11 +144,11 @@ uint32 iSNDdmqueue(const uint8 *source, sint32 spuAddress, sint32 size, sint32 p
         SoundDmaRequest *request = &sndpd.requests[i];
         if (request->token == 0)
         {
-            sndpd.queued = (sint8)((uint8)sndpd.queued + 1u);
+            sndpd.queued = (sint8)((uint8)sndpd.queued + 1);
             request->source = source;
             request->token = sndpd.generation;
-            request->destinationUnits = (uint16)((uint32)spuAddress >> 3);
-            request->lengthUnits = (uint8)((sint32)length >> 6);
+            request->destinationUnits = (uint16)(spuAddress >> 3);
+            request->lengthUnits = (uint8)(length >> 6);
             request->priority = (uint8)priority;
             request->notify = (uint8)notify;
             request->sourceBytes = (uint16)size;
@@ -176,7 +175,7 @@ uint32 iSNDdmqueuesplit(const uint8 *source, sint32 spuAddress, sint32 size, sin
         request = iSNDdmqueue(source, spuAddress, chunk, priority, 0);
         source += chunk;
         size -= chunk;
-        spuAddress = (sint32)(((uint32)(spuAddress)) + ((uint32)(chunk)));
+        spuAddress = (((spuAddress)) + (chunk));
     }
     return request;
 }

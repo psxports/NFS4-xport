@@ -2,6 +2,7 @@
 #define COPSPEAK_H
 
 #include "xport.h"
+#include "eaclib/psx/nfile.h"
 #include "eaclib/psx/sststat.h"
 #include "game/common/car.h"
 
@@ -26,7 +27,7 @@ public:
         sint32 buffer;
         sint32 offset;
         sint32 size;
-        sint32 filehandle;
+        NativeFileSlot *filehandle;
         sint32 ophandle;
         sint32 phrase;
         char player;
@@ -37,7 +38,7 @@ public:
 
     struct tBank
     {
-        sint32 FileHandle;
+        NativeFileSlot *FileHandle;
         sint32 FileOpen;
         tFileIndex *Index;
         sint32 Count;
@@ -74,7 +75,7 @@ public:
     static void Cancel(void);
     static void CleanUp(void);
     static void InitVars(void);
-    static void DirectRequest(sint32 filehandle, sint32 offset, sint32 size, Car::tObj *car, char *name);
+    static void DirectRequest(NativeFileSlot *filehandle, sint32 offset, sint32 size, Car::tObj *car, char *name);
     static void GenericBankRequest(sint32 patch, Car::tObj *car);
     static void StartUp(void);
     static sint32 GetEnginePatch(sint32 type, sint32 timbre);

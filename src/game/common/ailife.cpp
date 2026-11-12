@@ -46,38 +46,38 @@ void AILife::RCPickSliceAndDirection(Car::tObj *carObj)
     uint32 seed = randSeed;
     uint32 firstRandom = fastRandom * seed;
     uint32 secondRandom = (firstRandom & 0xFFFFU) * seed;
-    uint32 basisIndex = ((uint32)Cars::gNumLifeBasisCars * ((firstRandom >> 8) & 0xFFFFU)) >> 16;
+    uint32 basisIndex = (Cars::gNumLifeBasisCars * ((firstRandom >> 8) & 0xFFFFU)) >> 16;
     randtemp = firstRandom;
-    fastRandom = firstRandom & 0xFFFFU;
+    fastRandom = firstRandom & 0xFFFF;
     randtemp = secondRandom;
-    fastRandom = secondRandom & 0xFFFFU;
+    fastRandom = secondRandom & 0xFFFF;
     carObj->basisCar = Cars::gLifeBasisCarList[basisIndex];
     sint32 approachSide = (((secondRandom >> 8) & 0xFFFFU) * 1000U >> 16) < 500U ? -1 : 1;
     sint32 basisSpeed = carObj->basisCar->currentSpeed;
     if (basisSpeed < 0)
-        basisSpeed = (sint32)(0U - (uint32)basisSpeed);
+        basisSpeed = (-basisSpeed);
     if (basisSpeed > 0x1E0000)
         approachSide = carObj->basisCar->direction;
     sint32 search = carObj->basisCar->sortIndex;
-    sint32 offset = (sint32)((uint32)approachSide * 36U);
+    sint32 offset = (approachSide * 36);
     sint32 count = 0;
     for (;;)
     {
         sint32 numCars = Cars::gNumCars;
         if (count >= numCars)
             break;
-        sint32 sortedIndex = (sint32)((uint32)search + (uint32)numCars) % numCars;
+        sint32 sortedIndex = (search + numCars) % numCars;
         Car::tObj *checkCar = Cars::gSortedList[sortedIndex];
         if (checkCar != carObj && checkCar != carObj->basisCar && (checkCar->carFlags & 0x100) != 0)
         {
-            sint32 basisOuterSlice = (sint32)((uint32)carObj->basisCar->N.simRoadInfo.slice + (uint32)offset);
+            sint32 basisOuterSlice = (carObj->basisCar->N.simRoadInfo.slice + offset);
             if (offset >= 0)
             {
                 if (basisOuterSlice >= gNumSlices)
-                    basisOuterSlice = (sint32)((uint32)basisOuterSlice - (uint32)gNumSlices);
+                    basisOuterSlice = (basisOuterSlice - gNumSlices);
             }
             else if (basisOuterSlice < 0)
-                basisOuterSlice = (sint32)((uint32)basisOuterSlice + (uint32)gNumSlices);
+                basisOuterSlice = (basisOuterSlice + gNumSlices);
             coorddef basisOuterCoord;
             basisOuterCoord.x = BWorldSm::slices[basisOuterSlice].center[0];
             basisOuterCoord.y = BWorldSm::slices[basisOuterSlice].center[1];
@@ -87,31 +87,31 @@ void AILife::RCPickSliceAndDirection(Car::tObj *carObj)
             {
                 sint32 distance = AIWorld::ApxSplineDistance(checkCar, carObj->basisCar);
                 if (distance < 0)
-                    distance = (sint32)((uint32)distance + 0xFFFFU);
-                sint32 directedDistance = (sint32)((uint32)approachSide * (uint32)(distance >> 16));
+                    distance = (distance + 0xFFFF);
+                sint32 directedDistance = (approachSide * (distance >> 16));
                 continuesOutward = directedDistance > 0;
             }
             if (!continuesOutward)
                 break;
             carObj->basisCar = checkCar;
         }
-        search = (sint32)((uint32)search + (uint32)approachSide);
-        count = (sint32)((uint32)count + 1U);
+        search = (search + approachSide);
+        count = (count + 1);
     }
     uint32 product = fastRandom * randSeed;
     randtemp = product;
-    fastRandom = product & 0xFFFFU;
+    fastRandom = product & 0xFFFF;
     carObj->direction = (((product >> 8) & 0xFFFFU) * 1000U >> 16) < 500U ? -1 : 1;
     if (AITune::oneWay != 0)
         carObj->direction = GameSetup::gData.reverseTrack == 0 ? 1 : -1;
     product = fastRandom * randSeed;
-    offset = (sint32)((((product >> 21) & 7U) + 28U) * (uint32)approachSide);
+    offset = ((((product >> 21) & 7U) + 28U) * approachSide);
     randtemp = product;
-    fastRandom = product & 0xFFFFU;
+    fastRandom = product & 0xFFFF;
     carObj->desiredDirection = carObj->direction;
     sint32 basisSlice = carObj->basisCar->N.simRoadInfo.slice;
-    uint32 newSlice = (uint32)(uint16)basisSlice + (uint32)offset;
-    sint32 signedSlice = (sint32)((uint32)basisSlice + (uint32)offset);
+    uint32 newSlice = ((uint16)basisSlice) + (uint32)offset;
+    sint32 signedSlice = (basisSlice + offset);
     if (offset >= 0)
     {
         if (signedSlice >= gNumSlices)
@@ -132,7 +132,7 @@ void AILife::RCPickDesiredLatPosition(Car::tObj *carObj)
     uint32 product = fastRandom * randSeed;
     sint32 width = (rightSide ? BWorldSm::slices[newSlice].avgPavedWidthRt : BWorldSm::slices[newSlice].avgPavedWidthLf) * 32768;
     randtemp = product;
-    fastRandom = product & 0xFFFFU;
+    fastRandom = product & 0xFFFF;
     uint32 laneCount = BWorldSm::slices[newSlice].laneCount;
     laneCount = rightSide ? laneCount & 15U : laneCount >> 4;
     sint32 randNumLanes = (sint32)((laneCount * ((product >> 8) & 0xFFFFU)) >> 16) + 1;
@@ -142,7 +142,7 @@ void AILife::RCPickDesiredLatPosition(Car::tObj *carObj)
     else
         lateralPosition = -width * randNumLanes + width / 2;
     carObj->desiredLatPos = lateralPosition;
-    lateralPosition = (sint32)((uint32)carObj->desiredLatPos + (uint32)carObj->laneSlack);
+    lateralPosition = (carObj->desiredLatPos + carObj->laneSlack);
     carObj->desiredLatPos = lateralPosition;
     carObj->rampDesiredLatPos = lateralPosition;
 }
@@ -188,7 +188,7 @@ void AILife::PlaceCarAtLocation(Car::tObj *carObj, sint32 rotation1024)
         targetDirection.z = carObj->N.orientMat.m[8];
         sint32 speed = carObj->currentSpeed;
         if (speed < 0)
-            speed = (sint32)(0U - (uint32)speed);
+            speed = (-speed);
         targetDirection.x = fixedmult(speed, targetDirection.x);
         targetDirection.y = fixedmult(speed, targetDirection.y);
         targetDirection.z = fixedmult(speed, targetDirection.z);
@@ -224,9 +224,9 @@ void AILife::ReencarnateTraffic(Car::tObj *carObj)
     FUNCTION_MARKER(0x80067EE4, "NFS4.EXE");
     uint32 product = fastRandom * randSeed;
     randtemp = product;
-    fastRandom = product & 0xFFFFU;
+    fastRandom = product & 0xFFFF;
     if ((carObj->carFlags & 0x10) != 0)
-        R3DCar::ChangeTrafficColor(carObj, (sint32)((((product >> 8) & 0xFFFFU) * 3U) >> 16));
+        R3DCar::ChangeTrafficColor(carObj, ((((product >> 8) & 0xFFFFU) * 3U) >> 16));
     AI::ChooseNewLaneSlack(carObj);
     AISpeeds::SetTrafficSpeedRandomFactor(carObj);
     RCPickSliceAndDirection(carObj);
@@ -242,9 +242,9 @@ void AILife::ReencarnateTrafficByPosition(Car::tObj *carObj, sint32 slice, sint3
     coorddef offset = { 0, 0, 0 };
     uint32 product = fastRandom * randSeed;
     randtemp = product;
-    fastRandom = product & 0xFFFFU;
+    fastRandom = product & 0xFFFF;
     if ((carObj->carFlags & 0x10) != 0)
-        R3DCar::ChangeTrafficColor(carObj, (sint32)((((product >> 8) & 0xFFFFU) * 3U) >> 16));
+        R3DCar::ChangeTrafficColor(carObj, ((((product >> 8) & 0xFFFFU) * 3U) >> 16));
     AI::ChooseNewLaneSlack(carObj);
     AISpeeds::SetTrafficSpeedRandomFactor(carObj);
     carObj->basisCar = 0;
@@ -416,7 +416,7 @@ void AILife::ReencarnateCopByLatPosAndRotation(Car::tObj *carObj, sint32 slice, 
     carObj->desiredSpeed = 0;
     carObj->currentSpeed = 0;
     AIPhysic::ResetCar(carObj);
-    offset.x = (sint32)((uint32)latPos * (uint32)carObj->direction);
+    offset.x = (latPos * carObj->direction);
     Newton::SetInitialSlicePositionOrientationEtc(&carObj->N, carObj->N.simRoadInfo.slice, &offset, carObj->direction);
     matrixtdef rotMatrix;
     xformy(&rotMatrix, rotation1024);
@@ -446,23 +446,23 @@ void AILife::ReencarnateCopByLatPosAndRotation(Car::tObj *carObj, sint32 slice, 
 sint32 AILife::IsCoordInThisLiveArea(coorddef *tPos, Car::tObj *racer)
 {
     FUNCTION_MARKER(0x80068658, "NFS4.EXE");
-    sint32 zD = (sint32)((uint32)tPos->z - (uint32)racer->N.position.z);
-    sint32 xD = (sint32)((uint32)tPos->x - (uint32)racer->N.position.x);
+    sint32 zD = (tPos->z - racer->N.position.z);
+    sint32 xD = (tPos->x - racer->N.position.x);
     if (zD < 0)
-        zD = (sint32)(0U - (uint32)zD);
+        zD = (-zD);
     if (xD < 0)
-        xD = (sint32)(0U - (uint32)xD);
+        xD = (-xD);
     sint32 dist;
     if (zD < xD)
-        dist = (sint32)((uint32)xD + (uint32)(zD >> 2));
+        dist = (xD + (zD >> 2));
     else
-        dist = (sint32)((uint32)zD + (uint32)(xD >> 2));
+        dist = (zD + (xD >> 2));
     if (dist <= 0xD80000)
         return 1;
-    sint64 product = (sint64)dist * (sint32)0x80008001U;
+    sint64 product = (sint64)dist * (sint32)0x80008001;
     sint32 highProduct = (sint32)(product >> 32);
-    sint32 numerator = (sint32)((uint32)highProduct + (uint32)dist);
-    sint32 displayDistance = (sint32)((uint32)(numerator >> 15) - (uint32)(dist >> 31));
+    sint32 numerator = (highProduct + dist);
+    sint32 displayDistance = (((numerator >> 15)) - (dist >> 31));
     char format[] = "dist=%d";
     Debug(format, displayDistance);
     return 0;
@@ -479,7 +479,7 @@ Car::tObj * AILife::IsTrafficCarInAnyLiveArea(Car::tObj *traffic)
     do
     {
         sint32 inLiveArea = IsCoordInThisLiveArea(tPos, *basisCar);
-        racerLoop = (sint32)((uint32)racerLoop + 1U);
+        racerLoop = (racerLoop + 1);
         if (inLiveArea != 0)
             return *basisCar;
         ++basisCar;
@@ -490,17 +490,17 @@ Car::tObj * AILife::IsTrafficCarInAnyLiveArea(Car::tObj *traffic)
 sint32 AILife::IsCoordInThisVisibleArea(coorddef *tPos, Car::tObj *racer)
 {
     FUNCTION_MARKER(0x80068788, "NFS4.EXE");
-    sint32 zD = (sint32)((uint32)tPos->z - (uint32)racer->N.position.z);
-    sint32 xD = (sint32)((uint32)tPos->x - (uint32)racer->N.position.x);
+    sint32 zD = (tPos->z - racer->N.position.z);
+    sint32 xD = (tPos->x - racer->N.position.x);
     if (zD < 0)
-        zD = (sint32)(0U - (uint32)zD);
+        zD = (-zD);
     if (xD < 0)
-        xD = (sint32)(0U - (uint32)xD);
+        xD = (-xD);
     sint32 dist;
     if (zD < xD)
-        dist = (sint32)((uint32)xD + (uint32)(zD >> 2));
+        dist = (xD + (zD >> 2));
     else
-        dist = (sint32)((uint32)zD + (uint32)(xD >> 2));
+        dist = (zD + (xD >> 2));
     return dist <= 0xAC0000;
 }
 
@@ -519,11 +519,11 @@ Car::tObj * AILife::IsSliceInAnyVisibleArea(sint32 slice)
     {
         sint32 sliceDist = AIWorld::ApxSplineDistance((*car)->N.simRoadInfo.slice, slice);
         if (sliceDist < 0)
-            sliceDist = (sint32)(0U - (uint32)sliceDist);
+            sliceDist = (-sliceDist);
         if (sliceDist < 0xAC0000)
             return *car;
         ++car;
-        racerLoop = (sint32)((uint32)racerLoop + 1U);
+        racerLoop = (racerLoop + 1);
     }
     return 0;
 }
@@ -537,11 +537,11 @@ Car::tObj * AILife::IsSliceCloseToAnyCopCar(sint32 slice)
     {
         sint32 sliceDist = AIWorld::ApxSplineDistance((*car)->N.simRoadInfo.slice, slice);
         if (sliceDist < 0)
-            sliceDist = (sint32)(0U - (uint32)sliceDist);
+            sliceDist = (-sliceDist);
         if (sliceDist < 0x320000)
             return *car;
         ++car;
-        copLoop = (sint32)((uint32)copLoop + 1U);
+        copLoop = (copLoop + 1);
     }
     return 0;
 }
@@ -556,7 +556,7 @@ Car::tObj * AILife::IsPositionInAnyVisibleArea(coorddef *pos)
     do
     {
         sint32 inVisibleArea = IsCoordInThisVisibleArea(pos, *racer);
-        racerLoop = (sint32)((uint32)racerLoop + 1U);
+        racerLoop = (racerLoop + 1);
         if (inVisibleArea != 0)
             return *racer;
         ++racer;
@@ -567,5 +567,4 @@ Car::tObj * AILife::IsPositionInAnyVisibleArea(coorddef *pos)
 void AILife::Debug(char *format, ...)
 {
     FUNCTION_MARKER(0x800689D0, "NFS4.EXE");
-    (void)format;
 }

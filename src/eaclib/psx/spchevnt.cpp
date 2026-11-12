@@ -88,10 +88,10 @@ sint32 iSPCH::FindEventSlot(uint32 priority)
     {
         SPCHEventSlot *slot = &gVoxEvents.slots[i];
         uint32 age = slot->definition->maxAge;
-        if (age != 0 && age < (uint32)tick - (uint32)slot->tick)
+        if (age != 0 && age < tick - (uint32)slot->tick)
         {
             slot->active = 0;
-            gVoxEvents.count = (sint32)((uint32)gVoxEvents.count - 1);
+            gVoxEvents.count = (gVoxEvents.count - 1);
             return i;
         }
     }
@@ -101,7 +101,7 @@ sint32 iSPCH::FindEventSlot(uint32 priority)
         if (priority >= slot->definition->priority)
         {
             slot->active = 0;
-            gVoxEvents.count = (sint32)((uint32)gVoxEvents.count - 1);
+            gVoxEvents.count = (gVoxEvents.count - 1);
             return i;
         }
     }
@@ -132,7 +132,7 @@ sint32 SPCH::AddEvent(sint32 *parameters)
     slot->subTick = gLastSubTick;
     for (sint32 i = 0; i < 12; ++i)
         slot->parameters[i] = parameters[i];
-    gVoxEvents.count = (sint32)((uint32)gVoxEvents.count + 1);
+    gVoxEvents.count = (gVoxEvents.count + 1);
     slot->active = 1;
     return 0;
 }
@@ -140,10 +140,10 @@ sint32 SPCH::AddEvent(sint32 *parameters)
 sint32 iSPCH::ChooseEvent(void)
 {
     FUNCTION_MARKER(0x800E7300, "NFS4.EXE");
-    uint32 tick = (uint32)gettick() + (uint32)gPreLoadTicks;
+    uint32 tick = gettick() + (uint32)gPreLoadTicks;
     sint32 selected = -1;
     sint32 bestPriority = 0;
-    uint32 bestAge = 0xFFFFFFFFu;
+    uint32 bestAge = 0xFFFFFFFF;
     uint16 bestSubTick = 0;
     for (sint32 i = 0; i < 16; ++i)
     {
@@ -151,7 +151,7 @@ sint32 iSPCH::ChooseEvent(void)
         if (slot->active != 0)
         {
             SPCHEventDefinitionPrefix *definition = slot->definition;
-            uint32 age = tick - (uint32)slot->tick;
+            uint32 age = tick - slot->tick;
             uint32 maxAge = definition->maxAge;
             bool expired = maxAge != 0 && maxAge < age;
             bool filtered = false;
@@ -160,13 +160,12 @@ sint32 iSPCH::ChooseEvent(void)
             if (expired || filtered)
             {
                 slot->active = 0;
-                gVoxEvents.count = (sint32)((uint32)gVoxEvents.count - 1);
+                gVoxEvents.count = (gVoxEvents.count - 1);
             }
             else
             {
                 sint32 priority = definition->priority;
-                if (priority > bestPriority || (priority == bestPriority &&
-                    (age < bestAge || (age == bestAge && slot->subTick > bestSubTick))))
+                if (priority > bestPriority || (priority == bestPriority && (age < bestAge || (age == bestAge && slot->subTick > bestSubTick))))
                 {
                     selected = i;
                     bestPriority = priority;
@@ -188,7 +187,7 @@ void SPCH::ClearEventQueue(void)
         if (slot->active != 0)
         {
             slot->active = 0;
-            gVoxEvents.count = (sint32)((uint32)gVoxEvents.count - 1);
+            gVoxEvents.count = (gVoxEvents.count - 1);
         }
     }
 }
@@ -196,7 +195,7 @@ void SPCH::ClearEventQueue(void)
 void iSPCH::ClearOldEvents(sint32 selected)
 {
     FUNCTION_MARKER(0x800E7528, "NFS4.EXE");
-    uint32 tick = (uint32)gVoxEvents.slots[selected].tick;
+    uint32 tick = gVoxEvents.slots[selected].tick;
     uint16 subTick = gVoxEvents.slots[selected].subTick;
     gVoxEvents.unknown4 = 0;
     for (sint32 i = 0; i < 16; ++i)
@@ -204,13 +203,13 @@ void iSPCH::ClearOldEvents(sint32 selected)
         SPCHEventSlot *slot = &gVoxEvents.slots[i];
         if (i != selected && slot->active != 0)
         {
-            uint32 otherTick = (uint32)slot->tick;
+            uint32 otherTick = slot->tick;
             if (otherTick < tick || (otherTick == tick && slot->subTick < subTick))
             {
                 if ((slot->definition->flags & 4) == 0)
                 {
                     slot->active = 0;
-                    gVoxEvents.count = (sint32)((uint32)gVoxEvents.count - 1);
+                    gVoxEvents.count = (gVoxEvents.count - 1);
                 }
             }
             else if (slot->definition->probability == 100)
@@ -247,12 +246,12 @@ sint32 SPCH::ChooseSpeech(void)
                     status = gReparm(attempt, parameters);
                     if (status >= 0)
                         result = iSPCH::ChooseSentence(parameters);
-                    attempt = (sint32)((uint32)attempt + 1);
+                    attempt = (attempt + 1);
                 } while (result == 0 && status > 0);
             }
             if (result < 0)
                 result = 0;
-            gVoxEvents.count = (sint32)((uint32)gVoxEvents.count - 1);
+            gVoxEvents.count = (gVoxEvents.count - 1);
             gVoxEvents.slots[selected].active = 0;
         }
     }

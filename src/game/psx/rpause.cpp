@@ -50,5 +50,5 @@ void RPause::StopPauseMenu(void)
     uint32 *ot = view->ot[frame];
     DrawOTag(ot + otsize - 1);
     systemtask(0);
-    gFlip = (sint32)(1U - (uint32)gFlip);
+    gFlip = (1 - gFlip);
 }

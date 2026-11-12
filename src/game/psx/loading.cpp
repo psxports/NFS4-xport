@@ -18,8 +18,7 @@ void Loading::DrawLoadingScreen(void)
     FUNCTION_MARKER(0x800DB0B8, "NFS4.EXE");
     char name[255];
     sint32 language = GameSetup::gData.userSetting.language;
-    sprintf(name, "%sLoad%d%c.qps", Paths_Paths[25], GameSetup::gData.track,
-        (sint32)((uint32)GameSetup::gData.mirrorTrack + 97U));
+    sprintf(name, "%sLoad%d%c.qps", Paths_Paths[25], GameSetup::gData.track, (GameSetup::gData.mirrorTrack + 97));
     void *f = loadshapeadr(name, 0);
     sprintf(name, "%sLoada.psh", Paths_Paths[25]);
     void *g = loadshapeadr(name, 0);
@@ -43,11 +42,11 @@ void Loading::UpdateLoadingScreen(sint32 checkpoint)
         smallShapeFile = static_cast<char *>(loadshapeadr(name, 16));
     }
     const sint32 max = 23;
-    uint32 start = ((uint32)checkpoint - 1U) * 23U;
+    uint32 start = (checkpoint - 1U) * 23U;
     for (sint32 i = 0; i < max; ++i)
     {
         shapetbl *s = static_cast<shapetbl *>(locateshape(smallShapeFile, "back"));
-        Draw::DrawDirectScreen(s, (sint32)(start + (uint32)i + 142U), 192);
+        Draw::DrawDirectScreen(s, (start + i + 142U), 192);
     }
     if (checkpoint == 10 && smallShapeFile != 0)
     {

@@ -69,7 +69,7 @@ char * TextSys::Word(sint32 wordnum)
 {
     FUNCTION_MARKER(0x800B9250, "NFS4.EXE");
 
-    sint32 recordOffset = (sint32)((uint32)wordnum * 12 + 8);
+    sint32 recordOffset = ((wordnum * 12) + 8);
     sint32 textOffset;
     memcpy(&textOffset, wordFile + recordOffset, sizeof(textOffset));
     return wordFile + textOffset;
@@ -79,7 +79,7 @@ sint32 TextSys::WordFlags(sint32 wordnum)
 {
     FUNCTION_MARKER(0x800B9270, "NFS4.EXE");
 
-    sint32 offset = (sint32)((uint32)wordnum * 12 + 3);
+    sint32 offset = ((wordnum * 12) + 3);
     return (uint8)wordFile[offset];
 }
 
@@ -87,7 +87,7 @@ sint32 TextSys::WordX(sint32 wordnum)
 {
     FUNCTION_MARKER(0x800B9290, "NFS4.EXE");
 
-    sint32 offset = (sint32)((uint32)wordnum * 12 + 4);
+    sint32 offset = ((wordnum * 12) + 4);
     sint16 x;
     memcpy(&x, wordFile + offset, sizeof(x));
     return x;
@@ -97,7 +97,7 @@ sint32 TextSys::WordY(sint32 wordnum)
 {
     FUNCTION_MARKER(0x800B92B0, "NFS4.EXE");
 
-    sint32 offset = (sint32)((uint32)wordnum * 12 + 6);
+    sint32 offset = ((wordnum * 12) + 6);
     sint16 y;
     memcpy(&y, wordFile + offset, sizeof(y));
     return y;

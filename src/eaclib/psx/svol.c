@@ -8,7 +8,7 @@ sint32 iSNDunsafevol(sint32 handle, sint32 volume)
     if (channel >= 0)
     {
         sint32 cursor = -1;
-        sint32 target = (sint32)(((uint32)(volume)) << 16);
+        sint32 target = (((uint32)(volume)) << 16);
         while (iSNDpatchkey(channel, &cursor) != 0)
         {
             SoundVoicePrefix *voice = &((SoundVoicePrefix *)(sndgs.voiceMemory))[cursor];

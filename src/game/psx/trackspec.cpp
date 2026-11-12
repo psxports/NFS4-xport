@@ -23,8 +23,7 @@ void read(char **handle, void *buf, sint32 bytes)
     FUNCTION_MARKER(0x800E17A0, "NFS4.EXE");
     char *source = *handle;
     char *dest = static_cast<char *>(buf);
-    for (sint32 i = 0; i < bytes; ++i)
-        *dest++ = *source++;
+    for (sint32 i = 0; i < bytes; ++i) *dest++ = *source++;
     *handle = source;
 }
 
@@ -114,8 +113,8 @@ void TrackSpec::Read(sint32 spec_num)
         CTrackSpecHeader header;
         read(&currentpos, &header, 8);
         if (spec_num < header.num_spec) {
-            gMaxSpec = (sint32)((uint32)header.num_spec + 1);
-            currentpos += (sint32)((uint32)spec_num * 0x108);
+            gMaxSpec = (header.num_spec + 1);
+            currentpos += (spec_num * 0x108);
             read(&currentpos, &gSpec, 0x108);
             SetUp();
         } else {

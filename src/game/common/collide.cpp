@@ -60,170 +60,98 @@ bool CollisionCopFlag(const BO::tNewtonObj *obj)
 sint32 CHECK_CENTER_VERTEX_WITH_DIRS(sint32 X_DIR, sint32 Y_DIR, sint32 Z_DIR)
 {
     FUNCTION_MARKER(0x8008BA70, "NFS4.EXE");
-    xRange = (sint32)((uint32)X_DIR * (uint32)scaledBasisDots[0] +
-        (uint32)Y_DIR * (uint32)scaledBasisDots[1] +
-        (uint32)Z_DIR * (uint32)scaledBasisDots[2] + (uint32)basisDotRelative[0]);
-    yRange = (sint32)((uint32)X_DIR * (uint32)scaledBasisDots[3] +
-        (uint32)Y_DIR * (uint32)scaledBasisDots[4] +
-        (uint32)Z_DIR * (uint32)scaledBasisDots[5] + (uint32)basisDotRelative[1]);
-    zRange = (sint32)((uint32)X_DIR * (uint32)scaledBasisDots[6] +
-        (uint32)Y_DIR * (uint32)scaledBasisDots[7] +
-        (uint32)Z_DIR * (uint32)scaledBasisDots[8] + (uint32)basisDotRelative[2]);
+    xRange = ((((X_DIR * scaledBasisDots[0]) + (Y_DIR * scaledBasisDots[1])) + (Z_DIR * scaledBasisDots[2])) + basisDotRelative[0]);
+    yRange = ((((X_DIR * scaledBasisDots[3]) + (Y_DIR * scaledBasisDots[4])) + (Z_DIR * scaledBasisDots[5])) + basisDotRelative[1]);
+    zRange = ((((X_DIR * scaledBasisDots[6]) + (Y_DIR * scaledBasisDots[7])) + (Z_DIR * scaledBasisDots[8])) + basisDotRelative[2]);
     BO::tNewtonObj *bounds = obj0;
     sint32 dimension = bounds->dimension.z;
-    if (zRange > dimension || zRange < (sint32)(0U - (uint32)dimension))
+    if (zRange > dimension || zRange < -dimension)
         return 0;
     dimension = bounds->dimension.x;
-    if (xRange > dimension || xRange < (sint32)(0U - (uint32)dimension))
+    if (xRange > dimension || xRange < -dimension)
         return 0;
     dimension = bounds->dimension.y;
-    if (yRange > dimension || yRange < (sint32)(0U - (uint32)dimension))
+    if (yRange > dimension || yRange < -dimension)
         return 0;
     BO::tNewtonObj *vertex = obj1;
-    pNormal->x = (sint32)((uint32)X_DIR * (uint32)vertex->orientMat.m[0] +
-        (uint32)Y_DIR * (uint32)vertex->orientMat.m[3] +
-        (uint32)Z_DIR * (uint32)vertex->orientMat.m[6]);
-    pNormal->y = (sint32)((uint32)X_DIR * (uint32)vertex->orientMat.m[1] +
-        (uint32)Y_DIR * (uint32)vertex->orientMat.m[4] +
-        (uint32)Z_DIR * (uint32)vertex->orientMat.m[7]);
-    pNormal->z = (sint32)((uint32)X_DIR * (uint32)vertex->orientMat.m[2] +
-        (uint32)Y_DIR * (uint32)vertex->orientMat.m[5] +
-        (uint32)Z_DIR * (uint32)vertex->orientMat.m[8]);
-    pP->x = (sint32)((uint32)vertex->position.x +
-        (uint32)X_DIR * (uint32)(vertex->orientMat.m[0] / 256) * (uint32)(vertex->dimension.x / 256) +
-        (uint32)Y_DIR * (uint32)(vertex->orientMat.m[3] / 256) * (uint32)(vertex->dimension.y / 256) +
-        (uint32)Z_DIR * (uint32)(vertex->orientMat.m[6] / 256) * (uint32)(vertex->dimension.z / 256));
-    pP->y = (sint32)((uint32)vertex->position.y +
-        (uint32)X_DIR * (uint32)(vertex->orientMat.m[1] / 256) * (uint32)(vertex->dimension.x / 256) +
-        (uint32)Y_DIR * (uint32)(vertex->orientMat.m[4] / 256) * (uint32)(vertex->dimension.y / 256) +
-        (uint32)Z_DIR * (uint32)(vertex->orientMat.m[7] / 256) * (uint32)(vertex->dimension.z / 256));
-    pP->z = (sint32)((uint32)vertex->position.z +
-        (uint32)X_DIR * (uint32)(vertex->orientMat.m[2] / 256) * (uint32)(vertex->dimension.x / 256) +
-        (uint32)Y_DIR * (uint32)(vertex->orientMat.m[5] / 256) * (uint32)(vertex->dimension.y / 256) +
-        (uint32)Z_DIR * (uint32)(vertex->orientMat.m[8] / 256) * (uint32)(vertex->dimension.z / 256));
+    pNormal->x = (((X_DIR * vertex->orientMat.m[0]) + (Y_DIR * vertex->orientMat.m[3])) + (Z_DIR * vertex->orientMat.m[6]));
+    pNormal->y = (((X_DIR * vertex->orientMat.m[1]) + (Y_DIR * vertex->orientMat.m[4])) + (Z_DIR * vertex->orientMat.m[7]));
+    pNormal->z = (((X_DIR * vertex->orientMat.m[2]) + (Y_DIR * vertex->orientMat.m[5])) + (Z_DIR * vertex->orientMat.m[8]));
+    pP->x = (((vertex->position.x + ((X_DIR * (vertex->orientMat.m[0] / 256)) * (vertex->dimension.x / 256))) + ((Y_DIR * (vertex->orientMat.m[3] / 256)) * (vertex->dimension.y / 256))) + ((Z_DIR * (vertex->orientMat.m[6] / 256)) * (vertex->dimension.z / 256)));
+    pP->y = (((vertex->position.y + ((X_DIR * (vertex->orientMat.m[1] / 256)) * (vertex->dimension.x / 256))) + ((Y_DIR * (vertex->orientMat.m[4] / 256)) * (vertex->dimension.y / 256))) + ((Z_DIR * (vertex->orientMat.m[7] / 256)) * (vertex->dimension.z / 256)));
+    pP->z = (((vertex->position.z + ((X_DIR * (vertex->orientMat.m[2] / 256)) * (vertex->dimension.x / 256))) + ((Y_DIR * (vertex->orientMat.m[5] / 256)) * (vertex->dimension.y / 256))) + ((Z_DIR * (vertex->orientMat.m[8] / 256)) * (vertex->dimension.z / 256)));
     return 1;
 }
 
 sint32 CHECK_CENTER_VERTEX_WITH_DIRS_OTHER(sint32 X_DIR, sint32 Y_DIR, sint32 Z_DIR)
 {
     FUNCTION_MARKER(0x8008BEF0, "NFS4.EXE");
-    xRange = (sint32)((uint32)X_DIR * (uint32)scaledBasisDotsOther[0] +
-        (uint32)Y_DIR * (uint32)scaledBasisDotsOther[3] +
-        (uint32)Z_DIR * (uint32)scaledBasisDotsOther[6] - (uint32)basisDotRelative[3]);
-    yRange = (sint32)((uint32)X_DIR * (uint32)scaledBasisDotsOther[1] +
-        (uint32)Y_DIR * (uint32)scaledBasisDotsOther[4] +
-        (uint32)Z_DIR * (uint32)scaledBasisDotsOther[7] - (uint32)basisDotRelative[4]);
-    zRange = (sint32)((uint32)X_DIR * (uint32)scaledBasisDotsOther[2] +
-        (uint32)Y_DIR * (uint32)scaledBasisDotsOther[5] +
-        (uint32)Z_DIR * (uint32)scaledBasisDotsOther[8] - (uint32)basisDotRelative[5]);
+    xRange = ((((X_DIR * scaledBasisDotsOther[0]) + (Y_DIR * scaledBasisDotsOther[3])) + (Z_DIR * scaledBasisDotsOther[6])) - basisDotRelative[3]);
+    yRange = ((((X_DIR * scaledBasisDotsOther[1]) + (Y_DIR * scaledBasisDotsOther[4])) + (Z_DIR * scaledBasisDotsOther[7])) - basisDotRelative[4]);
+    zRange = ((((X_DIR * scaledBasisDotsOther[2]) + (Y_DIR * scaledBasisDotsOther[5])) + (Z_DIR * scaledBasisDotsOther[8])) - basisDotRelative[5]);
     BO::tNewtonObj *bounds = obj1;
     sint32 dimension = bounds->dimension.z;
-    if (zRange > dimension || zRange < (sint32)(0U - (uint32)dimension))
+    if (zRange > dimension || zRange < -dimension)
         return 0;
     dimension = bounds->dimension.x;
-    if (xRange > dimension || xRange < (sint32)(0U - (uint32)dimension))
+    if (xRange > dimension || xRange < -dimension)
         return 0;
     dimension = bounds->dimension.y;
-    if (yRange > dimension || yRange < (sint32)(0U - (uint32)dimension))
+    if (yRange > dimension || yRange < -dimension)
         return 0;
     BO::tNewtonObj *vertex = obj0;
-    pNormal->x = (sint32)(0U - ((uint32)X_DIR * (uint32)vertex->orientMat.m[0] +
-        (uint32)Y_DIR * (uint32)vertex->orientMat.m[3] +
-        (uint32)Z_DIR * (uint32)vertex->orientMat.m[6]));
-    pNormal->y = (sint32)(0U - ((uint32)X_DIR * (uint32)vertex->orientMat.m[1] +
-        (uint32)Y_DIR * (uint32)vertex->orientMat.m[4] +
-        (uint32)Z_DIR * (uint32)vertex->orientMat.m[7]));
-    pNormal->z = (sint32)(0U - ((uint32)X_DIR * (uint32)vertex->orientMat.m[2] +
-        (uint32)Y_DIR * (uint32)vertex->orientMat.m[5] +
-        (uint32)Z_DIR * (uint32)vertex->orientMat.m[8]));
-    pP->x = (sint32)((uint32)vertex->position.x +
-        (uint32)X_DIR * (uint32)(vertex->orientMat.m[0] / 256) * (uint32)(vertex->dimension.x / 256) +
-        (uint32)Y_DIR * (uint32)(vertex->orientMat.m[3] / 256) * (uint32)(vertex->dimension.y / 256) +
-        (uint32)Z_DIR * (uint32)(vertex->orientMat.m[6] / 256) * (uint32)(vertex->dimension.z / 256));
-    pP->y = (sint32)((uint32)vertex->position.y +
-        (uint32)X_DIR * (uint32)(vertex->orientMat.m[1] / 256) * (uint32)(vertex->dimension.x / 256) +
-        (uint32)Y_DIR * (uint32)(vertex->orientMat.m[4] / 256) * (uint32)(vertex->dimension.y / 256) +
-        (uint32)Z_DIR * (uint32)(vertex->orientMat.m[7] / 256) * (uint32)(vertex->dimension.z / 256));
-    pP->z = (sint32)((uint32)vertex->position.z +
-        (uint32)X_DIR * (uint32)(vertex->orientMat.m[2] / 256) * (uint32)(vertex->dimension.x / 256) +
-        (uint32)Y_DIR * (uint32)(vertex->orientMat.m[5] / 256) * (uint32)(vertex->dimension.y / 256) +
-        (uint32)Z_DIR * (uint32)(vertex->orientMat.m[8] / 256) * (uint32)(vertex->dimension.z / 256));
+    pNormal->x = (-(((X_DIR * vertex->orientMat.m[0]) + (Y_DIR * vertex->orientMat.m[3])) + (Z_DIR * vertex->orientMat.m[6])));
+    pNormal->y = (-(((X_DIR * vertex->orientMat.m[1]) + (Y_DIR * vertex->orientMat.m[4])) + (Z_DIR * vertex->orientMat.m[7])));
+    pNormal->z = (-(((X_DIR * vertex->orientMat.m[2]) + (Y_DIR * vertex->orientMat.m[5])) + (Z_DIR * vertex->orientMat.m[8])));
+    pP->x = (((vertex->position.x + ((X_DIR * (vertex->orientMat.m[0] / 256)) * (vertex->dimension.x / 256))) + ((Y_DIR * (vertex->orientMat.m[3] / 256)) * (vertex->dimension.y / 256))) + ((Z_DIR * (vertex->orientMat.m[6] / 256)) * (vertex->dimension.z / 256)));
+    pP->y = (((vertex->position.y + ((X_DIR * (vertex->orientMat.m[1] / 256)) * (vertex->dimension.x / 256))) + ((Y_DIR * (vertex->orientMat.m[4] / 256)) * (vertex->dimension.y / 256))) + ((Z_DIR * (vertex->orientMat.m[7] / 256)) * (vertex->dimension.z / 256)));
+    pP->z = (((vertex->position.z + ((X_DIR * (vertex->orientMat.m[2] / 256)) * (vertex->dimension.x / 256))) + ((Y_DIR * (vertex->orientMat.m[5] / 256)) * (vertex->dimension.y / 256))) + ((Z_DIR * (vertex->orientMat.m[8] / 256)) * (vertex->dimension.z / 256)));
     return 1;
 }
 
 sint32 CHECK_VERTEX_WITH_DIRS(sint32 X_DIR, sint32 Y_DIR, sint32 Z_DIR)
 {
     FUNCTION_MARKER(0x8008C37C, "NFS4.EXE");
-    xRange = (sint32)((uint32)X_DIR * (uint32)scaledBasisDots[0] +
-        (uint32)Y_DIR * (uint32)scaledBasisDots[1] +
-        (uint32)Z_DIR * (uint32)scaledBasisDots[2] + (uint32)basisDotRelative[0]);
-    yRange = (sint32)((uint32)X_DIR * (uint32)scaledBasisDots[3] +
-        (uint32)Y_DIR * (uint32)scaledBasisDots[4] +
-        (uint32)Z_DIR * (uint32)scaledBasisDots[5] + (uint32)basisDotRelative[1]);
-    zRange = (sint32)((uint32)X_DIR * (uint32)scaledBasisDots[6] +
-        (uint32)Y_DIR * (uint32)scaledBasisDots[7] +
-        (uint32)Z_DIR * (uint32)scaledBasisDots[8] + (uint32)basisDotRelative[2]);
+    xRange = ((((X_DIR * scaledBasisDots[0]) + (Y_DIR * scaledBasisDots[1])) + (Z_DIR * scaledBasisDots[2])) + basisDotRelative[0]);
+    yRange = ((((X_DIR * scaledBasisDots[3]) + (Y_DIR * scaledBasisDots[4])) + (Z_DIR * scaledBasisDots[5])) + basisDotRelative[1]);
+    zRange = ((((X_DIR * scaledBasisDots[6]) + (Y_DIR * scaledBasisDots[7])) + (Z_DIR * scaledBasisDots[8])) + basisDotRelative[2]);
     BO::tNewtonObj *bounds = obj0;
     sint32 dimension = bounds->dimension.z;
-    if (zRange > dimension || zRange < (sint32)(0U - (uint32)dimension))
+    if (zRange > dimension || zRange < -dimension)
         return 0;
     dimension = bounds->dimension.x;
-    if (xRange > dimension || xRange < (sint32)(0U - (uint32)dimension))
+    if (xRange > dimension || xRange < -dimension)
         return 0;
     dimension = bounds->dimension.y;
-    if (yRange > dimension || yRange < (sint32)(0U - (uint32)dimension))
+    if (yRange > dimension || yRange < -dimension)
         return 0;
     BO::tNewtonObj *vertex = obj1;
-    pP->x = (sint32)((uint32)vertex->position.x +
-        (uint32)X_DIR * (uint32)(vertex->orientMat.m[0] / 256) * (uint32)(vertex->dimension.x / 256) +
-        (uint32)Y_DIR * (uint32)(vertex->orientMat.m[3] / 256) * (uint32)(vertex->dimension.y / 256) +
-        (uint32)Z_DIR * (uint32)(vertex->orientMat.m[6] / 256) * (uint32)(vertex->dimension.z / 256));
-    pP->y = (sint32)((uint32)vertex->position.y +
-        (uint32)X_DIR * (uint32)(vertex->orientMat.m[1] / 256) * (uint32)(vertex->dimension.x / 256) +
-        (uint32)Y_DIR * (uint32)(vertex->orientMat.m[4] / 256) * (uint32)(vertex->dimension.y / 256) +
-        (uint32)Z_DIR * (uint32)(vertex->orientMat.m[7] / 256) * (uint32)(vertex->dimension.z / 256));
-    pP->z = (sint32)((uint32)vertex->position.z +
-        (uint32)X_DIR * (uint32)(vertex->orientMat.m[2] / 256) * (uint32)(vertex->dimension.x / 256) +
-        (uint32)Y_DIR * (uint32)(vertex->orientMat.m[5] / 256) * (uint32)(vertex->dimension.y / 256) +
-        (uint32)Z_DIR * (uint32)(vertex->orientMat.m[8] / 256) * (uint32)(vertex->dimension.z / 256));
+    pP->x = (((vertex->position.x + ((X_DIR * (vertex->orientMat.m[0] / 256)) * (vertex->dimension.x / 256))) + ((Y_DIR * (vertex->orientMat.m[3] / 256)) * (vertex->dimension.y / 256))) + ((Z_DIR * (vertex->orientMat.m[6] / 256)) * (vertex->dimension.z / 256)));
+    pP->y = (((vertex->position.y + ((X_DIR * (vertex->orientMat.m[1] / 256)) * (vertex->dimension.x / 256))) + ((Y_DIR * (vertex->orientMat.m[4] / 256)) * (vertex->dimension.y / 256))) + ((Z_DIR * (vertex->orientMat.m[7] / 256)) * (vertex->dimension.z / 256)));
+    pP->z = (((vertex->position.z + ((X_DIR * (vertex->orientMat.m[2] / 256)) * (vertex->dimension.x / 256))) + ((Y_DIR * (vertex->orientMat.m[5] / 256)) * (vertex->dimension.y / 256))) + ((Z_DIR * (vertex->orientMat.m[8] / 256)) * (vertex->dimension.z / 256)));
     return 1;
 }
 
 sint32 CHECK_VERTEX_WITH_DIRS_OTHER(sint32 X_DIR, sint32 Y_DIR, sint32 Z_DIR)
 {
     FUNCTION_MARKER(0x8008C744, "NFS4.EXE");
-    xRange = (sint32)((uint32)X_DIR * (uint32)scaledBasisDotsOther[0] +
-        (uint32)Y_DIR * (uint32)scaledBasisDotsOther[3] +
-        (uint32)Z_DIR * (uint32)scaledBasisDotsOther[6] - (uint32)basisDotRelative[3]);
-    yRange = (sint32)((uint32)X_DIR * (uint32)scaledBasisDotsOther[1] +
-        (uint32)Y_DIR * (uint32)scaledBasisDotsOther[4] +
-        (uint32)Z_DIR * (uint32)scaledBasisDotsOther[7] - (uint32)basisDotRelative[4]);
-    zRange = (sint32)((uint32)X_DIR * (uint32)scaledBasisDotsOther[2] +
-        (uint32)Y_DIR * (uint32)scaledBasisDotsOther[5] +
-        (uint32)Z_DIR * (uint32)scaledBasisDotsOther[8] - (uint32)basisDotRelative[5]);
+    xRange = ((((X_DIR * scaledBasisDotsOther[0]) + (Y_DIR * scaledBasisDotsOther[3])) + (Z_DIR * scaledBasisDotsOther[6])) - basisDotRelative[3]);
+    yRange = ((((X_DIR * scaledBasisDotsOther[1]) + (Y_DIR * scaledBasisDotsOther[4])) + (Z_DIR * scaledBasisDotsOther[7])) - basisDotRelative[4]);
+    zRange = ((((X_DIR * scaledBasisDotsOther[2]) + (Y_DIR * scaledBasisDotsOther[5])) + (Z_DIR * scaledBasisDotsOther[8])) - basisDotRelative[5]);
     BO::tNewtonObj *bounds = obj1;
     sint32 dimension = bounds->dimension.z;
-    if (zRange > dimension || zRange < (sint32)(0U - (uint32)dimension))
+    if (zRange > dimension || zRange < -dimension)
         return 0;
     dimension = bounds->dimension.x;
-    if (xRange > dimension || xRange < (sint32)(0U - (uint32)dimension))
+    if (xRange > dimension || xRange < -dimension)
         return 0;
     dimension = bounds->dimension.y;
-    if (yRange > dimension || yRange < (sint32)(0U - (uint32)dimension))
+    if (yRange > dimension || yRange < -dimension)
         return 0;
     BO::tNewtonObj *vertex = obj0;
-    pP->x = (sint32)((uint32)vertex->position.x +
-        (uint32)X_DIR * (uint32)(vertex->orientMat.m[0] / 256) * (uint32)(vertex->dimension.x / 256) +
-        (uint32)Y_DIR * (uint32)(vertex->orientMat.m[3] / 256) * (uint32)(vertex->dimension.y / 256) +
-        (uint32)Z_DIR * (uint32)(vertex->orientMat.m[6] / 256) * (uint32)(vertex->dimension.z / 256));
-    pP->y = (sint32)((uint32)vertex->position.y +
-        (uint32)X_DIR * (uint32)(vertex->orientMat.m[1] / 256) * (uint32)(vertex->dimension.x / 256) +
-        (uint32)Y_DIR * (uint32)(vertex->orientMat.m[4] / 256) * (uint32)(vertex->dimension.y / 256) +
-        (uint32)Z_DIR * (uint32)(vertex->orientMat.m[7] / 256) * (uint32)(vertex->dimension.z / 256));
-    pP->z = (sint32)((uint32)vertex->position.z +
-        (uint32)X_DIR * (uint32)(vertex->orientMat.m[2] / 256) * (uint32)(vertex->dimension.x / 256) +
-        (uint32)Y_DIR * (uint32)(vertex->orientMat.m[5] / 256) * (uint32)(vertex->dimension.y / 256) +
-        (uint32)Z_DIR * (uint32)(vertex->orientMat.m[8] / 256) * (uint32)(vertex->dimension.z / 256));
+    pP->x = (((vertex->position.x + ((X_DIR * (vertex->orientMat.m[0] / 256)) * (vertex->dimension.x / 256))) + ((Y_DIR * (vertex->orientMat.m[3] / 256)) * (vertex->dimension.y / 256))) + ((Z_DIR * (vertex->orientMat.m[6] / 256)) * (vertex->dimension.z / 256)));
+    pP->y = (((vertex->position.y + ((X_DIR * (vertex->orientMat.m[1] / 256)) * (vertex->dimension.x / 256))) + ((Y_DIR * (vertex->orientMat.m[4] / 256)) * (vertex->dimension.y / 256))) + ((Z_DIR * (vertex->orientMat.m[7] / 256)) * (vertex->dimension.z / 256)));
+    pP->z = (((vertex->position.z + ((X_DIR * (vertex->orientMat.m[2] / 256)) * (vertex->dimension.x / 256))) + ((Y_DIR * (vertex->orientMat.m[5] / 256)) * (vertex->dimension.y / 256))) + ((Z_DIR * (vertex->orientMat.m[8] / 256)) * (vertex->dimension.z / 256)));
     return 1;
 }
 
@@ -233,80 +161,77 @@ void Collide::DoObjectFixedObjectCollision(BO::tNewtonObj *o, coorddef *p, coord
     coorddef velocity = *v;
     coorddef normal = *n;
     sint32 velocityLength = 0;
-    uint32 x = (uint32)(normal.x / 256) * (uint32)(o->linearVel.x / 256);
-    uint32 y = (uint32)(normal.y / 256) * (uint32)(o->linearVel.y / 256);
-    uint32 z = (uint32)(normal.z / 256) * (uint32)(o->linearVel.z / 256);
-    sint32 temp0 = (sint32)(x + y + z);
+    uint32 x = (normal.x / 256) * (uint32)(o->linearVel.x / 256);
+    uint32 y = (normal.y / 256) * (uint32)(o->linearVel.y / 256);
+    uint32 z = (normal.z / 256) * (uint32)(o->linearVel.z / 256);
+    sint32 temp0 = (x + y + z);
     coorddef r;
-    r.x = (sint32)((uint32)p->x - (uint32)o->position.x);
-    r.y = (sint32)((uint32)p->y - (uint32)o->position.y);
-    r.z = (sint32)((uint32)p->z - (uint32)o->position.z);
+    r.x = (p->x - o->position.x);
+    r.y = (p->y - o->position.y);
+    r.z = (p->z - o->position.z);
     coorddef RCrossN;
-    RCrossN.x = (sint32)((uint32)(r.y / 256) * (uint32)(normal.z / 256) -
-        (uint32)(r.z / 256) * (uint32)(normal.y / 256));
-    RCrossN.y = (sint32)((uint32)(r.z / 256) * (uint32)(normal.x / 256) -
-        (uint32)(r.x / 256) * (uint32)(normal.z / 256));
-    RCrossN.z = (sint32)((uint32)(r.x / 256) * (uint32)(normal.y / 256) -
-        (uint32)(r.y / 256) * (uint32)(normal.x / 256));
-    x = (uint32)(o->angularVel.x / 256) * (uint32)(RCrossN.x / 256);
-    y = (uint32)(o->angularVel.y / 256) * (uint32)(RCrossN.y / 256);
-    z = (uint32)(o->angularVel.z / 256) * (uint32)(RCrossN.z / 256);
-    sint32 temp1 = (sint32)(x + y + z);
+    RCrossN.x = ((((r.y / 256)) * (normal.z / 256)) - (((r.z / 256)) * (normal.y / 256)));
+    RCrossN.y = ((((r.z / 256)) * (normal.x / 256)) - (((r.x / 256)) * (normal.z / 256)));
+    RCrossN.z = ((((r.x / 256)) * (normal.y / 256)) - (((r.y / 256)) * (normal.x / 256)));
+    x = (o->angularVel.x / 256) * (uint32)(RCrossN.x / 256);
+    y = (o->angularVel.y / 256) * (uint32)(RCrossN.y / 256);
+    z = (o->angularVel.z / 256) * (uint32)(RCrossN.z / 256);
+    sint32 temp1 = (x + y + z);
     sint32 temp2 = o->massInv / 4;
     sint32 inertiaTerm = Math::VectorLength2(&RCrossN);
-    inertiaTerm = fixedmult(inertiaTerm, (sint32)((uint32)o->moInertiaInv << 1));
-    sint32 numerator = (sint32)(0U - ((uint32)temp0 + (uint32)temp1));
-    sint32 denominator = (sint32)((uint32)temp2 + (uint32)(inertiaTerm / 2));
+    inertiaTerm = fixedmult(inertiaTerm, ((uint32)o->moInertiaInv << 1));
+    sint32 numerator = (-(temp0 + temp1));
+    sint32 denominator = (temp2 + (inertiaTerm / 2));
     sint32 impulse = fixedmult(fixeddiv(numerator, denominator), 0x6666);
     sint32 normalSpeed = temp0;
     if (normalSpeed < 0)
-        normalSpeed = (sint32)(0U - (uint32)normalSpeed);
-    o->collision.impulse = (sint32)((uint32)normalSpeed << 2);
+        normalSpeed = (-normalSpeed);
+    o->collision.impulse = ((uint32)normalSpeed << 2);
     sint32 surface = o->driveSurfaceType;
     o->collision.otherObj = 0;
     o->collision.sfxType = surface | 0x30000;
     coorddef contactPoint = *p;
     o->collision.collisionPoint = contactPoint;
     if (velocity.x != 0 || velocity.y != 0 || velocity.z != 0) {
-        x = (uint32)(velocity.x / 256) * (uint32)(normal.x / 256);
-        y = (uint32)(velocity.y / 256) * (uint32)(normal.y / 256);
-        z = (uint32)(velocity.z / 256) * (uint32)(normal.z / 256);
+        x = (velocity.x / 256) * (uint32)(normal.x / 256);
+        y = (velocity.y / 256) * (uint32)(normal.y / 256);
+        z = (velocity.z / 256) * (uint32)(normal.z / 256);
         sint32 projection = (sint32)(x + y + z) / 256;
-        velocity.x = (sint32)((uint32)velocity.x - (uint32)projection * (uint32)(normal.x / 256));
-        velocity.y = (sint32)((uint32)velocity.y - (uint32)projection * (uint32)(normal.y / 256));
-        velocity.z = (sint32)((uint32)velocity.z - (uint32)projection * (uint32)(normal.z / 256));
-        x = (uint32)(velocity.x / 256) * (uint32)(velocity.x / 256);
-        y = (uint32)(velocity.y / 256) * (uint32)(velocity.y / 256);
-        z = (uint32)(velocity.z / 256) * (uint32)(velocity.z / 256);
-        velocityLength = fixedsqrt((sint32)(x + y + z));
+        velocity.x = (velocity.x - (projection * (normal.x / 256)));
+        velocity.y = (velocity.y - (projection * (normal.y / 256)));
+        velocity.z = (velocity.z - (projection * (normal.z / 256)));
+        x = (velocity.x / 256) * (uint32)(velocity.x / 256);
+        y = (velocity.y / 256) * (uint32)(velocity.y / 256);
+        z = (velocity.z / 256) * (uint32)(velocity.z / 256);
+        velocityLength = fixedsqrt((x + y + z));
         sint32 scale = -0x10000;
         if (velocityLength / 2 != 0)
-            scale = (sint32)(0U - (uint32)fixeddiv(0x8000, velocityLength / 2));
+            scale = (-fixeddiv(0x8000, velocityLength / 2));
         velocity.x = fixedmult(scale, velocity.x);
         velocity.y = fixedmult(scale, velocity.y);
         velocity.z = fixedmult(scale, velocity.z);
     }
     sint32 speed = o->speedXZ;
     if (speed < 0)
-        speed = (sint32)(0U - (uint32)speed);
+        speed = (-speed);
     if (speed < 0xA0000) {
         static const coorddef upVec = { 0, 0x10000, 0 };
-        x = (uint32)(upVec.x / 256) * (uint32)(o->orientMat.m[0] / 256);
-        y = (uint32)(upVec.y / 256) * (uint32)(o->orientMat.m[1] / 256);
-        z = (uint32)(upVec.z / 256) * (uint32)(o->orientMat.m[2] / 256);
-        sint32 dotx = (sint32)(x + y + z);
-        x = (uint32)(upVec.x / 256) * (uint32)(o->orientMat.m[3] / 256);
-        y = (uint32)(upVec.y / 256) * (uint32)(o->orientMat.m[4] / 256);
-        z = (uint32)(upVec.z / 256) * (uint32)(o->orientMat.m[5] / 256);
-        sint32 doty = (sint32)(x + y + z);
-        x = (uint32)(upVec.x / 256) * (uint32)(o->orientMat.m[6] / 256);
-        y = (uint32)(upVec.y / 256) * (uint32)(o->orientMat.m[7] / 256);
-        z = (uint32)(upVec.z / 256) * (uint32)(o->orientMat.m[8] / 256);
-        sint32 dotz = (sint32)(x + y + z);
+        x = (upVec.x / 256) * (uint32)(o->orientMat.m[0] / 256);
+        y = (upVec.y / 256) * (uint32)(o->orientMat.m[1] / 256);
+        z = (upVec.z / 256) * (uint32)(o->orientMat.m[2] / 256);
+        sint32 dotx = (x + y + z);
+        x = (upVec.x / 256) * (uint32)(o->orientMat.m[3] / 256);
+        y = (upVec.y / 256) * (uint32)(o->orientMat.m[4] / 256);
+        z = (upVec.z / 256) * (uint32)(o->orientMat.m[5] / 256);
+        sint32 doty = (x + y + z);
+        x = (upVec.x / 256) * (uint32)(o->orientMat.m[6] / 256);
+        y = (upVec.y / 256) * (uint32)(o->orientMat.m[7] / 256);
+        z = (upVec.z / 256) * (uint32)(o->orientMat.m[8] / 256);
+        sint32 dotz = (x + y + z);
         if (dotx < 0)
-            dotx = (sint32)(0U - (uint32)dotx);
+            dotx = (-dotx);
         if (dotz < 0)
-            dotz = (sint32)(0U - (uint32)dotz);
+            dotz = (-dotz);
         if (dotx > 0xF5C2 || dotz > 0xF5C2 || doty < -0xF5C2)
             frictionLess = 1;
     }
@@ -315,33 +240,27 @@ void Collide::DoObjectFixedObjectCollision(BO::tNewtonObj *o, coorddef *p, coord
     deltaVFromFriction.x = fixedmult(fixedmult(frictionalImpulse, o->massInv / 2), velocity.x);
     deltaVFromFriction.y = fixedmult(fixedmult(frictionalImpulse, o->massInv / 2), velocity.y);
     deltaVFromFriction.z = fixedmult(fixedmult(frictionalImpulse, o->massInv / 2), velocity.z);
-    sint32 inverseMoment = (sint32)((uint32)o->moInertiaInv << 1);
+    sint32 inverseMoment = ((uint32)o->moInertiaInv << 1);
     frictionLess = 0;
     sint32 frictionalImpulseOverMoment = fixedmult(frictionalImpulse, inverseMoment);
     coorddef temp;
-    temp.x = (sint32)((uint32)(velocity.y / 256) * (uint32)(r.z / 256) -
-        (uint32)(velocity.z / 256) * (uint32)(r.y / 256));
-    temp.y = (sint32)((uint32)(velocity.z / 256) * (uint32)(r.x / 256) -
-        (uint32)(velocity.x / 256) * (uint32)(r.z / 256));
-    temp.z = (sint32)((uint32)(velocity.x / 256) * (uint32)(r.y / 256) -
-        (uint32)(velocity.y / 256) * (uint32)(r.x / 256));
+    temp.x = ((((velocity.y / 256)) * (r.z / 256)) - (((velocity.z / 256)) * (r.y / 256)));
+    temp.y = ((((velocity.z / 256)) * (r.x / 256)) - (((velocity.x / 256)) * (r.z / 256)));
+    temp.z = ((((velocity.x / 256)) * (r.y / 256)) - (((velocity.y / 256)) * (r.x / 256)));
 
-    temp.x = (sint32)((uint32)(temp.y / 256) * (uint32)(r.z / 256) -
-        (uint32)(temp.z / 256) * (uint32)(r.y / 256));
-    temp.y = (sint32)((uint32)(temp.z / 256) * (uint32)(r.x / 256) -
-        (uint32)(temp.x / 256) * (uint32)(r.z / 256));
-    temp.z = (sint32)((uint32)(temp.x / 256) * (uint32)(r.y / 256) -
-        (uint32)(temp.y / 256) * (uint32)(r.x / 256));
+    temp.x = ((((temp.y / 256)) * (r.z / 256)) - (((temp.z / 256)) * (r.y / 256)));
+    temp.y = ((((temp.z / 256)) * (r.x / 256)) - (((temp.x / 256)) * (r.z / 256)));
+    temp.z = ((((temp.x / 256)) * (r.y / 256)) - (((temp.y / 256)) * (r.x / 256)));
     temp.x = fixedmult(frictionalImpulseOverMoment, temp.x);
     temp.y = fixedmult(frictionalImpulseOverMoment, temp.y);
     temp.z = fixedmult(frictionalImpulseOverMoment, temp.z);
-    deltaVFromFriction.x = (sint32)((uint32)deltaVFromFriction.x + (uint32)temp.x);
-    deltaVFromFriction.y = (sint32)((uint32)deltaVFromFriction.y + (uint32)temp.y);
-    deltaVFromFriction.z = (sint32)((uint32)deltaVFromFriction.z + (uint32)temp.z);
-    x = (uint32)(deltaVFromFriction.x / 256) * (uint32)(velocity.x / 256);
-    y = (uint32)(deltaVFromFriction.y / 256) * (uint32)(velocity.y / 256);
-    z = (uint32)(deltaVFromFriction.z / 256) * (uint32)(velocity.z / 256);
-    sint32 deltaSpeedInFrictionDirection = (sint32)(x + y + z);
+    deltaVFromFriction.x = (deltaVFromFriction.x + temp.x);
+    deltaVFromFriction.y = (deltaVFromFriction.y + temp.y);
+    deltaVFromFriction.z = (deltaVFromFriction.z + temp.z);
+    x = (deltaVFromFriction.x / 256) * (uint32)(velocity.x / 256);
+    y = (deltaVFromFriction.y / 256) * (uint32)(velocity.y / 256);
+    z = (deltaVFromFriction.z / 256) * (uint32)(velocity.z / 256);
+    sint32 deltaSpeedInFrictionDirection = (x + y + z);
     if (velocityLength < deltaSpeedInFrictionDirection)
         frictionalImpulse = fixedmult(frictionalImpulse, fixeddiv(velocityLength, deltaSpeedInFrictionDirection));
     coorddef frictionImpulse;
@@ -353,28 +272,25 @@ void Collide::DoObjectFixedObjectCollision(BO::tNewtonObj *o, coorddef *p, coord
         impulseV.x = fixedmult(impulse, normal.x);
         impulseV.y = fixedmult(impulse, normal.y);
         impulseV.z = fixedmult(impulse, normal.z);
-        impulseV.x = (sint32)((uint32)impulseV.x + (uint32)frictionImpulse.x);
-        impulseV.y = (sint32)((uint32)impulseV.y + (uint32)frictionImpulse.y);
-        impulseV.z = (sint32)((uint32)impulseV.z + (uint32)frictionImpulse.z);
+        impulseV.x = (impulseV.x + frictionImpulse.x);
+        impulseV.y = (impulseV.y + frictionImpulse.y);
+        impulseV.z = (impulseV.z + frictionImpulse.z);
         coorddef deltaV;
         deltaV.x = fixedmult(o->massInv / 2, impulseV.x);
         deltaV.y = fixedmult(o->massInv / 2, impulseV.y);
         deltaV.z = fixedmult(o->massInv / 2, impulseV.z);
-        o->linearVel.x = (sint32)((uint32)o->linearVel.x + (uint32)deltaV.x);
-        o->linearVel.y = (sint32)((uint32)o->linearVel.y + (uint32)deltaV.y);
-        o->linearVel.z = (sint32)((uint32)o->linearVel.z + (uint32)deltaV.z);
-        RCrossN.x = (sint32)((uint32)(r.y / 256) * (uint32)(impulseV.z / 256) -
-            (uint32)(r.z / 256) * (uint32)(impulseV.y / 256));
-        RCrossN.y = (sint32)((uint32)(r.z / 256) * (uint32)(impulseV.x / 256) -
-            (uint32)(r.x / 256) * (uint32)(impulseV.z / 256));
-        RCrossN.z = (sint32)((uint32)(r.x / 256) * (uint32)(impulseV.y / 256) -
-            (uint32)(r.y / 256) * (uint32)(impulseV.x / 256));
-        deltaV.x = fixedmult((sint32)((uint32)o->moInertiaInv << 1), RCrossN.x);
-        deltaV.y = fixedmult((sint32)((uint32)o->moInertiaInv << 1), RCrossN.y);
-        deltaV.z = fixedmult((sint32)((uint32)o->moInertiaInv << 1), RCrossN.z);
-        o->angularVel.x = (sint32)((uint32)o->angularVel.x + (uint32)deltaV.x);
-        o->angularVel.y = (sint32)((uint32)o->angularVel.y + (uint32)deltaV.y);
-        o->angularVel.z = (sint32)((uint32)o->angularVel.z + (uint32)deltaV.z);
+        o->linearVel.x = (o->linearVel.x + deltaV.x);
+        o->linearVel.y = (o->linearVel.y + deltaV.y);
+        o->linearVel.z = (o->linearVel.z + deltaV.z);
+        RCrossN.x = ((((r.y / 256)) * (impulseV.z / 256)) - (((r.z / 256)) * (impulseV.y / 256)));
+        RCrossN.y = ((((r.z / 256)) * (impulseV.x / 256)) - (((r.x / 256)) * (impulseV.z / 256)));
+        RCrossN.z = ((((r.x / 256)) * (impulseV.y / 256)) - (((r.y / 256)) * (impulseV.x / 256)));
+        deltaV.x = fixedmult(((uint32)o->moInertiaInv << 1), RCrossN.x);
+        deltaV.y = fixedmult(((uint32)o->moInertiaInv << 1), RCrossN.y);
+        deltaV.z = fixedmult(((uint32)o->moInertiaInv << 1), RCrossN.z);
+        o->angularVel.x = (o->angularVel.x + deltaV.x);
+        o->angularVel.y = (o->angularVel.y + deltaV.y);
+        o->angularVel.z = (o->angularVel.z + deltaV.z);
     }
 }
 
@@ -411,42 +327,40 @@ void Collide::TestWithPlane(BO::tNewtonObj *o, coorddef *normal, coorddef *sampl
         normal->y = 0x10000;
     sint32 basisDots[3];
     for (sint32 row = 0; row < 3; ++row) {
-        uint32 x = (uint32)(normal->x / 256) * (uint32)(o->orientMat.m[row * 3] / 256);
-        uint32 y = (uint32)(normal->y / 256) * (uint32)(o->orientMat.m[row * 3 + 1] / 256);
-        uint32 z = (uint32)(normal->z / 256) * (uint32)(o->orientMat.m[row * 3 + 2] / 256);
-        sint32 dot = (sint32)(x + y + z);
+        uint32 x = (normal->x / 256) * (uint32)(o->orientMat.m[row * 3] / 256);
+        uint32 y = (normal->y / 256) * (uint32)(o->orientMat.m[row * 3 + 1] / 256);
+        uint32 z = (normal->z / 256) * (uint32)(o->orientMat.m[row * 3 + 2] / 256);
+        sint32 dot = (x + y + z);
         sint32 dimension = row == 0 ? o->dimension.x : (row == 1 ? o->dimension.y : o->dimension.z);
-        basisDots[row] = (sint32)((uint32)(dot / 256) * (uint32)(dimension / 256));
+        basisDots[row] = (((dot / 256)) * (dimension / 256));
     }
     sint32 xDir = basisDots[0] < 0 ? 1 : -1;
     sint32 Y_DIR = basisDots[1] < 0 ? 1 : -1;
     sint32 zDir = basisDots[2] < 0 ? 1 : -1;
     coorddef relativePos;
-    relativePos.x = (sint32)((uint32)o->position.x - (uint32)samplePoint->x);
-    relativePos.y = (sint32)((uint32)o->position.y - (uint32)samplePoint->y);
-    relativePos.z = (sint32)((uint32)o->position.z - (uint32)samplePoint->z);
-    uint32 dotX = (uint32)(normal->x / 256) * (uint32)(relativePos.x / 256);
-    uint32 dotY = (uint32)(normal->y / 256) * (uint32)(relativePos.y / 256);
-    uint32 dotZ = (uint32)(normal->z / 256) * (uint32)(relativePos.z / 256);
-    sint32 relativeDot = (sint32)(dotX + dotY + dotZ);
-    sint32 height = (sint32)((uint32)xDir * (uint32)basisDots[0] +
-        (uint32)Y_DIR * (uint32)basisDots[1] + (uint32)zDir * (uint32)basisDots[2] +
-        (uint32)relativeDot);
+    relativePos.x = (o->position.x - samplePoint->x);
+    relativePos.y = (o->position.y - samplePoint->y);
+    relativePos.z = (o->position.z - samplePoint->z);
+    uint32 dotX = (normal->x / 256) * (uint32)(relativePos.x / 256);
+    uint32 dotY = (normal->y / 256) * (uint32)(relativePos.y / 256);
+    uint32 dotZ = (normal->z / 256) * (uint32)(relativePos.z / 256);
+    sint32 relativeDot = (dotX + dotY + dotZ);
+    sint32 height = ((((xDir * basisDots[0]) + (Y_DIR * basisDots[1])) + (zDir * basisDots[2])) + relativeDot);
     if (height < 0) {
         coorddef spot;
-        uint32 x = (uint32)xDir * (uint32)(o->orientMat.m[0] / 256) * (uint32)(o->dimension.x / 256);
-        uint32 y = (uint32)Y_DIR * (uint32)(o->orientMat.m[3] / 256) * (uint32)(o->dimension.y / 256);
-        uint32 z = (uint32)zDir * (uint32)(o->orientMat.m[6] / 256) * (uint32)(o->dimension.z / 256);
-        spot.x = (sint32)((uint32)o->position.x + x + y + z);
-        x = (uint32)xDir * (uint32)(o->orientMat.m[1] / 256) * (uint32)(o->dimension.x / 256);
-        y = (uint32)Y_DIR * (uint32)(o->orientMat.m[4] / 256) * (uint32)(o->dimension.y / 256);
-        z = (uint32)zDir * (uint32)(o->orientMat.m[7] / 256) * (uint32)(o->dimension.z / 256);
-        spot.y = (sint32)((uint32)o->position.y + x + y + z);
-        x = (uint32)xDir * (uint32)(o->orientMat.m[2] / 256) * (uint32)(o->dimension.x / 256);
-        y = (uint32)Y_DIR * (uint32)(o->orientMat.m[5] / 256) * (uint32)(o->dimension.y / 256);
-        z = (uint32)zDir * (uint32)(o->orientMat.m[8] / 256) * (uint32)(o->dimension.z / 256);
-        spot.z = (sint32)((uint32)o->position.z + x + y + z);
-        sint32 raiseUp = (sint32)(0U - (uint32)height);
+        uint32 x = xDir * (uint32)(o->orientMat.m[0] / 256) * (o->dimension.x / 256);
+        uint32 y = Y_DIR * (uint32)(o->orientMat.m[3] / 256) * (o->dimension.y / 256);
+        uint32 z = zDir * (uint32)(o->orientMat.m[6] / 256) * (o->dimension.z / 256);
+        spot.x = (o->position.x + x + y + z);
+        x = xDir * (uint32)(o->orientMat.m[1] / 256) * (o->dimension.x / 256);
+        y = Y_DIR * (uint32)(o->orientMat.m[4] / 256) * (o->dimension.y / 256);
+        z = zDir * (uint32)(o->orientMat.m[7] / 256) * (o->dimension.z / 256);
+        spot.y = (o->position.y + x + y + z);
+        x = xDir * (uint32)(o->orientMat.m[2] / 256) * (o->dimension.x / 256);
+        y = Y_DIR * (uint32)(o->orientMat.m[5] / 256) * (o->dimension.y / 256);
+        z = zDir * (uint32)(o->orientMat.m[8] / 256) * (o->dimension.z / 256);
+        spot.z = (o->position.z + x + y + z);
+        sint32 raiseUp = (-height);
         if (raiseUp < 0)
             raiseUp = 0;
         coorddef Raise = { 0, 0, 0 };
@@ -455,37 +369,34 @@ void Collide::TestWithPlane(BO::tNewtonObj *o, coorddef *normal, coorddef *sampl
             Raise.x = fixedmult(halfRaise, normal->x);
             Raise.y = fixedmult(halfRaise, normal->y);
             Raise.z = fixedmult(halfRaise, normal->z);
-            o->position.x = (sint32)((uint32)o->position.x + (uint32)Raise.x);
-            o->position.y = (sint32)((uint32)o->position.y + (uint32)Raise.y);
-            o->position.z = (sint32)((uint32)o->position.z + (uint32)Raise.z);
+            o->position.x = (o->position.x + Raise.x);
+            o->position.y = (o->position.y + Raise.y);
+            o->position.z = (o->position.z + Raise.z);
         }
         coorddef r;
-        r.x = (sint32)((uint32)spot.x - (uint32)o->position.x);
-        r.y = (sint32)((uint32)spot.y - (uint32)o->position.y);
-        r.z = (sint32)((uint32)spot.z - (uint32)o->position.z);
+        r.x = (spot.x - o->position.x);
+        r.y = (spot.y - o->position.y);
+        r.z = (spot.z - o->position.z);
         coorddef vertexVelocity;
-        vertexVelocity.x = (sint32)((uint32)(o->angularVel.y / 256) * (uint32)(r.z / 256) -
-            (uint32)(o->angularVel.z / 256) * (uint32)(r.y / 256) + (uint32)o->linearVel.x);
-        vertexVelocity.y = (sint32)((uint32)(o->angularVel.z / 256) * (uint32)(r.x / 256) -
-            (uint32)(o->angularVel.x / 256) * (uint32)(r.z / 256) + (uint32)o->linearVel.y);
-        vertexVelocity.z = (sint32)((uint32)(o->angularVel.x / 256) * (uint32)(r.y / 256) -
-            (uint32)(o->angularVel.y / 256) * (uint32)(r.x / 256) + (uint32)o->linearVel.z);
-        dotX = (uint32)(normal->x / 256) * (uint32)(vertexVelocity.x / 256);
-        dotY = (uint32)(normal->y / 256) * (uint32)(vertexVelocity.y / 256);
-        dotZ = (uint32)(normal->z / 256) * (uint32)(vertexVelocity.z / 256);
+        vertexVelocity.x = (((((o->angularVel.y / 256)) * (r.z / 256)) - (((o->angularVel.z / 256)) * (r.y / 256))) + o->linearVel.x);
+        vertexVelocity.y = (((((o->angularVel.z / 256)) * (r.x / 256)) - (((o->angularVel.x / 256)) * (r.z / 256))) + o->linearVel.y);
+        vertexVelocity.z = (((((o->angularVel.x / 256)) * (r.y / 256)) - (((o->angularVel.y / 256)) * (r.x / 256))) + o->linearVel.z);
+        dotX = (normal->x / 256) * (uint32)(vertexVelocity.x / 256);
+        dotY = (normal->y / 256) * (uint32)(vertexVelocity.y / 256);
+        dotZ = (normal->z / 256) * (uint32)(vertexVelocity.z / 256);
         if ((sint32)(dotX + dotY + dotZ) < 0)
             DoObjectFixedObjectCollision(o, &spot, &vertexVelocity, normal);
         if (gRaiseUp != 0 && raiseUp != 0 && Raise.y > 0) {
-            sint32 correction = (sint32)((uint32)fixedmult(0x9CCCC, Raise.y) << 1);
+            sint32 correction = ((uint32)fixedmult(0x9CCCC, Raise.y) << 1);
             sint32 v2 = fixedmult(o->linearVel.y, o->linearVel.y);
             if (v2 < correction) {
                 o->linearVel.y = 0;
             } else {
-                sint32 speed = fixedsqrt((sint32)((uint32)v2 - (uint32)correction));
+                sint32 speed = fixedsqrt(((v2 - correction)));
                 if (o->linearVel.y > 0)
                     o->linearVel.y = speed;
                 else
-                    o->linearVel.y = (sint32)(0U - (uint32)speed);
+                    o->linearVel.y = (-speed);
             }
         }
     }
@@ -496,24 +407,24 @@ void Collide::TestWithPlane(BO::tNewtonObj *o, coorddef *normal, coorddef *sampl
     sint32 first = fixedmult(normal->x, o->linearVel.x);
     sint32 second = fixedmult(normal->y, o->linearVel.y);
     sint32 third = fixedmult(normal->z, o->linearVel.z);
-    sint32 dot = (sint32)((uint32)first + (uint32)second + (uint32)third);
+    sint32 dot = ((first + second) + third);
     if (dot <= 0)
-        dot = (sint32)(0U - (uint32)dot);
-    sint32 impulse = (sint32)((uint32)dot << 2);
+        dot = (-dot);
+    sint32 impulse = ((uint32)dot << 2);
     if (impulse <= 0xA0000)
         return;
     first = fixedmult(normal->x, o->orientMat.m[0]);
     second = fixedmult(normal->y, o->orientMat.m[1]);
     third = fixedmult(normal->z, o->orientMat.m[2]);
-    sint32 right = (sint32)((uint32)first + (uint32)second + (uint32)third);
+    sint32 right = ((first + second) + third);
     first = fixedmult(normal->x, o->orientMat.m[3]);
     second = fixedmult(normal->y, o->orientMat.m[4]);
     third = fixedmult(normal->z, o->orientMat.m[5]);
-    sint32 top = (sint32)((uint32)first + (uint32)second + (uint32)third);
+    sint32 top = ((first + second) + third);
     first = fixedmult(normal->x, o->orientMat.m[6]);
     second = fixedmult(normal->y, o->orientMat.m[7]);
     third = fixedmult(normal->z, o->orientMat.m[8]);
-    sint32 front = (sint32)((uint32)first + (uint32)second + (uint32)third);
+    sint32 front = ((first + second) + third);
     sint32 zone = 9;
     if (top < -0x8000) {
         zone = 8;
@@ -539,12 +450,12 @@ sint32 Collide::DoObjectObjectCollision(BO::tNewtonObj *o0, BO::tNewtonObj *o1, 
     FUNCTION_MARKER(0x8008E5D4, "NFS4.EXE");
     coorddef Rt0;
     coorddef Rt1;
-    Rt0.x = (sint32)((uint32)p->x - (uint32)o0->position.x);
-    Rt0.y = (sint32)((uint32)p->y - (uint32)o0->position.y);
-    Rt0.z = (sint32)((uint32)p->z - (uint32)o0->position.z);
-    Rt1.x = (sint32)((uint32)p->x - (uint32)o1->position.x);
-    Rt1.y = (sint32)((uint32)p->y - (uint32)o1->position.y);
-    Rt1.z = (sint32)((uint32)p->z - (uint32)o1->position.z);
+    Rt0.x = (p->x - o0->position.x);
+    Rt0.y = (p->y - o0->position.y);
+    Rt0.z = (p->z - o0->position.z);
+    Rt1.x = (p->x - o1->position.x);
+    Rt1.y = (p->y - o1->position.y);
+    Rt1.z = (p->z - o1->position.z);
     coorddef R0CrossN;
     coorddef R1CrossN;
     sint32 first;
@@ -552,49 +463,48 @@ sint32 Collide::DoObjectObjectCollision(BO::tNewtonObj *o0, BO::tNewtonObj *o1, 
     sint32 third;
     first = fixedmult(Rt0.y, normal->z);
     second = fixedmult(Rt0.z, normal->y);
-    R0CrossN.x = (sint32)((uint32)first - (uint32)second);
+    R0CrossN.x = (first - second);
     first = fixedmult(Rt0.z, normal->x);
     second = fixedmult(Rt0.x, normal->z);
-    R0CrossN.y = (sint32)((uint32)first - (uint32)second);
+    R0CrossN.y = (first - second);
     first = fixedmult(Rt0.x, normal->y);
     second = fixedmult(Rt0.y, normal->x);
-    R0CrossN.z = (sint32)((uint32)first - (uint32)second);
+    R0CrossN.z = (first - second);
     first = fixedmult(Rt1.y, normal->z);
     second = fixedmult(Rt1.z, normal->y);
-    R1CrossN.x = (sint32)((uint32)first - (uint32)second);
+    R1CrossN.x = (first - second);
     first = fixedmult(Rt1.z, normal->x);
     second = fixedmult(Rt1.x, normal->z);
-    R1CrossN.y = (sint32)((uint32)first - (uint32)second);
+    R1CrossN.y = (first - second);
     first = fixedmult(Rt1.x, normal->y);
     second = fixedmult(Rt1.y, normal->x);
-    R1CrossN.z = (sint32)((uint32)first - (uint32)second);
+    R1CrossN.z = (first - second);
     first = fixedmult(o0->linearVel.x, normal->x);
     second = fixedmult(o0->linearVel.y, normal->y);
     third = fixedmult(o0->linearVel.z, normal->z);
-    sint32 linear0 = (sint32)((uint32)first + (uint32)second + (uint32)third);
+    sint32 linear0 = ((first + second) + third);
     first = fixedmult(o1->linearVel.x, normal->x);
     second = fixedmult(o1->linearVel.y, normal->y);
     third = fixedmult(o1->linearVel.z, normal->z);
-    sint32 linear1 = (sint32)((uint32)first + (uint32)second + (uint32)third);
+    sint32 linear1 = ((first + second) + third);
     first = fixedmult(o0->angularVel.x, R0CrossN.x);
     second = fixedmult(o0->angularVel.y, R0CrossN.y);
     third = fixedmult(o0->angularVel.z, R0CrossN.z);
-    sint32 angular0 = (sint32)((uint32)first + (uint32)second + (uint32)third);
+    sint32 angular0 = ((first + second) + third);
     first = fixedmult(o1->angularVel.x, R1CrossN.x);
     second = fixedmult(o1->angularVel.y, R1CrossN.y);
     third = fixedmult(o1->angularVel.z, R1CrossN.z);
-    sint32 angular1 = (sint32)((uint32)first + (uint32)second + (uint32)third);
+    sint32 angular1 = ((first + second) + third);
     first = fixedmult(R0CrossN.x, R0CrossN.x);
     second = fixedmult(R0CrossN.y, R0CrossN.y);
     third = fixedmult(R0CrossN.z, R0CrossN.z);
-    sint32 moment0 = fixedmult((sint32)((uint32)first + (uint32)second + (uint32)third), o0->moInertiaInv);
+    sint32 moment0 = fixedmult((((first + second) + third)), o0->moInertiaInv);
     first = fixedmult(R1CrossN.x, R1CrossN.x);
     second = fixedmult(R1CrossN.y, R1CrossN.y);
     third = fixedmult(R1CrossN.z, R1CrossN.z);
-    sint32 moment1 = fixedmult((sint32)((uint32)first + (uint32)second + (uint32)third), o1->moInertiaInv);
-    sint32 numerator = (sint32)((uint32)linear1 - (uint32)linear0 - (uint32)angular0 + (uint32)angular1);
-    sint32 denominator = (sint32)((uint32)(o0->massInv / 2) + (uint32)(o1->massInv / 2) +
-        (uint32)(moment0 >> 1) + (uint32)(moment1 >> 1));
+    sint32 moment1 = fixedmult((((first + second) + third)), o1->moInertiaInv);
+    sint32 numerator = (((linear1 - linear0) - angular0) + angular1);
+    sint32 denominator = (((((o0->massInv / 2)) + (o1->massInv / 2)) + (moment0 >> 1)) + (moment1 >> 1));
     sint32 impulse = fixeddiv(numerator, denominator);
     if (impulse < 0)
         return 0;
@@ -611,20 +521,19 @@ sint32 Collide::DoObjectObjectCollision(BO::tNewtonObj *o0, BO::tNewtonObj *o1, 
     first = fixedmult(o0->linearVel.x, normal->x);
     second = fixedmult(o0->linearVel.y, normal->y);
     third = fixedmult(o0->linearVel.z, normal->z);
-    linear0 = (sint32)((uint32)first + (uint32)second + (uint32)third);
+    linear0 = ((first + second) + third);
     first = fixedmult(o1->linearVel.x, normal->x);
     second = fixedmult(o1->linearVel.y, normal->y);
     third = fixedmult(o1->linearVel.z, normal->z);
-    linear1 = (sint32)((uint32)first + (uint32)second + (uint32)third);
-    sint32 impulseWST = fixedmult((sint32)((uint32)linear0 - (uint32)linear1),
-        (sint32)((uint32)o0->mass + (uint32)o1->mass));
+    linear1 = ((first + second) + third);
+    sint32 impulseWST = fixedmult(((linear0 - linear1)), (o0->mass + o1->mass));
     sint32 objectImpulse0 = fixedmult(impulseWST, o0->massInv);
     if (objectImpulse0 <= 0)
-        objectImpulse0 = (sint32)(0U - (uint32)objectImpulse0);
+        objectImpulse0 = (-objectImpulse0);
     o0->collision.impulse = objectImpulse0;
     sint32 objectImpulse1 = fixedmult(impulseWST, o1->massInv);
     if (objectImpulse1 <= 0)
-        objectImpulse1 = (sint32)(0U - (uint32)objectImpulse1);
+        objectImpulse1 = (-objectImpulse1);
     o1->collision.impulse = objectImpulse1;
     if (o0->objID >= 0x200 || o1->objID >= 0x200) {
         o0->collision.impulse /= 3;
@@ -639,50 +548,49 @@ sint32 Collide::DoObjectObjectCollision(BO::tNewtonObj *o0, BO::tNewtonObj *o1, 
         deltaV.y = fixedmult(obj->massInv, impulseV.y);
         deltaV.z = fixedmult(obj->massInv, impulseV.z);
         if (which == 0) {
-            obj->linearVel.x = (sint32)((uint32)obj->linearVel.x + (uint32)deltaV.x);
-            obj->linearVel.y = (sint32)((uint32)obj->linearVel.y + (uint32)deltaV.y);
+            obj->linearVel.x = (obj->linearVel.x + deltaV.x);
+            obj->linearVel.y = (obj->linearVel.y + deltaV.y);
         } else {
-            obj->linearVel.x = (sint32)((uint32)obj->linearVel.x - (uint32)deltaV.x);
-            obj->linearVel.y = (sint32)((uint32)obj->linearVel.y - (uint32)deltaV.y);
+            obj->linearVel.x = (obj->linearVel.x - deltaV.x);
+            obj->linearVel.y = (obj->linearVel.y - deltaV.y);
         }
         sint32 oldZ = obj->linearVel.z;
         sint32 objID = obj->objID;
         obj->collision.sfxType = 0x50001;
         obj->collision.otherObj = peer;
-        obj->linearVel.z = which == 0 ? (sint32)((uint32)oldZ + (uint32)deltaV.z) :
-            (sint32)((uint32)oldZ - (uint32)deltaV.z);
+        obj->linearVel.z = which == 0 ? (oldZ + deltaV.z) : (oldZ - deltaV.z);
         if (objID < 0x200) {
             sint32 damageImpulse = obj->collision.impulse;
             if (which == 0) {
-                damageVector.x = (sint32)((uint32)o0->position.x - (uint32)o1->position.x);
-                damageVector.y = (sint32)((uint32)o0->position.y - (uint32)o1->position.y);
-                damageVector.z = (sint32)((uint32)o0->position.z - (uint32)o1->position.z);
+                damageVector.x = (o0->position.x - o1->position.x);
+                damageVector.y = (o0->position.y - o1->position.y);
+                damageVector.z = (o0->position.z - o1->position.z);
                 Math::NormalizeShortVector(&damageVector);
             } else {
-                damageVector.x = (sint32)(0U - (uint32)damageVector.x);
-                damageVector.z = (sint32)(0U - (uint32)damageVector.z);
-                damageVector.y = (sint32)(0U - (uint32)damageVector.y);
+                damageVector.x = (-damageVector.x);
+                damageVector.z = (-damageVector.z);
+                damageVector.y = (-damageVector.y);
             }
             if (damageImpulse > 0xA0000) {
                 first = fixedmult(damageVector.x, obj->orientMat.m[0]);
                 second = fixedmult(damageVector.y, obj->orientMat.m[1]);
                 third = fixedmult(damageVector.z, obj->orientMat.m[2]);
-                sint32 right = (sint32)((uint32)first + (uint32)second + (uint32)third);
+                sint32 right = ((first + second) + third);
                 first = fixedmult(damageVector.x, obj->orientMat.m[3]);
                 second = fixedmult(damageVector.y, obj->orientMat.m[4]);
                 third = fixedmult(damageVector.z, obj->orientMat.m[5]);
-                sint32 top = (sint32)((uint32)first + (uint32)second + (uint32)third);
+                sint32 top = ((first + second) + third);
                 first = fixedmult(damageVector.x, obj->orientMat.m[6]);
                 second = fixedmult(damageVector.y, obj->orientMat.m[7]);
                 third = fixedmult(damageVector.z, obj->orientMat.m[8]);
-                sint32 front = (sint32)((uint32)first + (uint32)second + (uint32)third);
+                sint32 front = ((first + second) + third);
                 sint32 zone = 9;
                 if (top < -0x8000) {
                     zone = 8;
                     Newton::AddDamageZone(obj, damageImpulse, zone, 2);
                 }
-                sint32 absRight = right < 0 ? (sint32)(0U - (uint32)right) : right;
-                sint32 absFront = front < 0 ? (sint32)(0U - (uint32)front) : front;
+                sint32 absRight = right < 0 ? -right : right;
+                sint32 absFront = front < 0 ? -front : front;
                 sint32 selected = 0;
                 if (absRight < 0x1999) {
                     if (front < -0x1999) { zone = 1; selected = 1; }
@@ -708,49 +616,49 @@ sint32 Collide::DoObjectObjectCollision(BO::tNewtonObj *o0, BO::tNewtonObj *o1, 
     }
     first = fixedmult(Rt0.y, impulseV.z);
     second = fixedmult(Rt0.z, impulseV.y);
-    R0CrossN.x = (sint32)((uint32)first - (uint32)second);
+    R0CrossN.x = (first - second);
     first = fixedmult(Rt0.z, impulseV.x);
     second = fixedmult(Rt0.x, impulseV.z);
-    R0CrossN.y = (sint32)((uint32)first - (uint32)second);
+    R0CrossN.y = (first - second);
     first = fixedmult(Rt0.x, impulseV.y);
     second = fixedmult(Rt0.y, impulseV.x);
-    R0CrossN.z = (sint32)((uint32)first - (uint32)second);
+    R0CrossN.z = (first - second);
     sint32 inverseMoment0 = o0->moInertiaInv;
     if (CollisionHumanFlag(o0) && impulse <= 0x3FFFFF)
-        inverseMoment0 = (sint32)((uint32)inverseMoment0 * 3U) / 4;
+        inverseMoment0 = (inverseMoment0 * 3) / 4;
     first = fixedmult(inverseMoment0, R0CrossN.x);
     second = fixedmult(inverseMoment0, R0CrossN.y);
     third = fixedmult(inverseMoment0, R0CrossN.z);
-    o0->angularVel.x = (sint32)((uint32)o0->angularVel.x + (uint32)first);
-    o0->angularVel.y = (sint32)((uint32)o0->angularVel.y + (uint32)second);
-    o0->angularVel.z = (sint32)((uint32)o0->angularVel.z + (uint32)third);
+    o0->angularVel.x = (o0->angularVel.x + first);
+    o0->angularVel.y = (o0->angularVel.y + second);
+    o0->angularVel.z = (o0->angularVel.z + third);
     first = fixedmult(Rt1.y, impulseV.z);
     second = fixedmult(Rt1.z, impulseV.y);
-    R1CrossN.x = (sint32)((uint32)first - (uint32)second);
+    R1CrossN.x = (first - second);
     first = fixedmult(Rt1.z, impulseV.x);
     second = fixedmult(Rt1.x, impulseV.z);
-    R1CrossN.y = (sint32)((uint32)first - (uint32)second);
+    R1CrossN.y = (first - second);
     first = fixedmult(Rt1.x, impulseV.y);
     second = fixedmult(Rt1.y, impulseV.x);
-    R1CrossN.z = (sint32)((uint32)first - (uint32)second);
+    R1CrossN.z = (first - second);
     sint32 inverseMoment1 = o1->moInertiaInv;
     if (CollisionHumanFlag(o1) && impulse <= 0x3FFFFF)
-        inverseMoment1 = (sint32)((uint32)inverseMoment1 * 3U) / 4;
+        inverseMoment1 = (inverseMoment1 * 3) / 4;
     first = fixedmult(inverseMoment1, R1CrossN.x);
     second = fixedmult(inverseMoment1, R1CrossN.y);
     third = fixedmult(inverseMoment1, R1CrossN.z);
-    o1->angularVel.x = (sint32)((uint32)o1->angularVel.x - (uint32)first);
-    o1->angularVel.y = (sint32)((uint32)o1->angularVel.y - (uint32)second);
-    o1->angularVel.z = (sint32)((uint32)o1->angularVel.z - (uint32)third);
+    o1->angularVel.x = (o1->angularVel.x - first);
+    o1->angularVel.y = (o1->angularVel.y - second);
+    o1->angularVel.z = (o1->angularVel.z - third);
     o0->flightTime = (uint16)(o0->flightTime + 1);
     o1->flightTime = (uint16)(o1->flightTime + 1);
-    sint32 midpoint = (sint32)((uint32)o0->position.x + (uint32)o1->position.x) / 2;
+    sint32 midpoint = (o0->position.x + o1->position.x) / 2;
     o1->collision.collisionPoint.x = midpoint;
     o0->collision.collisionPoint.x = midpoint;
-    midpoint = (sint32)((uint32)o0->position.y + (uint32)o1->position.y) / 2;
+    midpoint = (o0->position.y + o1->position.y) / 2;
     o1->collision.collisionPoint.y = midpoint;
     o0->collision.collisionPoint.y = midpoint;
-    midpoint = (sint32)((uint32)o0->position.z + (uint32)o1->position.z) / 2;
+    midpoint = (o0->position.z + o1->position.z) / 2;
     o1->collision.collisionPoint.z = midpoint;
     o0->collision.collisionPoint.z = midpoint;
     return 1;
@@ -780,28 +688,26 @@ sint32 Collide::DoActualObjectCollisionCheck(BO::tNewtonObj *o0, BO::tNewtonObj 
         { -1, 1, 1 }, { -1, 1, -1 }, { -1, -1, 1 }, { -1, -1, -1 }
     };
     sint32 index = 0;
-    while (index < 8 && !CHECK_VERTEX_WITH_DIRS(
-        directions[index][0], directions[index][1], directions[index][2]))
+    while (index < 8 && !CHECK_VERTEX_WITH_DIRS( directions[index][0], directions[index][1], directions[index][2]))
         ++index;
     sint32 other = index == 8;
     if (other) {
         index = 0;
-        while (index < 8 && !CHECK_VERTEX_WITH_DIRS_OTHER(
-            directions[index][0], directions[index][1], directions[index][2]))
+        while (index < 8 && !CHECK_VERTEX_WITH_DIRS_OTHER( directions[index][0], directions[index][1], directions[index][2]))
             ++index;
         if (index == 8)
             return 0;
     }
     findClosestSideDave = 0;
-    sint32 vx = (sint32)((uint32)o1->linearVel.x - (uint32)o0->linearVel.x);
+    sint32 vx = (o1->linearVel.x - o0->linearVel.x);
     if (vx <= 0)
-        vx = (sint32)((uint32)o0->linearVel.x - (uint32)o1->linearVel.x);
-    sint32 vy = (sint32)((uint32)o1->linearVel.y - (uint32)o0->linearVel.y);
+        vx = (o0->linearVel.x - o1->linearVel.x);
+    sint32 vy = (o1->linearVel.y - o0->linearVel.y);
     if (vy <= 0)
-        vy = (sint32)((uint32)o0->linearVel.y - (uint32)o1->linearVel.y);
-    sint32 vz = (sint32)((uint32)o1->linearVel.z - (uint32)o0->linearVel.z);
+        vy = (o0->linearVel.y - o1->linearVel.y);
+    sint32 vz = (o1->linearVel.z - o0->linearVel.z);
     if (vz <= 0)
-        vz = (sint32)((uint32)o0->linearVel.z - (uint32)o1->linearVel.z);
+        vz = (o0->linearVel.z - o1->linearVel.z);
     sint32 maxv = vx;
     if (maxv < vy) maxv = vy;
     if (maxv < vz) maxv = vz;
@@ -819,35 +725,29 @@ sint32 Collide::DoActualObjectCollisionCheck(BO::tNewtonObj *o0, BO::tNewtonObj 
         for (sint32 row = 0; row < 3; ++row) {
             coorddef *axis = normals[row];
             if (other ? ranges[row] < 0 : ranges[row] > 0) {
-                axis->x = (sint32)(0U - (uint32)axis->x);
-                axis->z = (sint32)(0U - (uint32)axis->z);
-                axis->y = (sint32)(0U - (uint32)axis->y);
+                axis->x = (-axis->x);
+                axis->z = (-axis->z);
+                axis->y = (-axis->y);
             }
-            uint32 x = (uint32)(axis->x / 256) * (uint32)(vel.x / 256);
-            uint32 y = (uint32)(axis->y / 256) * (uint32)(vel.y / 256);
-            uint32 z = (uint32)(axis->z / 256) * (uint32)(vel.z / 256);
-            sint32 dot = (sint32)(x + y + z);
+            uint32 x = (axis->x / 256) * (uint32)(vel.x / 256);
+            uint32 y = (axis->y / 256) * (uint32)(vel.y / 256);
+            uint32 z = (axis->z / 256) * (uint32)(vel.z / 256);
+            sint32 dot = (x + y + z);
             if (dot < 0)
-                dot = (sint32)(0U - (uint32)dot);
+                dot = (-dot);
             dots[row] = dot;
         }
         sint32 dotx = dots[0];
         sint32 doty = dots[1];
         sint32 dotz = dots[2];
-        if (doty < dotx && dotz < dotx)
-            *normal = normalx;
-        else if (doty > dotz)
-            *normal = normaly;
-        else
-            *normal = normalz;
+        if (doty < dotx && dotz < dotx) *normal = normalx;
+        else if (doty > dotz) *normal = normaly;
+        else *normal = normalz;
         return 1;
     }
-    sint32 xDiff = xRange < 0 ? (sint32)((uint32)faceObj->dimension.x + (uint32)xRange) :
-        (sint32)((uint32)faceObj->dimension.x - (uint32)xRange);
-    sint32 yDiff = yRange < 0 ? (sint32)((uint32)faceObj->dimension.y + (uint32)yRange) :
-        (sint32)((uint32)faceObj->dimension.y - (uint32)yRange);
-    sint32 zDiff = zRange < 0 ? (sint32)((uint32)faceObj->dimension.z + (uint32)zRange) :
-        (sint32)((uint32)faceObj->dimension.z - (uint32)zRange);
+    sint32 xDiff = xRange < 0 ? (faceObj->dimension.x + xRange) : (faceObj->dimension.x - xRange);
+    sint32 yDiff = yRange < 0 ? (faceObj->dimension.y + yRange) : (faceObj->dimension.y - yRange);
+    sint32 zDiff = zRange < 0 ? (faceObj->dimension.z + zRange) : (faceObj->dimension.z - zRange);
     sint32 selectedRange;
     sint32 row;
     if (xDiff < yDiff && xDiff < zDiff) {
@@ -865,9 +765,9 @@ sint32 Collide::DoActualObjectCollisionCheck(BO::tNewtonObj *o0, BO::tNewtonObj 
     };
     *normal = selectedNormal;
     if (other ? selectedRange < 0 : selectedRange > 0) {
-        normal->x = (sint32)(0U - (uint32)normal->x);
-        normal->z = (sint32)(0U - (uint32)normal->z);
-        normal->y = (sint32)(0U - (uint32)normal->y);
+        normal->x = (-normal->x);
+        normal->z = (-normal->z);
+        normal->y = (-normal->y);
     }
     return 1;
 }
@@ -880,52 +780,52 @@ sint32 Collide::TestObjectVertices(BO::tNewtonObj *o0, BO::tNewtonObj *o1, coord
     coorddef backoff1 = { 0, 0, 0 };
     for (sint32 row = 0; row < 3; ++row) {
         for (sint32 column = 0; column < 3; ++column) {
-            uint32 x = (uint32)(o0->orientMat.m[row * 3] / 256) * (uint32)(o1->orientMat.m[column * 3] / 256);
-            uint32 y = (uint32)(o0->orientMat.m[row * 3 + 1] / 256) * (uint32)(o1->orientMat.m[column * 3 + 1] / 256);
-            uint32 z = (uint32)(o0->orientMat.m[row * 3 + 2] / 256) * (uint32)(o1->orientMat.m[column * 3 + 2] / 256);
-            basisDots[row * 3 + column] = (sint32)(x + y + z);
+            uint32 x = (o0->orientMat.m[row * 3] / 256) * (uint32)(o1->orientMat.m[column * 3] / 256);
+            uint32 y = (o0->orientMat.m[row * 3 + 1] / 256) * (uint32)(o1->orientMat.m[column * 3 + 1] / 256);
+            uint32 z = (o0->orientMat.m[row * 3 + 2] / 256) * (uint32)(o1->orientMat.m[column * 3 + 2] / 256);
+            basisDots[row * 3 + column] = (x + y + z);
         }
     }
     for (sint32 i = 0; i < 9; ++i) {
         sint32 column = i % 3;
         sint32 dimension = column == 0 ? o1->dimension.x : (column == 1 ? o1->dimension.y : o1->dimension.z);
-        scaledBasisDots[i] = (sint32)((uint32)(basisDots[i] / 256) * (uint32)(dimension / 256));
+        scaledBasisDots[i] = (((basisDots[i] / 256)) * (dimension / 256));
     }
     for (sint32 i = 0; i < 9; ++i) {
         sint32 row = i / 3;
         sint32 dimension = row == 0 ? o0->dimension.x : (row == 1 ? o0->dimension.y : o0->dimension.z);
-        scaledBasisDotsOther[i] = (sint32)((uint32)(basisDots[i] / 256) * (uint32)(dimension / 256));
+        scaledBasisDotsOther[i] = (((basisDots[i] / 256)) * (dimension / 256));
     }
     sint32 numbackoffsteps = 32;
     for (sint32 ctr = 0; ctr < numbackoffsteps; ++ctr) {
         coorddef relativePosition;
-        relativePosition.x = (sint32)((uint32)o1->position.x - (uint32)o0->position.x);
-        relativePosition.y = (sint32)((uint32)o1->position.y - (uint32)o0->position.y);
-        relativePosition.z = (sint32)((uint32)o1->position.z - (uint32)o0->position.z);
+        relativePosition.x = (o1->position.x - o0->position.x);
+        relativePosition.y = (o1->position.y - o0->position.y);
+        relativePosition.z = (o1->position.z - o0->position.z);
         for (sint32 i = 0; i < 6; ++i) {
             BO::tNewtonObj *obj = i < 3 ? o0 : o1;
             sint32 row = (i % 3) * 3;
-            uint32 x = (uint32)(obj->orientMat.m[row] / 256) * (uint32)(relativePosition.x / 256);
-            uint32 y = (uint32)(obj->orientMat.m[row + 1] / 256) * (uint32)(relativePosition.y / 256);
-            uint32 z = (uint32)(obj->orientMat.m[row + 2] / 256) * (uint32)(relativePosition.z / 256);
-            basisDotRelative[i] = (sint32)(x + y + z);
+            uint32 x = (obj->orientMat.m[row] / 256) * (uint32)(relativePosition.x / 256);
+            uint32 y = (obj->orientMat.m[row + 1] / 256) * (uint32)(relativePosition.y / 256);
+            uint32 z = (obj->orientMat.m[row + 2] / 256) * (uint32)(relativePosition.z / 256);
+            basisDotRelative[i] = (x + y + z);
         }
         if (!DoActualObjectCollisionCheck(o0, o1, p, normal))
             return collisionHappened;
         if (collisionHappened == 0) {
             coorddef relativeVelocity;
-            relativeVelocity.x = (sint32)((uint32)o0->linearVel.x - (uint32)o1->linearVel.x);
-            relativeVelocity.y = (sint32)((uint32)o0->linearVel.y - (uint32)o1->linearVel.y);
-            relativeVelocity.z = (sint32)((uint32)o0->linearVel.z - (uint32)o1->linearVel.z);
+            relativeVelocity.x = (o0->linearVel.x - o1->linearVel.x);
+            relativeVelocity.y = (o0->linearVel.y - o1->linearVel.y);
+            relativeVelocity.z = (o0->linearVel.z - o1->linearVel.z);
             sint32 useVelocity = 0;
             sint32 inverseRelativeVelocityLength = 0;
-            uint32 vx = (uint32)(relativeVelocity.x / 256);
-            uint32 vz = (uint32)(relativeVelocity.z / 256);
-            sint32 maxrv = (sint32)(vx * vx + vz * vz);
+            uint32 vx = (relativeVelocity.x / 256);
+            uint32 vz = (relativeVelocity.z / 256);
+            sint32 maxrv = (vx * vx + vz * vz);
             if (maxrv > 0xE100000) {
-                uint32 px = (uint32)(relativePosition.x / 256);
-                uint32 pz = (uint32)(relativePosition.z / 256);
-                sint32 maxrp = (sint32)(px * px + pz * pz);
+                uint32 px = (relativePosition.x / 256);
+                uint32 pz = (relativePosition.z / 256);
+                sint32 maxrp = (px * px + pz * pz);
                 if (maxrp < 0xCCC) {
                     useVelocity = 1;
                 } else {
@@ -933,10 +833,10 @@ sint32 Collide::TestObjectVertices(BO::tNewtonObj *o0, BO::tNewtonObj *o1, coord
                     Math::NormalizeVector(&velocityUnit);
                     coorddef positionUnit = relativePosition;
                     Math::NormalizeShortVector(&positionUnit);
-                    uint32 x = (uint32)(velocityUnit.x / 256) * (uint32)(positionUnit.x / 256);
-                    uint32 y = (uint32)(velocityUnit.y / 256) * (uint32)(positionUnit.y / 256);
-                    uint32 z = (uint32)(velocityUnit.z / 256) * (uint32)(positionUnit.z / 256);
-                    sint32 dot = (sint32)(x + y + z);
+                    uint32 x = (velocityUnit.x / 256) * (uint32)(positionUnit.x / 256);
+                    uint32 y = (velocityUnit.y / 256) * (uint32)(positionUnit.y / 256);
+                    uint32 z = (velocityUnit.z / 256) * (uint32)(positionUnit.z / 256);
+                    sint32 dot = (x + y + z);
                     if (dot > 0xD999)
                         useVelocity = 1;
                 }
@@ -948,7 +848,7 @@ sint32 Collide::TestObjectVertices(BO::tNewtonObj *o0, BO::tNewtonObj *o1, coord
                 }
             }
             if (useVelocity) {
-                sint32 scale = (sint32)(0U - (uint32)inverseRelativeVelocityLength);
+                sint32 scale = (-inverseRelativeVelocityLength);
                 if (o0->objID < 0x200) {
                     backoff0.x = fixedmult(scale, o0->linearVel.x) >> 5;
                     backoff0.y = fixedmult(scale, o0->linearVel.y) >> 5;
@@ -970,20 +870,20 @@ sint32 Collide::TestObjectVertices(BO::tNewtonObj *o0, BO::tNewtonObj *o1, coord
             } else {
                 coorddef relativeUnit = relativePosition;
                 Math::NormalizeShortVector(&relativeUnit);
-                sint32 totalMass = (sint32)((uint32)o0->mass + (uint32)o1->mass);
+                sint32 totalMass = (o0->mass + o1->mass);
                 sint32 r0 = fixeddiv(o0->mass, totalMass);
                 sint32 r1 = fixeddiv(o1->mass, totalMass);
                 r1 /= 4;
-                sint32 x = (sint32)((uint32)relativeUnit.x * (uint32)r1) / 0x4000;
-                sint32 y = (sint32)((uint32)relativeUnit.y * (uint32)r1) / 0x4000;
-                sint32 z = (sint32)((uint32)relativeUnit.z * (uint32)r1) / 0x4000;
-                backoff0.x = (sint32)(0U - (uint32)x) >> 5;
-                backoff0.y = (sint32)(0U - (uint32)y) >> 5;
-                backoff0.z = (sint32)(0U - (uint32)z) >> 5;
+                sint32 x = (relativeUnit.x * r1) / 0x4000;
+                sint32 y = (relativeUnit.y * r1) / 0x4000;
+                sint32 z = (relativeUnit.z * r1) / 0x4000;
+                backoff0.x = -x >> 5;
+                backoff0.y = -y >> 5;
+                backoff0.z = -z >> 5;
                 r0 /= 4;
-                x = (sint32)((uint32)relativeUnit.x * (uint32)r0) / 0x4000;
-                y = (sint32)((uint32)relativeUnit.y * (uint32)r0) / 0x4000;
-                z = (sint32)((uint32)relativeUnit.z * (uint32)r0) / 0x4000;
+                x = (relativeUnit.x * r0) / 0x4000;
+                y = (relativeUnit.y * r0) / 0x4000;
+                z = (relativeUnit.z * r0) / 0x4000;
                 backoff1.x = x >> 5;
                 backoff1.y = y >> 5;
                 backoff1.z = z >> 5;
@@ -1000,12 +900,12 @@ sint32 Collide::TestObjectVertices(BO::tNewtonObj *o0, BO::tNewtonObj *o1, coord
             }
             collisionHappened = 1;
         }
-        o0->position.x = (sint32)((uint32)o0->position.x + (uint32)backoff0.x);
-        o0->position.y = (sint32)((uint32)o0->position.y + (uint32)backoff0.y);
-        o0->position.z = (sint32)((uint32)o0->position.z + (uint32)backoff0.z);
-        o1->position.x = (sint32)((uint32)o1->position.x + (uint32)backoff1.x);
-        o1->position.y = (sint32)((uint32)o1->position.y + (uint32)backoff1.y);
-        o1->position.z = (sint32)((uint32)o1->position.z + (uint32)backoff1.z);
+        o0->position.x = (o0->position.x + backoff0.x);
+        o0->position.y = (o0->position.y + backoff0.y);
+        o0->position.z = (o0->position.z + backoff0.z);
+        o1->position.x = (o1->position.x + backoff1.x);
+        o1->position.y = (o1->position.y + backoff1.y);
+        o1->position.z = (o1->position.z + backoff1.z);
     }
     return collisionHappened;
 }
@@ -1058,23 +958,23 @@ void Collide::ClearCollisionRegistry(void)
         obj->angularVel.y = 0;
         obj->angularVel.z = 0;
         gRegistry[i] = obj;
-        gNumRegistered = (sint32)((uint32)gNumRegistered + 1U);
+        gNumRegistered = (gNumRegistered + 1);
         BWorldSm::FindClosestSlice(&obj->position, &obj->simRoadInfo);
         sint32 slice = obj->simRoadInfo.slice;
         Trk::NewSlice *roadSlice = &BWorldSm::slices[slice];
         coorddef relVec;
 
-        relVec.x = (sint32)((uint32)obj->position.x - (uint32)roadSlice->center[0]);
-        relVec.y = (sint32)((uint32)obj->position.y - (uint32)roadSlice->center[0]);
-        relVec.z = (sint32)((uint32)obj->position.z - (uint32)roadSlice->center[0]);
+        relVec.x = (obj->position.x - roadSlice->center[0]);
+        relVec.y = (obj->position.y - roadSlice->center[0]);
+        relVec.z = (obj->position.z - roadSlice->center[0]);
         coorddef rightVec;
         rightVec.x = (sint8)roadSlice->right[0] * 512;
         rightVec.y = (sint8)roadSlice->right[1] * 512;
         rightVec.z = (sint8)roadSlice->right[2] * 512;
-        uint32 x = (uint32)(relVec.x / 256) * (uint32)(rightVec.x / 256);
-        uint32 y = (uint32)(relVec.y / 256) * (uint32)(rightVec.y / 256);
-        uint32 z = (uint32)(relVec.z / 256) * (uint32)(rightVec.z / 256);
-        obj->xRelRoadCenter = (sint32)(x + y + z);
+        uint32 x = (relVec.x / 256) * (uint32)(rightVec.x / 256);
+        uint32 y = (relVec.y / 256) * (uint32)(rightVec.y / 256);
+        uint32 z = (relVec.z / 256) * (uint32)(rightVec.z / 256);
+        obj->xRelRoadCenter = (x + y + z);
     }
     sint32 carLoop = 0;
     while (carLoop++ < Cars::gNumCars) {
@@ -1085,24 +985,24 @@ sint32 Collide::CheckAccuratePointRadiusCollision(BO::tNewtonObj *newObj, coordd
 {
     FUNCTION_MARKER(0x800916D4, "NFS4.EXE");
     coorddef d;
-    d.x = (sint32)((uint32)point->x - (uint32)newObj->position.x);
+    d.x = (point->x - newObj->position.x);
     d.y = 0;
-    d.z = (sint32)((uint32)point->z - (uint32)newObj->position.z);
+    d.z = (point->z - newObj->position.z);
     sint32 first = fixedmult(d.x, newObj->orientMat.m[0]);
     sint32 second = fixedmult(d.y, newObj->orientMat.m[1]);
     sint32 third = fixedmult(d.z, newObj->orientMat.m[2]);
-    sint32 temp = (sint32)((uint32)first + (uint32)second + (uint32)third);
+    sint32 temp = ((first + second) + third);
     if (temp <= 0)
-        temp = (sint32)(0U - (uint32)temp);
-    if (temp > (sint32)((uint32)newObj->dimension.x + (uint32)radius))
+        temp = (-temp);
+    if (temp > (newObj->dimension.x + radius))
         return 0;
     first = fixedmult(d.x, newObj->orientMat.m[6]);
     second = fixedmult(d.y, newObj->orientMat.m[7]);
     third = fixedmult(d.z, newObj->orientMat.m[8]);
-    temp = (sint32)((uint32)first + (uint32)second + (uint32)third);
+    temp = ((first + second) + third);
     if (temp <= 0)
-        temp = (sint32)(0U - (uint32)temp);
-    return temp <= (sint32)((uint32)newObj->dimension.z + (uint32)radius);
+        temp = (-temp);
+    return temp <= (newObj->dimension.z + radius);
 }
 
 void Collide::CheckMeForCollisions(BO::tNewtonObj *newObj)
@@ -1117,8 +1017,7 @@ void Collide::CheckMeForCollisions(BO::tNewtonObj *newObj)
     }
     if (newObj->collision.disableCollisionTimer > 0)
         --newObj->collision.disableCollisionTimer;
-    if (newObj->collision.disableCollisionTimer == 0 &&
-        (newObj->groundSurfaceType & 0x40) != 0) {
+    if (newObj->collision.disableCollisionTimer == 0 && (newObj->groundSurfaceType & 0x40) != 0) {
         Object::tSimObjList objList;
         sint32 numObjs;
         sint32 fixedRadius;
@@ -1133,14 +1032,13 @@ void Collide::CheckMeForCollisions(BO::tNewtonObj *newObj)
             Object::GetPointsCollisionData(&objList, i, &numPoints, pointList);
             for (sint32 j = 0; j < numPoints; ++j) {
                 sint32 dist = Math::DistXZ(&pointList[j], &newObj->position);
-                sint32 radius = (sint32)((uint32)fixedRadius + (uint32)newObj->dimensionRadius);
+                sint32 radius = (fixedRadius + newObj->dimensionRadius);
                 if (dist < radius && dist < closestDist) {
                     closestDist = dist;
                     closestPoint = j;
                 }
             }
-            if (closestPoint < 0 ||
-                CheckAccuratePointRadiusCollision(newObj, &pointList[closestPoint], fixedRadius) == 0)
+            if (closestPoint < 0 || CheckAccuratePointRadiusCollision(newObj, &pointList[closestPoint], fixedRadius) == 0)
                 continue;
             sint32 signCase = Object::CheckCollisionResults(&objList, i, newObj);
             if (signCase == 0)
@@ -1149,21 +1047,21 @@ void Collide::CheckMeForCollisions(BO::tNewtonObj *newObj)
             if (signCase == 1) {
                 coorddef normal;
                 normal.y = 0;
-                normal.x = (sint32)((uint32)newObj->position.x - (uint32)pos.x);
-                normal.z = (sint32)((uint32)newObj->position.z - (uint32)pos.z);
+                normal.x = (newObj->position.x - pos.x);
+                normal.z = (newObj->position.z - pos.z);
                 Math::NormalizeShortVector(&normal);
                 sint32 impulse = 0;
                 sint32 radius = fixedRadius / 256;
                 coorddef samplePoint;
-                sint32 x = (sint32)((uint32)radius * (uint32)normal.x);
-                sint32 y = (sint32)((uint32)radius * (uint32)normal.y);
-                sint32 z = (sint32)((uint32)radius * (uint32)normal.z);
-                samplePoint.x = (sint32)((uint32)(x / 256) + (uint32)pos.x);
-                samplePoint.y = (sint32)((uint32)(y / 256) + (uint32)pos.y);
-                samplePoint.z = (sint32)((uint32)(z / 256) + (uint32)pos.z);
+                sint32 x = (radius * normal.x);
+                sint32 y = (radius * normal.y);
+                sint32 z = (radius * normal.z);
+                samplePoint.x = (((x / 256)) + pos.x);
+                samplePoint.y = (((y / 256)) + pos.y);
+                samplePoint.z = (((z / 256)) + pos.z);
                 sint32 speed = newObj->speedXZ;
                 if (speed > 0x280000) {
-                    impulse = (sint32)((uint32)speed << 1);
+                    impulse = ((uint32)speed << 1);
                     if (impulse > 0x960000)
                         impulse = 0x960000;
                 } else if (speed > 0x190000) {
@@ -1205,22 +1103,22 @@ void Collide::CheckMeForCollisions(BO::tNewtonObj *newObj)
     gRegistry[gNumRegistered] = newObj;
     for (sint32 i = 0; i < gNumRegistered; ++i) {
         BO::tNewtonObj *otherObj = gRegistry[i];
-        sint32 radius = (sint32)((uint32)newObj->dimensionRadius + (uint32)otherObj->dimensionRadius);
-        sint32 dist = (sint32)((uint32)newObj->position.z - (uint32)otherObj->position.z);
+        sint32 radius = (newObj->dimensionRadius + otherObj->dimensionRadius);
+        sint32 dist = (newObj->position.z - otherObj->position.z);
         if (dist <= 0)
-            dist = (sint32)((uint32)otherObj->position.z - (uint32)newObj->position.z);
+            dist = (otherObj->position.z - newObj->position.z);
         if (dist >= radius)
             continue;
-        radius = (sint32)((uint32)newObj->dimensionRadius + (uint32)otherObj->dimensionRadius);
-        dist = (sint32)((uint32)newObj->position.x - (uint32)otherObj->position.x);
+        radius = (newObj->dimensionRadius + otherObj->dimensionRadius);
+        dist = (newObj->position.x - otherObj->position.x);
         if (dist <= 0)
-            dist = (sint32)((uint32)otherObj->position.x - (uint32)newObj->position.x);
+            dist = (otherObj->position.x - newObj->position.x);
         if (dist >= radius)
             continue;
-        radius = (sint32)((uint32)newObj->dimensionRadius + (uint32)otherObj->dimensionRadius);
-        dist = (sint32)((uint32)newObj->position.y - (uint32)otherObj->position.y);
+        radius = (newObj->dimensionRadius + otherObj->dimensionRadius);
+        dist = (newObj->position.y - otherObj->position.y);
         if (dist <= 0)
-            dist = (sint32)((uint32)otherObj->position.y - (uint32)newObj->position.y);
+            dist = (otherObj->position.y - newObj->position.y);
         if (dist >= radius)
             continue;
         newObj->angularVel.x = fixedmult(0x6487E, newObj->angularVel.x);
@@ -1239,5 +1137,5 @@ void Collide::CheckMeForCollisions(BO::tNewtonObj *newObj)
         LimitAngularVel(newObj);
         LimitAngularVel(otherObj);
     }
-    gNumRegistered = (sint32)((uint32)gNumRegistered + 1U);
+    gNumRegistered = (gNumRegistered + 1);
 }

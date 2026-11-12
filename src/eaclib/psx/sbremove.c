@@ -15,7 +15,6 @@ sint32 iSNDremovepatches(sint32 bank, sint32 count)
 sint32 cSNDbankremove(sint32 bank, sint32 unused)
 {
     FUNCTION_MARKER(0x800E6694, "NFS4.EXE");
-    (void)unused;
     if (sndgs.initialized == 0)
         return -10;
     if (bank == -1)
@@ -26,23 +25,21 @@ sint32 cSNDbankremove(sint32 bank, sint32 unused)
     }
     if (iSNDvalidbank(bank) != 0)
         return -8;
-    uint8 *record = ((uint8 *)(sndgs.bankMemory)) + bank * 12;
-    uint8 *header;
-    memcpy(&header, record, sizeof(header));
+    NativeSoundBank *record = &sndgs.bankMemory[bank];
+    uint8 *header = record->header;
     for (sint32 i = 0; i < sndgs.options.set.inputvoices; ++i)
     {
         SoundVoicePrefix *voice = &((SoundVoicePrefix *)(sndgs.voiceMemory))[i];
         if (voice->unknown0A == bank)
             SNDstop(voice->playHandle);
     }
-    record = ((uint8 *)(sndgs.bankMemory)) + bank * 12;
-    if ((sint8)record[9] != 0)
+    record = &sndgs.bankMemory[bank];
+    if (record->wholeSpuAllocation != 0)
     {
-        sint32 address;
-        memcpy(&address, record + 4, sizeof(address));
+        sint32 address = record->storage.spuAddress;
         iSNDpsxfree(address);
-        record = ((uint8 *)(sndgs.bankMemory)) + bank * 12;
-        record[9] = 0;
+        record = &sndgs.bankMemory[bank];
+        record->wholeSpuAllocation = 0;
     }
     else
     {
@@ -50,10 +47,9 @@ sint32 cSNDbankremove(sint32 bank, sint32 unused)
         memcpy(&count, header + 6, sizeof(count));
         iSNDremovepatches(bank, count);
     }
-    record = ((uint8 *)(sndgs.bankMemory)) + bank * 12;
-    header = 0;
-    memcpy(record, &header, sizeof(header));
-    record = ((uint8 *)(sndgs.bankMemory)) + bank * 12;
-    record[8] = 0;
+    record = &sndgs.bankMemory[bank];
+    record->header = 0;
+    record = &sndgs.bankMemory[bank];
+    record->unavailable = 0;
     return 0;
 }

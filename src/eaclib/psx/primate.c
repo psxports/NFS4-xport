@@ -20,8 +20,8 @@ void *initlinkmode(sint32 mode, sint32 maxprims, uint32 flags)
     maxprim = maxprims;
     if (otbuf != 0)
         purgememadr(otbuf);
-    uint32 bytes = ((uint32)maxprim * 13 + (uint32)maxot) * 8;
-    char *storage = ((char *)(reservememadr("Draw Lists", (sint32)bytes, 16)));
+    uint32 bytes = ((uint32)maxprim * 13 + maxot) * 8;
+    char *storage = ((char *)(reservememadr("Draw Lists", bytes, 16)));
     sint32 otCount = maxot;
     otbuf = storage;
     otbl = ((uint32 *)(storage));
@@ -57,6 +57,6 @@ sint32 settrans(sint32 mode)
 {
     FUNCTION_MARKER(0x800F070C, "NFS4.EXE");
     if (mode >= 0)
-        semitrans = mode == 0 ? 1U : 3U;
+        semitrans = mode == 0 ? 1 : 3U;
     return (sint32)semitrans >> 1;
 }

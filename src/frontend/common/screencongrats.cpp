@@ -108,9 +108,7 @@ void tScreenCongrats::DrawBackground(void)
     drawFlags2.custom_shapes = fSwapShapes.fShapes;
     carRotate += 3;
     DrawCongratsMessage();
-    if (trophy == kTrophyCar &&
-        (starttick == -1 || !fGotCar || R3DCar::aSyncLoading >= 0 ||
-         (sint32)((uint32)ticks - (uint32)fEnterTick) < 60))
+    if (trophy == kTrophyCar && (starttick == -1 || !fGotCar || R3DCar::aSyncLoading >= 0 || (sint32)((uint32)ticks - fEnterTick) < 60))
         starttick = ticks;
     else
     {
@@ -118,11 +116,11 @@ void tScreenCongrats::DrawBackground(void)
             starttick = ticks;
         if (CashAwarded != -1)
         {
-            if ((sint32)((uint32)ticks - (uint32)starttick) > 1000 || fStartCountdownNOW)
+            if ((sint32)((uint32)ticks - starttick) > 1000 || fStartCountdownNOW)
             {
                 if (CashAwarded != 0)
                     AudioCmn::PlayFESFX(21);
-                CashAwarded = (sint32)((uint32)CashAwarded - (uint32)fCountSpeed);
+                CashAwarded = (CashAwarded - fCountSpeed);
                 if (CashAwarded < 0)
                 {
                     CashAwarded = 0;
@@ -138,10 +136,10 @@ void tScreenCongrats::DrawBackground(void)
             FETextRender::MenuTextFade(fScreenFadeVal, 0x316, textState_Hilighted, textType_TrackRecords);
             x = TextSys::WordX(0x319);
             y = TextSys::WordY(0x319);
-            sint32 countedCash = (sint32)((uint32)TotalCash - (uint32)CashAwarded);
+            sint32 countedCash = (TotalCash - CashAwarded);
             DrawMoney(x, y, 9, countedCash, colf, colb);
         }
-        if (fSpeechToPlay != 0 && (sint32)((uint32)ticks - (uint32)starttick) > 128)
+        if (fSpeechToPlay != 0 && (sint32)((uint32)ticks - starttick) > 128)
         {
             FeAudio::AsyncPlaySpeech(2, fSpeechToPlay);
             fSpeechToPlay = 0;
@@ -153,14 +151,14 @@ void tScreenCongrats::DrawBackground(void)
             drawFlags2.tint[0] = CalcFadeVal(0x808080, fJustFadeOff);
             if (!InExtraSpin)
             {
-                framenum = (sint32)((uint32)ticks - (uint32)starttick) / 2;
+                framenum = (sint32)((uint32)ticks - starttick) / 2;
                 if (framenum >= 20)
                 {
                     scale = true;
                     sint32 quarterStart = starttick / 4;
                     sint32 now = ticks;
                     framenum = 20;
-                    if ((sint32)((uint32)now - (uint32)quarterStart) % 1500 < 45)
+                    if ((now - quarterStart) % 1500 < 45)
                     {
                         sint32 spinTick = ticks;
                         InExtraSpin = true;
@@ -170,7 +168,7 @@ void tScreenCongrats::DrawBackground(void)
             }
             else
             {
-                framenum = (sint32)((uint32)ticks - (uint32)InExtraSpinTick) / 6 + 21;
+                framenum = (sint32)((uint32)ticks - InExtraSpinTick) / 6 + 21;
                 scale = true;
                 if (framenum >= 42)
                 {
@@ -183,7 +181,7 @@ void tScreenCongrats::DrawBackground(void)
         {
             drawFlags.tint[0] = CalcFadeVal(0x646464, fJustFadeOff);
             drawFlags2.tint[0] = CalcFadeVal(0x808080, fJustFadeOff);
-            framenum = (sint32)((uint32)ticks - (uint32)starttick) / 4;
+            framenum = (sint32)((uint32)ticks - starttick) / 4;
             if (framenum > 20)
                 framenum = 20;
         }
@@ -313,9 +311,7 @@ void tScreenCongrats::Initialize(void)
 void tScreenCongrats::ProcessInput(tPlayer p, tInputKeyType &keyval, tMenuCommand &c)
 {
     FUNCTION_MARKER(0x80048AF0, "FRONT.BIN");
-    if (keyval != kInput_KeyType_Circle &&
-        (ginfo.areLoading != 0 || ginfo.soundIsPlaying != 0 ||
-         (sint32)((uint32)ticks - (uint32)starttick) < 150))
+    if (keyval != kInput_KeyType_Circle && (ginfo.areLoading != 0 || ginfo.soundIsPlaying != 0 || (sint32)((uint32)ticks - starttick) < 150))
         keyval = kInput_KeyType_AlreadyProcessed;
 }
 
@@ -543,7 +539,7 @@ void tScreenTournamentTrophy::CalculatePrizes(void)
     fCarPlayer = 0;
     TotalCash = tournamentManager.fMoney;
     if (tInfo.fCompletedGarageFull != 0)
-        TotalCash = (sint32)((uint32)TotalCash - (uint32)tInfo.fCompletedBonusMoney);
+        TotalCash = (TotalCash - tInfo.fCompletedBonusMoney);
     if (tInfo.fTournMoney == 0)
         tInfo.fTournMoney = -1;
     CashAwarded = tInfo.fTournMoney;

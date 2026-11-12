@@ -68,9 +68,9 @@ void InitializeSpinningCars(void)
     GameSetup::gData.Weather = 0;
     for (sint32 i = 0; i < 2; ++i)
     {
-        Car::tObj *car = static_cast<Car::tObj *>(reservememadr("carObj", 0x8DC, 0));
+        Car::tObj *car = static_cast<Car::tObj *>(reservememadr("carObj", sizeof(Car::tObj), 0));
         gCarObj[i] = car;
-        blockclear(car, 0x8DC);
+        blockclear(car, sizeof(*car));
         car->carInfo = &GameSetup::gData.carInfo[i];
         car->carInfo->carType = 1;
         strcpy(car->carName, GameSetup::gCarNames[car->carInfo->carType]);
@@ -81,7 +81,7 @@ void InitializeSpinningCars(void)
     R3DCar::PostStartUp();
     gMenuRotate[1] = 0;
     gMenuRotate[0] = 0;
-    blockclear(&gCView, 140);
+    blockclear(&gCView, sizeof(gCView));
     DrawC::gMenuColor[1] = -1;
     DrawC::gMenuColor[0] = -1;
     DrawC::gMenuLights = 0;
@@ -198,8 +198,8 @@ void PSXExitFrontend(void)
 void PSX_AllocShapes(void)
 {
     FUNCTION_MARKER(0x8004DCC8, "FRONT.BIN");
-    gHelpShapes = static_cast<tTexture::ShapeInfo *>(reservememadr("gHelpShapes", 0x760, 0));
-    blockclear(gHelpShapes, 0x760);
+    gHelpShapes = static_cast<tTexture::ShapeInfo *>(reservememadr("gHelpShapes", 59 * sizeof(*gHelpShapes), 0));
+    blockclear(gHelpShapes, 59 * sizeof(*gHelpShapes));
 }
 
 void Init_RenderingEnvironment(void)
@@ -210,7 +210,7 @@ void Init_RenderingEnvironment(void)
     Draw::InitViews();
     Draw::gRearView = -1;
     Draw::gPlayer1View = Draw::SetView(0, 0, 0, 256, 512, 240, 0, 1, 10);
-    blockclear(&gCView, 140);
+    blockclear(&gCView, sizeof(gCView));
     gCView.id = Draw::gPlayer1View;
     PSXFront::AllocateDrawMemory();
     Draw::gDoVSync = 1;
@@ -260,43 +260,43 @@ static void AdjustShapeDrawing(tTexture::ShapeInfo *tShp, sint32 &x, sint32 &y, 
     FUNCTION_MARKER(0x8004DF38, "FRONT.BIN");
     if ((flags & 0x400) != 0)
     {
-        x = (sint32)((uint32)x - (uint32)(sint32)tShp->centerx);
-        y = (sint32)((uint32)y - (uint32)(sint32)tShp->centery);
+        x = (x - tShp->centerx);
+        y = (y - tShp->centery);
     }
     else if (y <= 0)
     {
-        x = (sint32)((uint32)x - (uint32)(sint32)tShp->centerx);
-        y = (sint32)(0U - ((uint32)(sint32)tShp->centery + (uint32)y));
+        x = (x - tShp->centerx);
+        y = (-(tShp->centery + y));
     }
     if ((flags & 0x100) != 0)
     {
-        x = (sint32)((uint32)x - (uint32)((sint32)tShp->width >> 1));
-        y = (sint32)((uint32)y - (uint32)((sint32)tShp->height >> 1));
+        x = (x - ((sint32)tShp->width >> 1));
+        y = (y - ((sint32)tShp->height >> 1));
     }
     if ((flags & 0x20) != 0)
     {
-        uint32 axis = (uint32)(sint32)extra->flip_axis;
-        uint32 height = (uint32)(sint32)tShp->height;
-        y = (sint32)((axis << 1) - ((uint32)y + height) + 1U);
+        uint32 axis = ((sint32)extra->flip_axis);
+        uint32 height = ((sint32)tShp->height);
+        y = ((axis << 1) - (y + height) + 1U);
         flags |= 2;
     }
     sint32 activeFlags = flags;
     if ((activeFlags & 0x10) != 0)
     {
-        sint32 b = (sint32)((((uint32)extra->tint[0] >> 16) & 255U) * (uint32)bright) / 128;
-        sint32 g = (sint32)((((uint32)extra->tint[0] >> 8) & 255U) * (uint32)bright) / 128;
-        sint32 r = (sint32)(((uint32)extra->tint[0] & 255U) * (uint32)bright) / 128;
-        color[0] = (sint32)(((uint32)b << 16) | ((uint32)g << 8) | (uint32)r);
+        sint32 b = (sint32)((((uint32)extra->tint[0] >> 16) & 255U) * bright) / 128;
+        sint32 g = (sint32)((((uint32)extra->tint[0] >> 8) & 255U) * bright) / 128;
+        sint32 r = (sint32)((extra->tint[0] & 255U) * bright) / 128;
+        color[0] = (((uint32)b << 16) | ((uint32)g << 8) | r);
         return;
     }
     if ((activeFlags & 0x80) != 0)
     {
         for (sint32 i = 0; i < 4; ++i)
         {
-            sint32 b = (sint32)((((uint32)extra->tint[i] >> 16) & 255U) * (uint32)bright) / 128;
-            sint32 g = (sint32)((((uint32)extra->tint[i] >> 8) & 255U) * (uint32)bright) / 128;
-            sint32 r = (sint32)(((uint32)extra->tint[i] & 255U) * (uint32)bright) / 128;
-            color[i] = (sint32)(((uint32)b << 16) | ((uint32)g << 8) | (uint32)r);
+            sint32 b = (sint32)((((uint32)extra->tint[i] >> 16) & 255U) * bright) / 128;
+            sint32 g = (sint32)((((uint32)extra->tint[i] >> 8) & 255U) * bright) / 128;
+            sint32 r = (sint32)((extra->tint[i] & 255U) * bright) / 128;
+            color[i] = (((uint32)b << 16) | ((uint32)g << 8) | r);
         }
         return;
     }
@@ -304,48 +304,48 @@ static void AdjustShapeDrawing(tTexture::ShapeInfo *tShp, sint32 &x, sint32 &y, 
     {
         uint32 axis = (uint16)extra->flip_axis;
         uint32 position = (uint16)y;
-        uint32 difference = axis - position + 1U;
+        sint32 difference = axis - position + 1;
         if ((sint16)difference < 0)
-            difference = 0U - difference;
-        uint32 fadetop = difference << 1;
+            difference = -difference;
+        uint32 fadetop = (uint32)difference << 1;
         if ((sint16)fadetop > 128)
             fadetop = 128;
-        difference = axis - (position + (uint16)tShp->height) + 1U;
+        difference = axis - (position + (uint16)tShp->height) + 1;
         if ((sint16)difference < 0)
-            difference = 0U - difference;
-        uint32 fadebottom = difference << 1;
+            difference = -difference;
+        uint32 fadebottom = (uint32)difference << 1;
         if ((sint16)fadebottom > 128)
             fadebottom = 128;
-        sint32 fbot = 128 - (sint32)(sint16)fadebottom;
-        uint32 rgb = ((uint32)fbot << 16) | ((uint32)fbot << 8) | (uint32)fbot;
-        sint32 ftop = 128 - (sint32)(sint16)fadetop;
-        color[0] = (sint32)rgb;
-        color[1] = (sint32)rgb;
-        rgb = ((uint32)ftop << 16) | ((uint32)ftop << 8) | (uint32)ftop;
-        color[2] = (sint32)rgb;
-        color[3] = (sint32)rgb;
+        sint32 fbot = 128 - ((sint16)fadebottom);
+        uint32 rgb = ((uint32)fbot << 16) | ((uint32)fbot << 8) | fbot;
+        sint32 ftop = 128 - ((sint16)fadetop);
+        color[0] = rgb;
+        color[1] = rgb;
+        rgb = ((uint32)ftop << 16) | ((uint32)ftop << 8) | ftop;
+        color[2] = rgb;
+        color[3] = rgb;
         return;
     }
-    color[0] = (sint32)(((uint32)bright << 16) | ((uint32)bright << 8) | (uint32)bright);
+    color[0] = (((uint32)bright << 16) | ((uint32)bright << 8) | bright);
 }
 
 static void DrawGouraudShape(tTexture::ShapeInfo *shp, sint32 flags, sint32 x, sint32 y, sint32 *color, sint32 abr)
 {
     FUNCTION_MARKER(0x8004E264, "FRONT.BIN");
-    uint32 height = (uint16)shp->height;
+    sint32 height = (uint16)shp->height;
     uint32 width = (uint16)shp->width;
     sint32 bpp = (uint8)shp->depth;
     if ((flags & 2) != 0)
     {
-        y = (sint32)((uint32)y + (uint32)(sint32)(sint16)height);
-        height = 0U - height;
+        y = (y + ((sint16)height));
+        height = -height;
     }
     sint32 v = (uint8)shp->shapey;
     uint32 vh = (uint16)shp->height;
     if ((flags & 2) != 0)
         --v;
     uint8 baseV = (uint8)v;
-    uint32 bottom = height + (uint32)y;
+    uint32 bottom = (uint32)height + y;
     sint32 i = 0;
     for (;;)
     {
@@ -355,15 +355,15 @@ static void DrawGouraudShape(tTexture::ShapeInfo *shp, sint32 flags, sint32 x, s
             break;
         sint32 pixelOffset = offset * bpp / 16;
         uint32 shapeX = (uint16)shp->shapex;
-        sint32 baseNumerator = (sint32)(sint16)shapeX * 16;
+        sint32 baseNumerator = ((sint16)shapeX) * 16;
         if (bpp == 0)
             abort();
         sint32 baseU = baseNumerator / bpp;
-        uint32 pageX = shapeX + (uint32)pixelOffset;
-        sint32 pageNumerator = (sint32)(sint16)(pageX & ~63U) * 16;
+        uint32 pageX = shapeX + pixelOffset;
+        sint32 pageNumerator = ((sint16)(pageX & ~63U)) * 16;
         sint32 pageU = pageNumerator / bpp;
-        sint32 u = (sint32)((uint32)i + (uint32)baseU - (uint32)pageU);
-        sint32 w = 255 - (sint32)(sint16)u;
+        sint32 u = ((i + baseU) - pageU);
+        sint32 w = 255 - ((sint16)u);
         sint32 remaining = currentWidth - offset;
         if (remaining < w)
             w = remaining;
@@ -373,58 +373,56 @@ static void DrawGouraudShape(tTexture::ShapeInfo *shp, sint32 flags, sint32 x, s
         setaddr(prim, getaddr(ot));
         cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
         setaddr(ot, prim);
-        uint32 rgb = (uint32)color[0];
+        uint32 rgb = color[0];
         memcpy(&prim->p[0].rgbc, &rgb, sizeof(rgb));
-        rgb = (uint32)color[1];
+        rgb = color[1];
         memcpy(&prim->p[1].rgbc, &rgb, sizeof(rgb));
-        rgb = (uint32)color[2];
+        rgb = color[2];
         memcpy(&prim->p[2].rgbc, &rgb, sizeof(rgb));
-        rgb = (uint32)color[3];
+        rgb = color[3];
         setcode(prim, 0x3C + ((flags & 1) << 1));
         setlen(prim, 12);
         memcpy(&prim->p[3].rgbc, &rgb, sizeof(rgb));
-        sint32 clutID = (sint32)shp->clutID;
+        sint32 clutID = shp->clutID;
         prim->p[0].attr = GetClut((clutID & 63) << 4, clutID >> 6);
         uint32 pageY = (uint16)shp->shapey;
-        prim->p[1].attr = (uint16)(((shp->type & 3U) << 7) |
-                             (((uint32)abr & 3U) << 5) | ((pageY & 0x100U) >> 4) |
-                             ((pageX & 0x3C0U) >> 6) | ((pageY & 0x200U) << 2));
+        prim->p[1].attr = (uint16)(((shp->type & 3U) << 7) | ((abr & 3U) << 5) | ((pageY & 0x100U) >> 4) | ((pageX & 0x3C0U) >> 6) | ((pageY & 0x200U) << 2));
         sint32 addw = 0;
         if ((flags & 4) != 0 && shp->width < 255)
         {
-            u = (sint32)((uint32)u - 1U);
+            u = (u - 1);
             addw = 1;
         }
         prim->p[0].uv.u = (uint8)u;
         prim->p[0].uv.v = (uint8)v;
-        prim->p[1].uv.u = (uint8)((uint32)u + (uint32)w);
+        prim->p[1].uv.u = (uint8)(u + (uint32)w);
         prim->p[1].uv.v = (uint8)v;
         prim->p[2].uv.u = (uint8)u;
-        prim->p[3].uv.u = (uint8)((uint32)u + (uint32)w);
+        prim->p[3].uv.u = (uint8)(u + (uint32)w);
         prim->p[2].uv.v = (uint8)(vh + baseV);
         prim->p[3].uv.v = (uint8)(vh + baseV);
         if ((sint16)w <= 0)
             w = 1;
-        uint32 adjust = (uint32)addw - 1U;
+        uint32 adjust = addw - 1U;
         if ((flags & 4) != 0)
         {
-            prim->p[0].xy.x = (sint16)(width + (uint32)x - (uint32)i + adjust);
+            prim->p[0].xy.x = (sint16)(width + x - i + adjust);
             prim->p[0].xy.y = (sint16)y;
             uint32 shapeWidth = (uint16)shp->width;
-            uint32 next = (uint32)i + (uint32)w;
+            uint32 next = i + (uint32)w;
             prim->p[1].xy.y = (sint16)y;
-            prim->p[1].xy.x = (sint16)(shapeWidth + (uint32)x - next + adjust);
+            prim->p[1].xy.x = (sint16)(shapeWidth + x - next + adjust);
             shapeWidth = (uint16)shp->width;
             prim->p[2].xy.y = (sint16)bottom;
-            prim->p[2].xy.x = (sint16)(shapeWidth + (uint32)x - (uint32)i + adjust);
+            prim->p[2].xy.x = (sint16)(shapeWidth + x - i + adjust);
             shapeWidth = (uint16)shp->width;
             prim->p[3].xy.y = (sint16)bottom;
-            prim->p[3].xy.x = (sint16)(shapeWidth + (uint32)x - next + adjust);
+            prim->p[3].xy.x = (sint16)(shapeWidth + x - next + adjust);
         }
         else
         {
-            uint32 left = (uint32)i + (uint32)x;
-            uint32 right = left + (uint32)w;
+            uint32 left = i + (uint32)x;
+            uint32 right = left + w;
             prim->p[0].xy.x = (sint16)left;
             prim->p[0].xy.y = (sint16)y;
             prim->p[1].xy.x = (sint16)right;
@@ -434,7 +432,7 @@ static void DrawGouraudShape(tTexture::ShapeInfo *shp, sint32 flags, sint32 x, s
             prim->p[3].xy.x = (sint16)right;
             prim->p[3].xy.y = (sint16)bottom;
         }
-        i = (sint32)((uint32)i + (uint32)w);
+        i = (i + w);
     }
 }
 
@@ -452,7 +450,7 @@ void DrawShapeExtended(sint32 index, sint32 flags, sint32 x, sint32 y, sint32 fa
 {
     FUNCTION_MARKER(0x8004E678, "FRONT.BIN");
     tTexture::ShapeInfo *shapes = (flags & 8) != 0 ? gHelpShapes : gCurrentShapes;
-    sint32 bright = (sint16)((uint32)128 - (uint32)fade);
+    sint32 bright = (sint16)(128 - (uint32)fade);
     if ((flags & 0x200) != 0)
         shapes = extra->custom_shapes;
     tTexture::ShapeInfo *tShp = shapes + index;
@@ -476,31 +474,29 @@ static void ScaleGouraudShape(tTexture::ShapeInfo *shp, sint32 flags, sint32 x, 
     setaddr(prim, getaddr(ot));
     cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
     setaddr(ot, prim);
-    uint32 rgb = (uint32)color[0];
+    uint32 rgb = color[0];
     memcpy(&prim->p[0].rgbc, &rgb, sizeof(rgb));
-    rgb = (uint32)color[1];
+    rgb = color[1];
     memcpy(&prim->p[1].rgbc, &rgb, sizeof(rgb));
-    rgb = (uint32)color[2];
+    rgb = color[2];
     memcpy(&prim->p[2].rgbc, &rgb, sizeof(rgb));
-    rgb = (uint32)color[3];
+    rgb = color[3];
     memcpy(&prim->p[3].rgbc, &rgb, sizeof(rgb));
     SetPolyGT4(prim);
     SetSemiTrans(prim, flags & 1);
-    sint32 clutID = (sint32)shp->clutID;
+    sint32 clutID = shp->clutID;
     prim->p[0].attr = GetClut((clutID & 63) << 4, clutID >> 6);
     uint32 pageY = (uint16)shp->shapey;
     uint32 pageX = (uint16)shp->shapex;
-    prim->p[1].attr = (uint16)(((shp->type & 3U) << 7) |
-                         (((uint32)abr & 3U) << 5) | ((pageY & 0x100U) >> 4) |
-                         ((pageX & 0x3C0U) >> 6) | ((pageY & 0x200U) << 2));
+    prim->p[1].attr = (uint16)(((shp->type & 3U) << 7) | ((abr & 3U) << 5) | ((pageY & 0x100U) >> 4) | ((pageX & 0x3C0U) >> 6) | ((pageY & 0x200U) << 2));
     if ((flags & 4) != 0)
     {
-        x = (sint32)((uint32)x + (uint32)fixedmult(scalex, (sint16)width));
+        x = (x + fixedmult(scalex, (sint16)width));
         width = -width;
     }
     if ((flags & 2) != 0)
     {
-        y = (sint32)((uint32)y + (uint32)fixedmult(scaley, (sint16)height));
+        y = (y + fixedmult(scaley, (sint16)height));
         height = -height;
     }
     width = (sint16)width;
@@ -508,18 +504,18 @@ static void ScaleGouraudShape(tTexture::ShapeInfo *shp, sint32 flags, sint32 x, 
     prim->p[0].xy.y = (sint16)y;
     sint32 scaled = fixedmult(scalex, width);
     height = (sint16)height;
-    uint32 right = (uint32)x - 1U;
-    prim->p[1].xy.x = (sint16)(right + (uint32)scaled);
+    uint32 right = x - 1U;
+    prim->p[1].xy.x = (sint16)(right + scaled);
     prim->p[1].xy.y = (sint16)y;
     prim->p[2].xy.x = (sint16)x;
     scaled = fixedmult(scaley, height);
-    prim->p[2].xy.y = (sint16)((uint32)y + (uint32)scaled);
+    prim->p[2].xy.y = (sint16)(y + (uint32)scaled);
     scaled = fixedmult(scalex, width);
     right += (uint32)scaled;
     prim->p[3].xy.x = (sint16)right;
     scaled = fixedmult(scaley, height);
-    prim->p[3].xy.y = (sint16)((uint32)y + (uint32)scaled);
-    sint32 numerator = ((uint16)shp->shapex & 63U) << 4;
+    prim->p[3].xy.y = (sint16)(y + (uint32)scaled);
+    sint32 numerator = ((uint16)shp->shapex & 63) << 4;
     if (bpp == 0)
         abort();
     sint32 u = numerator / bpp;
@@ -556,7 +552,7 @@ void ScaleShapeExtended(sint32 index, sint32 flags, sint32 x, sint32 y, sint32 f
     sint32 scalex = 131072;
     sint32 scaley = 65536;
     tTexture::ShapeInfo *shapes = (flags & 8) != 0 ? gHelpShapes : gCurrentShapes;
-    sint32 bright = (sint16)((uint32)128 - (uint32)fade);
+    sint32 bright = (sint16)(128 - (uint32)fade);
     if ((flags & 0x200) != 0)
         shapes = extra->custom_shapes;
     tTexture::ShapeInfo *tShp = shapes + index;
@@ -591,13 +587,13 @@ void PSXDrawSquare(sint32 col, sint32 x, sint32 y, sint32 w, sint32 h)
     setaddr(prim, getaddr(ot));
     cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
     setaddr(ot, prim);
-    uint32 color = (uint32)col;
+    uint32 color = col;
     memcpy(&prim->rgbc, &color, sizeof(color));
     setcode(prim, 0x28);
     prim->p[0].y = (sint16)y;
     prim->p[1].y = (sint16)y;
-    uint32 right = (uint32)x + (uint32)w;
-    uint32 bottom = (uint32)y + (uint32)h;
+    uint32 right = x + (uint32)w;
+    uint32 bottom = y + (uint32)h;
     setlen(prim, 5);
     prim->p[0].x = (sint16)x;
     prim->p[1].x = (sint16)right;
@@ -616,17 +612,17 @@ void PSXDrawGouraudSquare(sint32 x, sint32 y, sint32 w, sint32 h, sint32 c1, sin
     setaddr(prim, getaddr(ot));
     cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
     setaddr(ot, prim);
-    uint32 color = (uint32)c1;
+    uint32 color = c1;
     memcpy(&prim->p[0].rgbc, &color, sizeof(color));
-    color = (uint32)c2;
+    color = c2;
     memcpy(&prim->p[1].rgbc, &color, sizeof(color));
-    color = (uint32)c3;
+    color = c3;
     memcpy(&prim->p[2].rgbc, &color, sizeof(color));
-    color = (uint32)c4;
+    color = c4;
     memcpy(&prim->p[3].rgbc, &color, sizeof(color));
     SetPolyG4(prim);
-    uint32 right = (uint32)x + (uint32)w;
-    uint32 bottom = (uint32)y + (uint32)h;
+    uint32 right = x + (uint32)w;
+    uint32 bottom = y + (uint32)h;
     prim->p[0].xy.y = (sint16)y;
     prim->p[1].xy.y = (sint16)y;
     prim->p[0].xy.x = (sint16)x;
@@ -643,11 +639,11 @@ void PSXDrawTransGouraudSquare(sint32 x, sint32 y, sint32 w, sint32 h, sint32 op
     if (opacity <= 0)
         return;
     uint32 top = (uint32)y << 16;
-    uint32 bottom = ((uint32)y + (uint32)h) << 16;
-    uint32 right = (uint32)x + (uint32)w;
-    uint32 xy0 = top | (uint32)x;
+    uint32 bottom = (y + (uint32)h) << 16;
+    uint32 right = x + (uint32)w;
+    uint32 xy0 = top | x;
     uint32 xy1 = top | right;
-    uint32 xy2 = bottom | (uint32)x;
+    uint32 xy2 = bottom | x;
     uint32 xy3 = bottom | right;
     for (sint32 i = 0; i < opacity; ++i)
     {
@@ -659,13 +655,13 @@ void PSXDrawTransGouraudSquare(sint32 x, sint32 y, sint32 w, sint32 h, sint32 op
         setaddr(ot, prim);
         memcpy(&prim->p[0].xy, &xy0, sizeof(xy0));
         memcpy(&prim->p[2].xy, &xy2, sizeof(xy2));
-        uint32 color = (uint32)c1;
+        uint32 color = c1;
         memcpy(&prim->p[0].rgbc, &color, sizeof(color));
-        color = (uint32)c2;
+        color = c2;
         memcpy(&prim->p[1].rgbc, &color, sizeof(color));
-        color = (uint32)c3;
+        color = c3;
         memcpy(&prim->p[2].rgbc, &color, sizeof(color));
-        color = (uint32)c4;
+        color = c4;
         memcpy(&prim->p[3].rgbc, &color, sizeof(color));
         setcode(prim, 0x39);
         setlen(prim, 8);
@@ -679,8 +675,8 @@ void PSXDrawTransSquare(sint32 col, sint32 x, sint32 y, sint32 w, sint32 h, sint
     FUNCTION_MARKER(0x8004EED0, "FRONT.BIN");
     if (opacity <= 0)
         return;
-    uint32 right = (uint32)x + (uint32)w;
-    uint32 bottom = (uint32)y + (uint32)h;
+    uint32 right = x + (uint32)w;
+    uint32 bottom = y + (uint32)h;
     for (sint32 i = 0; i < opacity; ++i)
     {
         Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
@@ -689,7 +685,7 @@ void PSXDrawTransSquare(sint32 col, sint32 x, sint32 y, sint32 w, sint32 h, sint
         setaddr(prim, getaddr(ot));
         cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
         setaddr(ot, prim);
-        uint32 color = (uint32)col;
+        uint32 color = col;
         memcpy(&prim->rgbc, &color, sizeof(color));
         setcode(prim, 0x2A);
         setlen(prim, 5);
@@ -717,30 +713,29 @@ void FontUpsideDownBlit(sint32 x, sint32 y, void *src, sint32 u, sint32 v, chara
     uint32 packed;
     memcpy(&packed, static_cast<const char *>(src) + 12, sizeof(packed));
     sint32 dv = (sint32)(packed << 4) >> 20;
-    sint32 row = (sint32)(((uint32)dv + (uint32)v) & 255U) - 1;
+    sint32 row = ((dv + (uint32)v) & 255U) - 1;
     setaddr(prim, getaddr(ot));
-    uint32 tint = (uint32)font::tint;
+    uint32 tint = font::tint;
     setaddr(ot, prim);
     memcpy(&prim->rgbc, &tint, sizeof(tint));
     setlen(prim, 9);
     setcode(prim, 0x2C);
-    uint32 upper = (uint32)y - (uint32)yoffset * 2U + 5U - (uint32)height;
+    uint32 upper = y - yoffset * 2U + 5U - (uint32)height;
     prim->p[0].attr = gFontClut;
     uint32 type = *static_cast<const uint8 *>(src);
     memcpy(&packed, static_cast<const char *>(src) + 12, sizeof(packed));
     prim->p[0].uv.v = (uint8)row;
     prim->p[1].uv.v = (uint8)row;
     prim->p[0].uv.u = (uint8)u;
-    prim->p[1].uv.u = (uint8)((uint32)u + (uint32)width);
+    prim->p[1].uv.u = (uint8)(u + (uint32)width);
     prim->p[2].uv.u = (uint8)u;
     prim->p[2].uv.v = (uint8)(row + height);
-    prim->p[3].uv.u = (uint8)((uint32)u + (uint32)width);
+    prim->p[3].uv.u = (uint8)(u + (uint32)width);
     prim->p[3].uv.v = (uint8)(row + height);
     prim->p[0].xy.x = (sint16)x;
-    prim->p[1].attr = (uint16)(((type & 3U) << 7) |
-                         ((packed >> 20) & 16U) | ((packed & 0x3FFU) >> 6));
-    uint32 right = (uint32)x + (uint32)width;
-    uint32 lower = upper + (uint32)height;
+    prim->p[1].attr = (uint16)(((type & 3) << 7) | ((packed >> 20) & 16U) | ((packed & 0x3FFU) >> 6));
+    uint32 right = x + (uint32)width;
+    uint32 lower = upper + height;
     prim->p[0].xy.y = (sint16)lower;
     prim->p[1].xy.x = (sint16)right;
     prim->p[1].xy.y = (sint16)lower;

@@ -8,9 +8,9 @@ NativeFileAtomicResult filesizeatomic(sint32 priority, void *userData)
 {
     FUNCTION_MARKER(0x800E5608, "NFS4.EXE");
     NativeFileSizeRequest *request = static_cast<NativeFileSizeRequest *>(userData);
-    sint32 handle;
+    NativeFileSlot *handle;
     sint32 succeeded = XPORT_UNPLACED::FILE::opensync(request->name, 1, priority, &handle);
-    sint32 nestedPriority = (sint32)((uint32)priority - 1);
+    sint32 nestedPriority = (priority - 1);
     NativeFileAtomicResult result;
     result.value = 0;
     if (succeeded != 0)
@@ -36,9 +36,9 @@ NativeFileAtomicResult loadfileadratomic(sint32 priority, void *userData)
     NativeFileLoadRequest *request = static_cast<NativeFileLoadRequest *>(userData);
     NativeFileAtomicResult result;
     result.memory = 0;
-    sint32 file;
+    NativeFileSlot *file;
     sint32 opened = XPORT_UNPLACED::FILE::opensync(request->name, 1, priority, &file);
-    sint32 nestedPriority = (sint32)((uint32)priority - 1);
+    sint32 nestedPriority = (priority - 1);
     if (opened == 0)
         return result;
     sint32 size = XPORT_UNPLACED::FILE::sizesync(file, nestedPriority);
@@ -87,10 +87,10 @@ NativeFileAtomicResult loadfileatadratomic(sint32 priority, void *userData)
     NativeFileLoadRequest *request = static_cast<NativeFileLoadRequest *>(userData);
     NativeFileAtomicResult result;
     result.memory = 0;
-    sint32 file;
+    NativeFileSlot *file;
     if (XPORT_UNPLACED::FILE::opensync(request->name, 1, priority, &file) == 0)
         return result;
-    sint32 nestedPriority = (sint32)((uint32)priority - 1);
+    sint32 nestedPriority = (priority - 1);
     XPORT_UNPLACED::FILE::readsync(file, 0, request->destination, 0x7FFFFFFF, nestedPriority);
     XPORT_UNPLACED::FILE::closesync(file, nestedPriority);
     result.memory = request->destination;
@@ -123,22 +123,22 @@ NativeFileAtomicResult loadbigfileheaderatomic(sint32 priority, void *userData)
     NativeFileLoadRequest *request = static_cast<NativeFileLoadRequest *>(userData);
     NativeFileAtomicResult result;
     result.memory = 0;
-    sint32 file;
+    NativeFileSlot *file;
     if (XPORT_UNPLACED::FILE::opensync(request->name, 1, priority, &file) == 0)
         return result;
-    sint32 nestedPriority = (sint32)((uint32)priority - 1);
+    sint32 nestedPriority = (priority - 1);
     char *header = static_cast<char *>(reservememadr(request->name, 0xA90, request->flags));
     if (header != 0)
     {
         XPORT_UNPLACED::FILE::readsync(file, 0, header, 0xA90, nestedPriority);
         if (typeofbigfile(header) != 0)
         {
-            uint32 size = (uint32)sizeofbigfileheader(header);
+            uint32 size = sizeofbigfileheader(header);
             if (size <= 0xA90)
                 result.memory = header;
             else
             {
-                char *expanded = static_cast<char *>(reservememadr(request->name, (sint32)size, request->flags));
+                char *expanded = static_cast<char *>(reservememadr(request->name, size, request->flags));
                 if (expanded != 0)
                 {
                     blockmove(header, expanded, 0xA90);

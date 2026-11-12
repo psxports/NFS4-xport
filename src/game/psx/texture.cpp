@@ -38,10 +38,10 @@ void Texture::InitPaletteSharing(void)
     FUNCTION_MARKER(0x800DF5B4, "NFS4.EXE");
     gNum4bitPal = 0;
     gNum8bitPal = 0;
-    gP4bitPmx = reinterpret_cast<Draw::tPixMap **>(reservememadr("pshare 4", 0x800, 0x10));
-    gP8bitPmx = reinterpret_cast<Draw::tPixMap **>(reservememadr("pshare 8", 0x100, 0x10));
-    gPalette4bit = reinterpret_cast<char **>(reservememadr("pal 4bit", 0x800, 0x10));
-    gPalette8bit = reinterpret_cast<char **>(reservememadr("pal 8bit", 0x100, 0x10));
+    gP4bitPmx = reinterpret_cast<Draw::tPixMap **>(reservememadr("pshare 4", 512 * sizeof(*gP4bitPmx), 0x10));
+    gP8bitPmx = reinterpret_cast<Draw::tPixMap **>(reservememadr("pshare 8", 64 * sizeof(*gP8bitPmx), 0x10));
+    gPalette4bit = reinterpret_cast<char **>(reservememadr("pal 4bit", 512 * sizeof(*gPalette4bit), 0x10));
+    gPalette8bit = reinterpret_cast<char **>(reservememadr("pal 8bit", 64 * sizeof(*gPalette8bit), 0x10));
 }
 
 void Texture::DeInitPaletteSharing(void)
@@ -103,14 +103,14 @@ void Texture::AddSharedPalette(char *ptr_to_data, Draw::tPixMap *ptr_to_pmx, sin
         sint32 index = gNum4bitPal;
         gPalette4bit[index] = ptr_to_data;
         gP4bitPmx[index] = ptr_to_pmx;
-        gNum4bitPal = (sint32)((uint32)index + 1U);
+        gNum4bitPal = (index + 1);
     }
     else if (bpp == 1)
     {
         sint32 index = gNum8bitPal;
         gPalette8bit[index] = ptr_to_data;
         gP8bitPmx[index] = ptr_to_pmx;
-        gNum8bitPal = (sint32)((uint32)index + 1U);
+        gNum8bitPal = (index + 1);
     }
 }
 
@@ -142,10 +142,10 @@ void Texture::GetClutId(sint32 bpp, sint32 *xclut, sint32 *yclut)
         sint32 count = gNbFreePal4;
         if (count != 0)
         {
-            sint32 index = (sint32)((uint32)count - 1U);
+            sint32 index = (count - 1);
             sint16 *freePal = gFreePal4;
             gNbFreePal4 = index;
-            id = (uint16)freePal[index];
+            id = freePal[index];
         }
     }
     else
@@ -153,41 +153,41 @@ void Texture::GetClutId(sint32 bpp, sint32 *xclut, sint32 *yclut)
         sint32 count = gNbFreePal8;
         if (count != 0)
         {
-            sint32 index = (sint32)((uint32)count - 1U);
+            sint32 index = (count - 1);
             sint16 *freePal = gFreePal8;
             gNbFreePal8 = index;
-            id = (uint16)freePal[index];
+            id = freePal[index];
         }
     }
     *xclut = (id & 0x3F) << 4;
-    *yclut = (sint32)(sint16)id >> 6;
+    *yclut = ((sint16)id) >> 6;
 }
 
 void Texture::MenuReleaseClutId(sint16 id)
 {
     FUNCTION_MARKER(0x800DF9A4, "NFS4.EXE");
-    sint32 yclut = (sint32)id >> 6;
+    sint32 yclut = id >> 6;
     if (yclut < 488)
     {
         sint32 index = gNbFreePal8;
         gFreePal8[index] = id;
-        gNbFreePal8 = (sint32)((uint32)index + 1U);
+        gNbFreePal8 = (index + 1);
     }
     else
     {
         sint32 index = gNbFreePal4;
         gFreePal4[index] = id;
-        gNbFreePal4 = (sint32)((uint32)index + 1U);
+        gNbFreePal4 = (index + 1);
     }
 }
 
 void Texture::ColorCarPalette(char *from, char *to, sint32 numentry)
 {
     FUNCTION_MARKER(0x800DFA04, "NFS4.EXE");
-    uint32 colorOffset = (uint32)CarColor * 32U;
+    uint32 colorOffset = CarColor * 32U;
     uint8 *source = (uint8 *)from + colorOffset;
     uint8 *dest = (uint8 *)to;
-    uint32 remaining = (uint32)numentry;
+    uint32 remaining = numentry;
     while (remaining != 0)
     {
         uint8 low = source[0];
@@ -217,9 +217,9 @@ void Texture::CopyPalette(char *data, sint32 width, sint32 x, sint32 y)
         dest[0] = low;
         dest[1] = high;
         dest += 2;
-        i = (sint32)((uint32)i + 1U);
+        i = (i + 1);
     }
-    palNum = (sint32)((uint32)palNum + 1U);
+    palNum = (palNum + 1);
 }
 
 void Texture::ProcessPaletteCopy(Texture::pal8bit *palCopy, sint32 palStart, sint32 palNum)
@@ -243,7 +243,7 @@ void Texture::ProcessPaletteCopy(Texture::pal8bit *palCopy, sint32 palStart, sin
     {
         ColorCarPalette((char *)palette->pal, (char *)tmpPal.colors, 16);
         r.x = (sint16)palette->x;
-        i = (sint32)((uint32)i + 1U);
+        i = (i + 1);
         r.y = (sint16)palette->y;
         ++palette;
         LoadImagePSX(&r, (uint32 *)tmpPal.colors);
@@ -254,7 +254,7 @@ void Texture::LoadImage(PSX_RECT *imgrect, uint32 *p)
 {
     FUNCTION_MARKER(0x800DFB48, "NFS4.EXE");
     if (((uint16)imgrect->w & 1U) != 0)
-        imgrect->h = (sint16)((uint16)imgrect->h | 1U);
+        imgrect->h = (sint16)((uint16)imgrect->h | 1);
     LoadImagePSX(imgrect, (uint32 *)p);
 }
 
@@ -266,8 +266,8 @@ void Texture::Vramf(shapetbl *shp, sint32 x, sint32 y, sint32 clutx, sint32 clut
         uint32 type = shp->type & 0xF7U;
         if (type >= 0x40 && type < 0x44)
         {
-            shp->shapex = (sint32)((uint32)x & 0xFFFU);
-            shp->shapey = (sint32)((uint32)y & 0xFFFU);
+            shp->shapex = (x & 0xFFFU);
+            shp->shapey = (y & 0xFFFU);
             shp->type |= 8U;
             PSX_RECT r;
             r.x = (sint16)x;
@@ -280,8 +280,8 @@ void Texture::Vramf(shapetbl *shp, sint32 x, sint32 y, sint32 clutx, sint32 clut
         }
         else if (type == 0x23 && clutx >= 0)
         {
-            shp->shapex = (sint32)((uint32)clutx & 0xFFFU);
-            shp->shapey = (sint32)((uint32)cluty & 0xFFFU);
+            shp->shapex = (clutx & 0xFFFU);
+            shp->shapey = (cluty & 0xFFFU);
             shp->type |= 8U;
             PSX_RECT r;
             r.x = (sint16)clutx;
@@ -299,7 +299,7 @@ void Texture::Vramcf(shapetbl *shp, sint32 x, sint32 y, sint32 clutx, sint32 clu
 {
     FUNCTION_MARKER(0x800DFD38, "NFS4.EXE");
     sint32 depth = shapedepth(shp);
-    uint32 roundedBits = ((uint32)shp->width * (uint32)depth + 15U) & ~15U;
+    uint32 roundedBits = (shp->width * (uint32)depth + 15U) & ~15U;
     sint32 rowbytes = (sint32)roundedBits >> 3;
     if ((rowbytes & 2) == 0 || ((uint16)shp->height & 1U) != 0)
     {
@@ -307,21 +307,21 @@ void Texture::Vramcf(shapetbl *shp, sint32 x, sint32 y, sint32 clutx, sint32 clu
         return;
     }
     sint32 height = shp->height;
-    sint32 lastRow = (sint32)(((uint32)height - 1U) * (uint32)rowbytes);
-    char *s = (char *)&shp->data + lastRow;
-    sint32 endY = (sint32)((uint32)y + (uint32)height);
+    sint32 lastRow = ((height - 1) * rowbytes);
+    char *s = (&shp->data) + lastRow;
+    sint32 endY = (y + height);
     PSX_RECT r;
     r.x = (sint16)x;
-    r.y = (sint16)((uint32)endY - 2U);
+    r.y = (sint16)(endY - 2U);
     r.w = 1;
     r.h = 2;
     LoadImagePSX(&r, (uint32 *)(s - 2));
-    r.x = (sint16)((uint32)x + 1U);
-    r.y = (sint16)((uint32)endY - 1U);
-    r.w = (sint16)((uint32)((sint32)roundedBits >> 4) - 1U);
+    r.x = (sint16)(x + 1U);
+    r.y = (sint16)(endY - 1U);
+    r.w = (sint16)(((sint32)roundedBits >> 4) - 1U);
     r.h = 1;
     LoadImagePSX(&r, (uint32 *)(s + 2));
-    shp->height = (sint16)((uint16)shp->height - 1U);
+    shp->height = (sint16)((uint16)shp->height - 1);
     Vramf(shp, x, y, clutx, cluty);
     shp->height = (sint16)height;
 }
@@ -333,7 +333,7 @@ sint32 Texture::GetTranslucencyMode(shapetbl *shp)
     {
         if (shp->type == 0x6B)
         {
-            uint32 abr = ((uint16)shp->width >> 5) & 3U;
+            uint32 abr = ((uint16)shp->width >> 5) & 3;
             return abr == 3 ? 2 : (sint32)abr;
         }
         sint32 next = shp->next;
@@ -368,8 +368,8 @@ void Texture::LoadPmx(char *f, char *n, sint32 ctrl, sint32 rx, sint32 ry, sint3
     }
     else
     {
-        x = (sint32)((uint32)shpptr->shapex + (uint32)rx);
-        y = (sint32)((uint32)shpptr->shapey + (uint32)ry);
+        x = shpptr->shapex + rx;
+        y = shpptr->shapey + ry;
     }
     sint32 w = shpptr->width;
     sint32 h = shpptr->height;

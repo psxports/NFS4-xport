@@ -60,9 +60,9 @@ extern "C" void iSNDsetvol(sint32 channel, sint32 left, sint32 right)
 {
     FUNCTION_MARKER(0x800FF238, "NFS4.EXE");
     SoundPlatformChannel *voice = &sndpd.channels[channel];
-    uint32 registers = 0x1F801C00u + ((uint32)channel << 4);
-    uint32 leftScaled = ((uint32)left << 7) + (uint32)left;
-    uint32 rightScaled = ((uint32)right << 7) + (uint32)right;
+    uint32 registers = 0x1F801C00 + ((uint32)channel << 4);
+    uint32 leftScaled = ((uint32)left << 7) + left;
+    uint32 rightScaled = ((uint32)right << 7) + right;
     if (voice->channelCount == 1)
     {
         if (sndgs.options.set.outputchannels == 2)
@@ -76,17 +76,17 @@ extern "C" void iSNDsetvol(sint32 channel, sint32 left, sint32 right)
         if (voice->unknown1E == 1)
         {
             if (left < 0)
-                left = (sint32)(0u - (uint32)left);
+                left = (-left);
             if (right < 0)
-                right = (sint32)(0u - (uint32)right);
+                right = (-right);
             if (left >= 128)
                 left = 127;
             if (right >= 128)
                 right = 127;
         }
-        uint32 sum = (uint32)left + (uint32)right;
+        uint32 sum = left + (uint32)right;
         uint32 scaled = (sum << 7) + sum;
-        uint32 volume = (uint32)((sint32)scaled >> 1) & 0x7FFFu;
+        uint32 volume = ((sint32)scaled >> 1) & 0x7FFFu;
         if (!spu_mmio_write(0, registers, 2, volume, 3))
             abort();
         if (!spu_mmio_write(0, registers + 2, 2, volume, 3))
@@ -99,20 +99,20 @@ extern "C" void iSNDsetvol(sint32 channel, sint32 left, sint32 right)
             abort();
         if (!spu_mmio_write(0, registers + 2, 2, 0, 3))
             abort();
-        registers = 0x1F801C00u + ((uint32)(sint32)voice->partner << 4);
+        registers = 0x1F801C00 + ((uint32)(sint32)voice->partner << 4);
         if (!spu_mmio_write(0, registers, 2, 0, 3))
             abort();
         if (!spu_mmio_write(0, registers + 2, 2, rightScaled & 0x7FFFu, 3))
             abort();
         return;
     }
-    uint32 volume = (uint32)((sint32)leftScaled >> 1) & 0x7FFFu;
+    uint32 volume = ((sint32)leftScaled >> 1) & 0x7FFFu;
     if (!spu_mmio_write(0, registers, 2, volume, 3))
         abort();
     if (!spu_mmio_write(0, registers + 2, 2, volume, 3))
         abort();
-    volume = (uint32)((sint32)rightScaled >> 1) & 0x7FFFu;
-    registers = 0x1F801C00u + ((uint32)(sint32)voice->partner << 4);
+    volume = ((sint32)rightScaled >> 1) & 0x7FFFu;
+    registers = 0x1F801C00 + ((uint32)(sint32)voice->partner << 4);
     if (!spu_mmio_write(0, registers, 2, volume, 3))
         abort();
     if (!spu_mmio_write(0, registers + 2, 2, volume, 3))
@@ -122,7 +122,7 @@ extern "C" void iSNDsetvol(sint32 channel, sint32 left, sint32 right)
 extern "C" void iSNDsetslot(sint32 channel, sint32 address, sint32 pitch)
 {
     FUNCTION_MARKER(0x800FF394, "NFS4.EXE");
-    uint32 registers = 0x1F801C00u + ((uint32)channel << 4);
+    uint32 registers = 0x1F801C00 + ((uint32)channel << 4);
     if (!spu_mmio_write(0, registers + 8, 2, 0xF, 3))
         abort();
     if (!spu_mmio_write(0, registers + 10, 2, 5, 3))
@@ -141,9 +141,9 @@ extern "C" uint32 iSNDstartvoice(sint32 channel)
     SoundPlatformChannel *voice = &sndpd.channels[channel];
     voice->unknown24[0] = 0;
     voice->unknown24[1] = 0;
-    uint32 pitch = (uint32)(((uint64)(uint32)voice->pitch * 0x4A4DC96Fu) >> 39);
-    iSNDsetslot(channel, (sint32)voice->sampleAddress, (sint32)pitch);
-    uint32 channels = 1u << ((uint32)channel & 31u);
+    uint32 pitch = (uint32)(((uint64)(uint32)voice->pitch * 0x4A4DC96F) >> 39);
+    iSNDsetslot(channel, voice->sampleAddress, (sint32)pitch);
+    uint32 channels = 1u << (channel & 31u);
     voice->state = 2;
     voice->unknown1D = 2;
     voice->envelopeSeen = 0;
@@ -156,17 +156,17 @@ extern "C" uint32 iSNDstartvoice(sint32 channel)
         else
         {
             uint32 length = voice->sampleLength;
-            uint32 blocks = (uint32)(((uint64)(length >> 2) * 0x24924925u) >> 32);
+            uint32 blocks = (uint32)(((uint64)(length >> 2) * 0x24924925) >> 32);
             if (length != blocks * 28u)
                 ++blocks;
             rightOffset = blocks << 4;
         }
-        iSNDsetslot(voice->partner, (sint32)(voice->sampleAddress + rightOffset), (sint32)pitch);
+        iSNDsetslot(voice->partner, (voice->sampleAddress + rightOffset), (sint32)pitch);
         sint32 partner = voice->partner;
         other->state = 2;
         other->unknown1D = 2;
         other->envelopeSeen = 0;
-        channels |= 1u << ((uint32)partner & 31u);
+        channels |= 1u << (partner & 31u);
     }
     iSNDvol(channel, voice->volume);
     iSNDplatformfxlevel(channel, 0, voice->effectLevel);
@@ -344,7 +344,7 @@ extern "C" void iSNDserve(void)
     for (sint32 channel = 0; channel < sndgs.options.set.inputvoices; ++channel)
     {
         SoundPlatformChannel *voice = &sndpd.channels[channel];
-        uint32 registers = 0x1F801C00u + ((uint32)channel << 4);
+        uint32 registers = 0x1F801C00 + ((uint32)channel << 4);
         if (voice->unknown1D == 2)
         {
             uint32 envelope;
@@ -369,10 +369,10 @@ extern "C" void iSNDserve(void)
                     voice->state = 0;
                     --remaining;
                     iSNDfreechan(selected);
-                    uint32 selectedRegisters = 0x1F801C00u + ((uint32)selected << 4);
+                    uint32 selectedRegisters = 0x1F801C00 + ((uint32)selected << 4);
                     if (!spu_mmio_write(0, selectedRegisters + 6, 2, 0x200, 3))
                         abort();
-                    keyOn |= 1u << ((uint32)selected & 31u);
+                    keyOn |= 1u << (selected & 31u);
                     if (!spu_mmio_write(0, selectedRegisters, 2, 0, 3))
                         abort();
                     if (!spu_mmio_write(0, selectedRegisters + 2, 2, 0, 3))
@@ -381,7 +381,7 @@ extern "C" void iSNDserve(void)
             }
             if (voice->pitchChanged != 0)
             {
-                uint32 pitch = (uint32)(((uint64)(uint32)voice->pitch * 0x4A4DC96Fu) >> 39);
+                uint32 pitch = (uint32)(((uint64)(uint32)voice->pitch * 0x4A4DC96F) >> 39);
                 if (!spu_mmio_write(0, registers + 4, 2, (uint16)pitch, 3))
                     abort();
                 voice->pitchChanged = 0;
@@ -407,7 +407,7 @@ extern "C" void iSNDserve(void)
                 abort();
             if (envelope == 0)
             {
-                keyOn |= 1u << ((uint32)channel & 31u);
+                keyOn |= 1u << (channel & 31u);
                 voice->unknown1D = 0;
                 if (!spu_mmio_write(0, registers + 6, 2, 0x200, 3))
                     abort();
@@ -417,10 +417,9 @@ extern "C" void iSNDserve(void)
                     abort();
             }
             else
-                keyOff |= 1u << ((uint32)channel & 31u);
+                keyOff |= 1u << (channel & 31u);
         }
-        if (voice->state == 1 && voice->unknown1D == 0 &&
-            (voice->channelCount < 2 || sndpd.channels[voice->partner].unknown1D == 0))
+        if (voice->state == 1 && voice->unknown1D == 0 && (voice->channelCount < 2 || sndpd.channels[voice->partner].unknown1D == 0))
             keyOn |= iSNDstartvoice(channel);
     }
     if (keyOff != 0)
@@ -438,12 +437,12 @@ extern "C" sint32 iSNDstop(sint32 channel)
     iSNDfreechan(channel);
     voice->unknown1D = 3;
     voice->state = 0;
-    uint32 channels = 1u << ((uint32)channel & 31u);
+    uint32 channels = 1u << (channel & 31u);
     if (voice->channelCount >= 2)
     {
         sint32 partner = voice->partner;
         iSNDfreechan(partner);
-        channels |= 1u << ((uint32)partner & 31u);
+        channels |= 1u << (partner & 31u);
         sndpd.channels[partner].unknown1D = 3;
         sndpd.channels[partner].state = 0;
     }
@@ -455,9 +454,9 @@ extern "C" sint32 iSNDplatformpitch(sint32 channel, sint32 pitch)
 {
     FUNCTION_MARKER(0x800FFF94, "NFS4.EXE");
     SoundPlatformChannel *voice = &sndpd.channels[channel];
-    uint32 product = (uint32)voice->basePitch * (uint32)pitch;
-    uint32 shifted = (uint32)((sint32)product >> 12);
-    voice->pitch = (sint32)(shifted * 441u);
+    uint32 product = voice->basePitch * (uint32)pitch;
+    uint32 shifted = ((sint32)product >> 12);
+    voice->pitch = (shifted * 441u);
     voice->pitchChanged = 1;
     if (voice->channelCount == 2)
     {
@@ -475,9 +474,9 @@ extern "C" sint32 iSNDplatformfxlevel(sint32 channel, sint32, sint32 level)
         voice->effectLevel = (sint8)level;
     else
     {
-        uint32 channels = 1u << ((uint32)channel & 31u);
+        uint32 channels = 1u << (channel & 31u);
         if (voice->channelCount == 2)
-            channels |= 1u << ((uint32)(uint8)voice->partner & 31u);
+            channels |= 1u << (((uint8)voice->partner) & 31u);
         if (level != 0)
             iSNDpsxeffecton(channels);
         else
@@ -502,8 +501,7 @@ extern "C" sint32 iSNDvol(sint32 channel, sint32 volume)
     if (mode == 0)
         iSNDatolrv(voice->pan, volume, &left, &right);
     else
-        iSNDatodlrv(voice->pan, volume, &left, &right,
-            (sint8)voice->unknown24[0], (sint8)voice->unknown24[1]);
+        iSNDatodlrv(voice->pan, volume, &left, &right, (sint8)voice->unknown24[0], (sint8)voice->unknown24[1]);
     voice->unknown24[0] = (uint8)left;
     voice->unknown24[1] = (uint8)right;
     iSNDsetvol(channel, left, right);

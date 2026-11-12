@@ -215,18 +215,15 @@ void DrawW::SubdividFacet(Draw::tGiveShelbyMoreCache *sd, sint32 l, Draw::SVerte
 {
     FUNCTION_MARKER(0x800C5284, "NFS4.EXE");
     sint32 clipW = sd->head.clipW;
-    if ((v0->dvx > clipW && v1->dvx > clipW && v2->dvx > clipW && v3->dvx > clipW) ||
-        (v0->dvx < 0 && v1->dvx < 0 && v2->dvx < 0 && v3->dvx < 0))
+    if ((v0->dvx > clipW && v1->dvx > clipW && v2->dvx > clipW && v3->dvx > clipW) || (v0->dvx < 0 && v1->dvx < 0 && v2->dvx < 0 && v3->dvx < 0))
         return;
     sint32 clipH = sd->head.clipH;
-    if ((v0->dvy > clipH && v1->dvy > clipH && v2->dvy > clipH && v3->dvy > clipH) ||
-        (v0->dvy < 0 && v1->dvy < 0 && v2->dvy < 0 && v3->dvy < 0) ||
-        (v0->vz < 0 && v1->vz < 0 && v2->vz < 0 && v3->vz < 0))
+    if ((v0->dvy > clipH && v1->dvy > clipH && v2->dvy > clipH && v3->dvy > clipH) || (v0->dvy < 0 && v1->dvy < 0 && v2->dvy < 0 && v3->dvy < 0) || (v0->vz < 0 && v1->vz < 0 && v2->vz < 0 && v3->vz < 0))
         return;
     Draw::SubdivStruct *r_div = &gDiv;
     if (l < CalcSubdivision(sd, v0, v1, v2, v3))
     {
-        Draw::SVertex *v4 = &r_div->v[(sint16)n];
+        Draw::SVertex *v4 = &r_div->v[n];
         Draw::SVertex *v5 = &r_div->v[(sint16)(n + 1)];
         Draw::SVertex *v6 = &r_div->v[(sint16)(n + 2)];
         Draw::SVertex *v7 = &r_div->v[(sint16)(n + 3)];
@@ -265,7 +262,7 @@ void DrawW::SubdividFacet(Draw::tGiveShelbyMoreCache *sd, sint32 l, Draw::SVerte
         if (sd->doublelayer != 0)
         {
             sd->GT4Prim.p[0].rgbc.code &= 0xF7;
-            sint32 otz = (sint32)((uint32)sd->otz + 8U);
+            sint32 otz = (sd->otz + 8);
             Draw::SVertex *edge0[4] = { v0, v1, v2, v3 };
             Draw::SVertex *edge1[4] = { v1, v2, v3, v0 };
             Draw::SVertex *midpoint[4] = { v4, v5, v6, v7 };
@@ -284,7 +281,7 @@ void DrawW::SubdividFacet(Draw::tGiveShelbyMoreCache *sd, sint32 l, Draw::SVerte
             }
             sd->GT4Prim.p[0].rgbc.code |= 8;
         }
-        l = (sint32)((uint32)l + 1U);
+        l = (l + 1);
         gte_stsxy(&v8->dvx);
         SubdividFacet(sd, l, v0, v4, v8, v7, n, subDivide);
         SubdividFacet(sd, l, v4, v1, v5, v8, n, subDivide);
@@ -305,7 +302,7 @@ void DrawW::SubdividFacet(Draw::tGiveShelbyMoreCache *sd, sint32 l, Draw::SVerte
         sint32 bfct;
         gte_swc2(24, &bfct);
         if (sd->head.mirror == 1)
-            bfct = (sint32)(0U - (uint32)bfct);
+            bfct = (-bfct);
         if (bfct < 0)
         {
             memcpy(&xy0, &v0->dvx, sizeof(xy0));
@@ -317,7 +314,7 @@ void DrawW::SubdividFacet(Draw::tGiveShelbyMoreCache *sd, sint32 l, Draw::SVerte
             gte_nclip();
             gte_swc2(24, &bfct);
             if (sd->head.mirror == 1)
-                bfct = (sint32)(0U - (uint32)bfct);
+                bfct = (-bfct);
             if (bfct < 0)
                 return;
         }
@@ -402,10 +399,10 @@ void Night::NightCopCalc(VECTOR *v, sint16 *idx)
 {
     FUNCTION_MARKER(0x800C5F18, "NFS4.EXE");
     sint32 z = v->vz;
-    if ((uint32)z + 0x7FFU >= 0xFFFU)
+    if (z + 0x7FFU >= 0xFFFU)
         return;
     sint32 x = v->vx;
-    if ((uint32)x + 0x3FFU >= 0x7FFU)
+    if (x + 0x3FFU >= 0x7FFU)
         return;
     sint32 side = z < 0 ? 1 : 0;
     if (z < 0)
@@ -424,20 +421,19 @@ void Night::NightCalc(VECTOR *v, sint16 *idx, Draw::tGiveShelbyMoreCache *sd)
     sint32 z = v->vz;
     sint32 znear = sd->night_ZNear;
     sint32 drawLightning = sd->night_DrawLightning;
-    sint32 zfar = (sint32)((uint32)znear + (1U << ((zShift + 6) & 31)));
-    if (drawLightning != 0)
-        *idx = (*gWeatherLightingTable[sd->night_LightningType])[*idx];
+    sint32 zfar = (znear + (1U << ((zShift + 6) & 31)));
+    if (drawLightning != 0) *idx = (*gWeatherLightingTable[sd->night_LightningType])[*idx];
     if (z <= znear || z >= zfar)
         return;
     sint32 xShift = sd->night_XDistShift;
     sint32 x = v->vx;
-    sint32 xdist = (sint32)(1U << ((xShift + 5) & 31));
-    sint32 negativeXdist = (sint32)(0U - (uint32)xdist);
+    sint32 xdist = (1U << ((xShift + 5) & 31));
+    sint32 negativeXdist = (-xdist);
     if (x <= negativeXdist || x >= xdist)
         return;
-    sint32 column = (sint32)((uint32)x + (uint32)xdist) >> (xShift & 31);
-    sint32 row = (sint32)((uint32)z - (uint32)znear) >> (sd->night_ZDistShift & 31);
-    sint32 lookup = (sint32)(((uint32)row << 6) + (uint32)column);
+    sint32 column = (x + xdist) >> (xShift & 31);
+    sint32 row = (z - znear) >> (sd->night_ZDistShift & 31);
+    sint32 lookup = (((uint32)row << 6) + column);
     char *nightTable = gNightTbl;
     sint32 current = *idx;
     const uint8 *table = (const uint8 *)gCurrentNightColor;
@@ -542,13 +538,9 @@ void DrawW::DrawQuad(Draw::tGiveShelbyMoreCache *sd, Trk::Quad *inQuad)
         if (i == 0)
             gte_stsxy(&dvxy[0]);
     }
-    if (sd->tVn3.vz < sd->tVn3.vx && sd->tVn0.vz < sd->tVn0.vx &&
-        sd->tVn1.vz < sd->tVn1.vx && sd->tVn2.vz < sd->tVn2.vx)
+    if (sd->tVn3.vz < sd->tVn3.vx && sd->tVn0.vz < sd->tVn0.vx && sd->tVn1.vz < sd->tVn1.vx && sd->tVn2.vz < sd->tVn2.vx)
         return;
-    if (sd->tVn3.vz < (sint32)(0U - uint32(sd->tVn3.vx)) &&
-        sd->tVn0.vz < (sint32)(0U - uint32(sd->tVn0.vx)) &&
-        sd->tVn1.vz < (sint32)(0U - uint32(sd->tVn1.vx)) &&
-        sd->tVn2.vz < (sint32)(0U - uint32(sd->tVn2.vx)))
+    if (sd->tVn3.vz < -sd->tVn3.vx && sd->tVn0.vz < -sd->tVn0.vx && sd->tVn1.vz < -sd->tVn1.vx && sd->tVn2.vz < -sd->tVn2.vx)
         return;
     if (sd->tVn0.vz < 0 && sd->tVn1.vz < 0 && sd->tVn2.vz < 0 && sd->tVn3.vz < 0)
         return;
@@ -565,14 +557,14 @@ void DrawW::DrawQuad(Draw::tGiveShelbyMoreCache *sd, Trk::Quad *inQuad)
         gte_nclip();
         gte_swc2(24, &bfct);
         if (sd->head.mirror == 1)
-            bfct = (sint32)(0U - uint32(bfct));
+            bfct = (-bfct);
         if (bfct < 0)
         {
             gte_ldsxy3(dvxy[0], dvxy[1], dvxy[3]);
             gte_nclip();
             gte_swc2(24, &bfct);
             if (sd->head.mirror == 1)
-                bfct = (sint32)(0U - uint32(bfct));
+                bfct = (-bfct);
             if (bfct < 0)
                 return;
         }
@@ -590,12 +582,12 @@ void DrawW::DrawQuad(Draw::tGiveShelbyMoreCache *sd, Trk::Quad *inQuad)
     sd->otz = save_pre_otz;
     if (offset == Draw::gMidGroundOtz)
     {
-        save_pre_otz = (sint32)(uint32(save_pre_otz) << 2);
-        sd->otz = (sint32)(uint32(originalOtz >> 4) + uint32(offset));
+        save_pre_otz = (uint32(save_pre_otz) << 2);
+        sd->otz = ((originalOtz >> 4) + offset);
     }
     else
-        sd->otz = (sint32)(uint32(save_pre_otz) + uint32(offset));
-    if (sd->otz <= 0 || (sint32)(uint32(Draw::gViewOtSize) - 3) < sd->otz)
+        sd->otz = (save_pre_otz + offset);
+    if (sd->otz <= 0 || (Draw::gViewOtSize - 3) < sd->otz)
         return;
     if ((flag & 0x80) != 0)
     {
@@ -672,13 +664,13 @@ void DrawW::DrawQuad(Draw::tGiveShelbyMoreCache *sd, Trk::Quad *inQuad)
     prim->p[3].uv_attr = uv[3];
     if (prim->p[0].attr == 0xFFFF)
     {
-        sint32 depth_index = (sint32)((uint32(save_pre_otz) - uint32((sint32)sd->startfog)) << 4);
+        sint32 depth_index = ((uint32(save_pre_otz) - uint32((sint32)sd->startfog)) << 4);
         depth_index >>= (uint16)sd->distfog & 31;
         if (depth_index < 0)
             depth_index = 0;
         else if (depth_index > 15)
             depth_index = 15;
-        prim->p[0].attr = (uint16)gClutDepth[workPmx->pad2][depth_index];
+        prim->p[0].attr = gClutDepth[workPmx->pad2][depth_index];
     }
     if (doSubdivision)
     {
@@ -700,10 +692,10 @@ void DrawW::DrawQuad(Draw::tGiveShelbyMoreCache *sd, Trk::Quad *inQuad)
     }
     if ((flag & 0x80) != 0)
     {
-        sint32 dU = sint32(workPmx->u3) - sint32(workPmx->u0);
+        sint32 dU = workPmx->u3 - workPmx->u0;
         if (dU < 0)
             dU = -dU;
-        sint32 dV = sint32(workPmx->v3) - sint32(workPmx->v0);
+        sint32 dV = workPmx->v3 - workPmx->v0;
         if (dV < 0)
             dV = -dV;
         PSX_RECT r = { 0, 0, (sint16)(dU + 1), (sint16)(dV + 1) };
@@ -791,41 +783,41 @@ void DrawW::DoTrough(DRender::tView *Vi, tBuildEntry *buildList)
         {
             sd->nightFlags = 4;
             BO::tNewtonObj *target = Camera::gInfo[Vi->player].target;
-            sint32 cx = (sint32)((uint32)pChunkCp->x - (uint32)target->position.x) >> 10;
-            sint32 cz = (sint32)((uint32)pChunkCp->z - (uint32)target->position.z) >> 10;
-            sint32 dist = (sint32)((uint32)cx * (uint32)cx + (uint32)cz * (uint32)cz);
+            sint32 cx = (pChunkCp->x - target->position.x) >> 10;
+            sint32 cz = (pChunkCp->z - target->position.z) >> 10;
+            sint32 dist = ((cx * cx) + (cz * cz));
             if (dist < 0x47E0000)
             {
                 if ((Cars::gList[Vi->player]->control.lights & 6) != 0)
                     sd->nightFlags = 5;
                 coorddef tmp, tmp2;
-                tmp.x = (sint32)((uint32)Vi->cview.translation.x - (uint32)Camera::gInfo[Vi->player].target->position.x);
-                tmp.y = (sint32)((uint32)Vi->cview.translation.y - (uint32)Camera::gInfo[Vi->player].target->position.y);
-                tmp.z = (sint32)((uint32)Vi->cview.translation.z - (uint32)Camera::gInfo[Vi->player].target->position.z);
+                tmp.x = (Vi->cview.translation.x - Camera::gInfo[Vi->player].target->position.x);
+                tmp.y = (Vi->cview.translation.y - Camera::gInfo[Vi->player].target->position.y);
+                tmp.z = (Vi->cview.translation.z - Camera::gInfo[Vi->player].target->position.z);
                 transform(&tmp, &gNightMat, &tmp2);
                 WorldSetUpTranslation(&tmp2, &sd->matNight);
             }
             Car::tObj *cop = BW::gCopCarObj;
             if (cop != 0)
             {
-                cx = (sint32)((uint32)pChunkCp->x - (uint32)cop->N.position.x) >> 10;
-                cz = (sint32)((uint32)pChunkCp->z - (uint32)cop->N.position.z) >> 10;
-                dist = (sint32)((uint32)cx * (uint32)cx + (uint32)cz * (uint32)cz);
+                cx = (pChunkCp->x - cop->N.position.x) >> 10;
+                cz = (pChunkCp->z - cop->N.position.z) >> 10;
+                dist = ((cx * cx) + (cz * cz));
                 if (dist < 0x47E0000)
                 {
                     sd->nightFlags |= 2;
                     coorddef tmp, tmp2;
-                    tmp.x = (sint32)((uint32)Vi->cview.translation.x - (uint32)cop->N.position.x);
-                    tmp.y = (sint32)((uint32)Vi->cview.translation.y - (uint32)cop->N.position.y);
-                    tmp.z = (sint32)((uint32)Vi->cview.translation.z - (uint32)cop->N.position.z);
+                    tmp.x = (Vi->cview.translation.x - cop->N.position.x);
+                    tmp.y = (Vi->cview.translation.y - cop->N.position.y);
+                    tmp.z = (Vi->cview.translation.z - cop->N.position.z);
                     transform(&tmp, &gCopMat, &tmp2);
                     WorldSetUpTranslation(&tmp2, &sd->matCop);
                 }
             }
         }
-        sd->trans.x = (sint16)((sint32)((uint32)pChunkCp->x - (uint32)Vi->cview.translation.x) >> 10);
-        sd->trans.y = (sint16)((sint32)((uint32)pChunkCp->y - (uint32)Vi->cview.translation.y) >> 10);
-        sd->trans.z = (sint16)((sint32)((uint32)pChunkCp->z - (uint32)Vi->cview.translation.z) >> 10);
+        sd->trans.x = (sint16)((pChunkCp->x - (uint32)Vi->cview.translation.x) >> 10);
+        sd->trans.y = (sint16)((pChunkCp->y - (uint32)Vi->cview.translation.y) >> 10);
+        sd->trans.z = (sint16)((pChunkCp->z - (uint32)Vi->cview.translation.z) >> 10);
         sd->matB.t[2] = 0;
         sd->matB.t[1] = 0;
         sd->matB.t[0] = 0;
@@ -951,7 +943,7 @@ sint32 DrawW::GetAnimationTime(Trk::AnimateInst *animInst)
     sint32 track = GameSetup::gData.track;
     if (objIndex == 0 || track == 3 || track == 7)
         return simGlobal.gameTicks;
-    sint32 maxTick = (sint32)((uint32)(animInst->count - 2) * (uint32)animInst->interval);
+    sint32 maxTick = ((animInst->count - 2) * animInst->interval);
     sint32 time = animation_timer[animInst->objectIndex - 1];
     return time < maxTick ? time : maxTick;
 }
@@ -959,26 +951,23 @@ sint32 DrawW::GetAnimationTime(Trk::AnimateInst *animInst)
 void DrawW::SetAnimationTime(Trk::AnimateInst *animInst, sint32 *table, sint32 time)
 {
     FUNCTION_MARKER(0x800C76C8, "NFS4.EXE");
-    (void)time;
     sint32 objIndex = animInst->objectIndex - 1;
     sint32 *timer = &animation_timer[objIndex];
     if (*timer < 3841) {
         if (*timer > 0) {
-            *timer = (sint32)((uint32)*timer + 1);
+            *timer = ((*timer) + 1);
             return;
         }
         sint32 numCars = Cars::gNumHumanRaceCars;
         for (sint32 i = 0; i < numCars; ++i) {
             sint32 slice = Cars::gHumanRaceCarList[i]->N.simRoadInfo.slice;
-            if (table[objIndex * 2] <= slice && slice <= table[objIndex * 2 + 1])
-                *timer = (sint32)((uint32)*timer + 1);
+            if (table[objIndex * 2] <= slice && slice <= table[objIndex * 2 + 1]) *timer = ((*timer) + 1);
         }
     } else {
         sint32 numCars = Cars::gNumHumanRaceCars;
         for (sint32 i = 0; i < numCars; ++i) {
             sint32 slice = Cars::gHumanRaceCarList[i]->N.simRoadInfo.slice;
-            if (slice < table[objIndex * 2] || table[objIndex * 2 + 1] < slice)
-                *timer = 0;
+            if (slice < table[objIndex * 2] || table[objIndex * 2 + 1] < slice) *timer = 0;
         }
     }
 }
@@ -1032,8 +1021,7 @@ sint32 DrawW::BuildObjectFacets(DRender::tView *Vi, ChunkObjectInfo *gObjInfo)
     gte_SetTransMatrix(&world->matB);
     matrixtdef matrix;
     coorddef cp;
-    for (sint32 objectIndex = 0; objectIndex < groupNumElements; ++objectIndex,
-        objInstance = reinterpret_cast<Trk::SimpleInst *>(reinterpret_cast<uint8 *>(objInstance) + objInstance->size))
+    for (sint32 objectIndex = 0; objectIndex < groupNumElements; ++objectIndex, objInstance = reinterpret_cast<Trk::SimpleInst *>(reinterpret_cast<uint8 *>(objInstance) + objInstance->size))
     {
         if (visList != 0 && (static_cast<uint16>(visList[objectIndex]) & 0x1000) == 0)
             continue;
@@ -1050,7 +1038,7 @@ sint32 DrawW::BuildObjectFacets(DRender::tView *Vi, ChunkObjectInfo *gObjInfo)
             if (zClipSq != -1 && xzsquaredist32(position, &Vi->cview.translation) >= zClipSq)
                 continue;
             sint32 count = DrawObjectSimple(Vi, sd, objDef, position, objectOffset);
-            totalCount = (sint32)(uint32(totalCount) + uint32(count));
+            totalCount = (totalCount + count);
         }
         else if (objInstance->type == 3 || objInstance->type == 7)
         {
@@ -1061,13 +1049,13 @@ sint32 DrawW::BuildObjectFacets(DRender::tView *Vi, ChunkObjectInfo *gObjInfo)
                 continue;
             Trk::ObjectDef *objDef = Track::gObjDefs[animInst->pad];
             sint32 count = DrawObjectTransform(Vi, sd, &matrix, objDef, &cp, objectOffset, -1);
-            totalCount = (sint32)(uint32(totalCount) + uint32(count));
+            totalCount = (totalCount + count);
             if ((animInst->flags & 2) != 0)
             {
                 coorddef pt2;
-                pt2.x = (sint32)(uint32(cp.x) - (uint32(matrix.m[6]) << 4));
-                pt2.y = (sint32)(uint32(cp.y) - (uint32(matrix.m[7]) << 4));
-                pt2.z = (sint32)(uint32(cp.z) - (uint32(matrix.m[8]) << 4));
+                pt2.x = (uint32(cp.x) - (uint32(matrix.m[6]) << 4));
+                pt2.y = (uint32(cp.y) - (uint32(matrix.m[7]) << 4));
+                pt2.z = (uint32(cp.z) - (uint32(matrix.m[8]) << 4));
                 Flare::Halo2(Vi, -1, 30, &cp, &pt2, &gNativeRenderCache.flare);
             }
         }
@@ -1088,8 +1076,7 @@ sint32 DrawW::BuildCustomObjectFacets(DRender::tView *Vi, Draw::DCache *sd, Trk:
     sd->matB.t[1] = 0;
     sd->matB.t[0] = 0;
     gte_SetTransMatrix(&sd->matB);
-    for (sint32 objectIndex = 0; objectIndex < groupNumElements; ++objectIndex,
-        objInstance = reinterpret_cast<Trk::SimpleInst *>(reinterpret_cast<uint8 *>(objInstance) + objInstance->size))
+    for (sint32 objectIndex = 0; objectIndex < groupNumElements; ++objectIndex, objInstance = reinterpret_cast<Trk::SimpleInst *>(reinterpret_cast<uint8 *>(objInstance) + objInstance->size))
     {
         sint32 objectOffset = (sint8)offsets[objInstance->zoffset];
         uint8 type = objInstance->type;
@@ -1106,8 +1093,7 @@ sint32 DrawW::BuildCustomObjectFacets(DRender::tView *Vi, Draw::DCache *sd, Trk:
         coorddef *position = reinterpret_cast<coorddef *>(&objInstance->x);
         if (xzsquaredist32(position, &Vi->cview.translation) >= zClipSq)
             continue;
-        if (objInstance->type == 2 && ObjectClipped(Vi, objInstance->pad, position,
-            reinterpret_cast<Draw::tGiveShelbyMoreCache *>(sd)))
+        if (objInstance->type == 2 && ObjectClipped(Vi, objInstance->pad, position, reinterpret_cast<Draw::tGiveShelbyMoreCache *>(sd)))
             continue;
         tQuat quat;
         memcpy(&quat, &objCollideBoomInstance->qx, sizeof(quat));
@@ -1127,7 +1113,7 @@ sint32 DrawW::BuildCustomObjectFacets(DRender::tView *Vi, Draw::DCache *sd, Trk:
             matrix.m[column + 6] = t3;
         }
         sint32 count = DrawObjectTransform(Vi, sd, &matrix, objDef, position, objectOffset, -1);
-        totalCount = (sint32)(uint32(totalCount) + uint32(count));
+        totalCount = (totalCount + count);
     }
     return totalCount;
 }
@@ -1151,18 +1137,18 @@ sint32 DrawObjectTransform(DRender::tView *Vi, Draw::DCache *sd, matrixtdef *mat
         world->nightFlags = 4;
         if ((Cars::gList[Vi->player]->control.lights & 6) != 0)
             world->nightFlags = 5;
-        tmp.x = (sint32)(uint32(pCp->x) - uint32(Camera::gInfo[Vi->player].target->position.x));
-        tmp.y = (sint32)(uint32(pCp->y) - uint32(Camera::gInfo[Vi->player].target->position.y));
-        tmp.z = (sint32)(uint32(pCp->z) - uint32(Camera::gInfo[Vi->player].target->position.z));
+        tmp.x = (pCp->x - Camera::gInfo[Vi->player].target->position.x);
+        tmp.y = (pCp->y - Camera::gInfo[Vi->player].target->position.y);
+        tmp.z = (pCp->z - Camera::gInfo[Vi->player].target->position.z);
         transform(&tmp, &gNightMat, &tmp2);
         DrawW::WorldSetUpTranslation(&tmp2, &world->matNight);
         if (BW::gCopCarObj != 0)
         {
             world->nightFlags |= 2;
             Car::tObj *cop = BW::gCopCarObj;
-            tmp.x = (sint32)(uint32(pCp->x) - uint32(cop->N.position.x));
-            tmp.y = (sint32)(uint32(pCp->y) - uint32(cop->N.position.y));
-            tmp.z = (sint32)(uint32(pCp->z) - uint32(cop->N.position.z));
+            tmp.x = (pCp->x - cop->N.position.x);
+            tmp.y = (pCp->y - cop->N.position.y);
+            tmp.z = (pCp->z - cop->N.position.z);
             transform(&tmp, &gCopMat, &tmp2);
             DrawW::WorldSetUpTranslation(&tmp2, &world->matCop);
         }
@@ -1171,9 +1157,9 @@ sint32 DrawObjectTransform(DRender::tView *Vi, Draw::DCache *sd, matrixtdef *mat
         world->matB.t[0] = 0;
         gte_SetTransMatrix(&world->matB);
     }
-    tmp.x = (sint32)(uint32(pCp->x) - uint32(Vi->cview.translation.x));
-    tmp.y = (sint32)(uint32(pCp->y) - uint32(Vi->cview.translation.y));
-    tmp.z = (sint32)(uint32(pCp->z) - uint32(Vi->cview.translation.z));
+    tmp.x = (pCp->x - Vi->cview.translation.x);
+    tmp.y = (pCp->y - Vi->cview.translation.y);
+    tmp.z = (pCp->z - Vi->cview.translation.z);
     TrsProj::SetPsxTransZero();
     TrsProj::TransPt(&tmp, &tmp2);
     if (offset == -1)
@@ -1220,18 +1206,18 @@ sint32 DrawObjectSimple(DRender::tView *Vi, Draw::DCache *sd, Trk::ObjectDef *ob
         world->nightFlags = 4;
         if ((Cars::gList[Vi->player]->control.lights & 6) != 0)
             world->nightFlags = 5;
-        tmp.x = (sint32)(uint32(Vi->cview.translation.x) - uint32(Camera::gInfo[Vi->player].target->position.x));
-        tmp.y = (sint32)(uint32(Vi->cview.translation.y) - uint32(Camera::gInfo[Vi->player].target->position.y));
-        tmp.z = (sint32)(uint32(Vi->cview.translation.z) - uint32(Camera::gInfo[Vi->player].target->position.z));
+        tmp.x = (Vi->cview.translation.x - Camera::gInfo[Vi->player].target->position.x);
+        tmp.y = (Vi->cview.translation.y - Camera::gInfo[Vi->player].target->position.y);
+        tmp.z = (Vi->cview.translation.z - Camera::gInfo[Vi->player].target->position.z);
         transform(&tmp, &gNightMat, &tmp2);
         DrawW::WorldSetUpTranslation(&tmp2, &world->matNight);
         if (BW::gCopCarObj != 0)
         {
             world->nightFlags |= 2;
             Car::tObj *cop = BW::gCopCarObj;
-            tmp.x = (sint32)(uint32(Vi->cview.translation.x) - uint32(cop->N.position.x));
-            tmp.y = (sint32)(uint32(Vi->cview.translation.y) - uint32(cop->N.position.y));
-            tmp.z = (sint32)(uint32(Vi->cview.translation.z) - uint32(cop->N.position.z));
+            tmp.x = (Vi->cview.translation.x - cop->N.position.x);
+            tmp.y = (Vi->cview.translation.y - cop->N.position.y);
+            tmp.z = (Vi->cview.translation.z - cop->N.position.z);
             transform(&tmp, &gCopMat, &tmp2);
             DrawW::WorldSetUpTranslation(&tmp2, &world->matCop);
         }
@@ -1246,9 +1232,9 @@ sint32 DrawObjectSimple(DRender::tView *Vi, Draw::DCache *sd, Trk::ObjectDef *ob
         world->offset = Draw::gMidGroundOtz;
         shift = 12;
     }
-    world->trans.x = (sint16)((sint32)(uint32(pCp->x) - uint32(Vi->cview.translation.x)) >> shift);
-    world->trans.y = (sint16)((sint32)(uint32(pCp->y) - uint32(Vi->cview.translation.y)) >> shift);
-    world->trans.z = (sint16)((sint32)(uint32(pCp->z) - uint32(Vi->cview.translation.z)) >> shift);
+    world->trans.x = (sint16)((pCp->x - Vi->cview.translation.x) >> shift);
+    world->trans.y = (sint16)((pCp->y - Vi->cview.translation.y) >> shift);
+    world->trans.z = (sint16)((pCp->z - Vi->cview.translation.z) >> shift);
     world->zeroGTETransFlag = 1;
     world->light = -1;
     DrawW::kCtrlWorld_High(world);
@@ -1273,24 +1259,22 @@ sint32 DrawW::BuildChunkObjectFacets(DRender::tView *Vi, ChunkObjectInfo *gObjIn
     world->matB.t[0] = 0;
     gte_SetTransMatrix(&world->matB);
     matrixtdef matrix;
-    for (sint32 objectIndex = 0; objectIndex < groupNumElements; ++objectIndex,
-        objInstance = reinterpret_cast<Trk::SimpleInst *>(reinterpret_cast<uint8 *>(objInstance) + objInstance->size))
+    for (sint32 objectIndex = 0; objectIndex < groupNumElements; ++objectIndex, objInstance = reinterpret_cast<Trk::SimpleInst *>(reinterpret_cast<uint8 *>(objInstance) + objInstance->size))
     {
         uint8 type = objInstance->type;
         sint32 objectOffset = (sint8)goffsets[objInstance->zoffset];
         if ((type & 0x80) != 0)
             continue;
         coorddef *position = reinterpret_cast<coorddef *>(&objInstance->x);
-        if (type != 5 && doFrustumClip != 0 &&
-            ObjectClipped(Vi, objInstance->pad, position, world) && objInstance->type != 2)
+        if (type != 5 && doFrustumClip != 0 && ObjectClipped(Vi, objInstance->pad, position, world) && objInstance->type != 2)
             continue;
         world->offsubdivid = 1024;
         sint16 light = -1;
         bool billboard = false;
         if ((objInstance->flags & 1) != 0)
         {
-            sint32 dx = (sint32)(uint32(objInstance->x) - uint32(Vi->cview.translation.x));
-            sint32 dz = (sint32)(uint32(objInstance->z) - uint32(Vi->cview.translation.z));
+            sint32 dx = (objInstance->x - Vi->cview.translation.x);
+            sint32 dz = (objInstance->z - Vi->cview.translation.z);
             sint32 angle = fixedatan(dx, dz);
             fixedxformy(&matrix, angle);
             billboard = type == 9;
@@ -1299,7 +1283,7 @@ sint32 DrawW::BuildChunkObjectFacets(DRender::tView *Vi, ChunkObjectInfo *gObjIn
         {
             Trk::ObjectDef *objDef = Track::gObjDefs[objInstance->pad];
             sint32 count = DrawObjectSimple(Vi, sd, objDef, position, objectOffset);
-            totalCount = (sint32)(uint32(totalCount) + uint32(count));
+            totalCount = (totalCount + count);
             continue;
         }
         else if (type == 2 || type == 5)
@@ -1334,7 +1318,7 @@ sint32 DrawW::BuildChunkObjectFacets(DRender::tView *Vi, ChunkObjectInfo *gObjIn
                 memcpy(&light, reinterpret_cast<uint8 *>(objInstance) + 34, sizeof(light));
             }
             sint32 count = DrawObjectTransform(Vi, sd, &matrix, objDef, position, objectOffset, light);
-            totalCount = (sint32)(uint32(totalCount) + uint32(count));
+            totalCount = (totalCount + count);
             continue;
         }
         else if (type == 9)
@@ -1366,7 +1350,7 @@ sint32 DrawW::BuildChunkObjectFacets(DRender::tView *Vi, ChunkObjectInfo *gObjIn
         }
         Trk::ObjectDef *objDef = Track::gObjDefs[objInstance->pad];
         sint32 count = DrawObjectTransform(Vi, sd, &matrix, objDef, position, objectOffset, light);
-        totalCount = (sint32)(uint32(totalCount) + uint32(count));
+        totalCount = (totalCount + count);
     }
     return totalCount;
 }
@@ -1374,26 +1358,25 @@ sint32 DrawW::BuildChunkObjectFacets(DRender::tView *Vi, ChunkObjectInfo *gObjIn
 bool ObjectClipped(DRender::tView *Vi, sint32 ind, coorddef *pCp, Draw::tGiveShelbyMoreCache *sd)
 {
     FUNCTION_MARKER(0x800C8BD0, "NFS4.EXE");
-    (void)sd;
     tBoundingSphere *bSphere = reinterpret_cast<tBoundingSphere *>(gPersistObjDefBoundingSpheres + 1) + ind;
     coorddef tmp;
-    tmp.x = (sint32)((uint32)(sint32(bSphere->cp.x) * 1024) + (uint32)pCp->x);
-    tmp.y = (sint32)((uint32)(sint32(bSphere->cp.y) * 1024) + (uint32)pCp->y);
-    tmp.z = (sint32)((uint32)(sint32(bSphere->cp.z) * 1024) + (uint32)pCp->z);
+    tmp.x = ((bSphere->cp.x * 1024) + pCp->x);
+    tmp.y = ((bSphere->cp.y * 1024) + pCp->y);
+    tmp.z = ((bSphere->cp.z * 1024) + pCp->z);
     coorddef trans = Vi->cview.translationInv;
     coorddef tmp2;
     transform(&tmp, &Vi->cview.mrotationInv, &tmp2);
-    tmp2.x = (sint32)((uint32)tmp2.x + (uint32)trans.x);
-    tmp2.y = (sint32)((uint32)tmp2.y + (uint32)trans.y);
-    tmp2.z = (sint32)((uint32)tmp2.z + (uint32)trans.z);
-    sint32 zLimit = (sint32)((uint32)tmp2.z + (uint32)(sint32(bSphere->radius) * 1024));
-    return zLimit < tmp2.x || zLimit < (sint32)(0U - (uint32)tmp2.x);
+    tmp2.x = (tmp2.x + trans.x);
+    tmp2.y = (tmp2.y + trans.y);
+    tmp2.z = (tmp2.z + trans.z);
+    sint32 zLimit = (tmp2.z + (bSphere->radius * 1024));
+    return zLimit < tmp2.x || zLimit < -tmp2.x;
 }
 
 void DepthCue_Init(void)
 {
     FUNCTION_MARKER(0x800CA950, "NFS4.EXE");
-    sint32 distance = (sint32)((uint32)TrackSpec::gSpec.depthcuespec.distance << 6);
+    sint32 distance = ((uint32)TrackSpec::gSpec.depthcuespec.distance << 6);
     SetFogNear(distance, 160);
     SetFarColor(TrackSpec::gSpec.depthcuespec.color.r, TrackSpec::gSpec.depthcuespec.color.g, TrackSpec::gSpec.depthcuespec.color.b);
 }
@@ -1443,8 +1426,7 @@ void DrawW::DoObjects(DRender::tView *Vi, tBuildEntry *buildList)
     {
         sint32 track = GameSetup::gData.track;
         uint32 chunk = uint32(thisChunkInd);
-        if ((track != 4 || (chunk - 1U >= 40U && chunk - 61U >= 30U && chunk - 108U >= 9U)) &&
-            (track != 0 || (chunk - 1U >= 53U && chunk - 68U >= 28U && chunk - 108U >= 20U)))
+        if ((track != 4 || (chunk - 1U >= 40U && chunk - 61U >= 30U && chunk - 108U >= 9U)) && (track != 0 || (chunk - 1U >= 53U && chunk - 68U >= 28U && chunk - 108U >= 20U)))
         {
             gChunkObjInfo.objInstanceBuf = gPersistObjInst;
             gChunkObjInfo.simObjs = 0;
@@ -1474,25 +1456,24 @@ void DrawW::DoObjects(DRender::tView *Vi, tBuildEntry *buildList)
         Group *simGroup = Object::customSimObjs;
         Trk::SimObject *simObjs = simGroup != 0 ? reinterpret_cast<Trk::SimObject *>(simGroup + 1) :
             reinterpret_cast<Trk::SimObject *>(sizeof(Group));
-        BuildCustomObjectFacets(Vi, &gNativeRenderCache.horizonDraw, simObjs,
-            Object::customObjInst, gCurrContext->polyFarZClipSq);
+        BuildCustomObjectFacets(Vi, &gNativeRenderCache.horizonDraw, simObjs, Object::customObjInst, gCurrContext->polyFarZClipSq);
     }
 }
 
 sint32 Draw::CircleClip(coorddef *pt1, coorddef *pt2, sint32 r)
 {
     FUNCTION_MARKER(0x800C903C, "NFS4.EXE");
-    sint32 dx = (sint32)((uint32)pt1->x - (uint32)pt2->x);
+    sint32 dx = (pt1->x - pt2->x);
     if (dx <= 0)
-        dx = (sint32)((uint32)pt2->x - (uint32)pt1->x);
-    sint32 dz = (sint32)((uint32)pt1->z - (uint32)pt2->z);
+        dx = (pt2->x - pt1->x);
+    sint32 dz = (pt1->z - pt2->z);
     if (dz <= 0)
-        dz = (sint32)((uint32)pt2->z - (uint32)pt1->z);
+        dz = (pt2->z - pt1->z);
     sint32 dist;
     if (dz < dx)
-        dist = (sint32)((uint32)dx + (uint32)(dz >> 2));
+        dist = (dx + (dz >> 2));
     else
-        dist = (sint32)((uint32)dz + (uint32)(dx >> 2));
+        dist = (dz + (dx >> 2));
     return dist < r;
 }
 
@@ -1514,16 +1495,16 @@ void Draw::kCtrlSkidmark(Draw::tCtrlSkidmark *fskid)
     }
     while (true)
     {
-        ccount = (sint32)(uint32(ccount) - 1);
+        ccount = (ccount - 1);
         if (ccount == -1)
             return;
         Skidmark::Chunk *sm = fskid->smp + ccount;
         if (!BWorld::IsSliceInBuildList(sm->slice) || !CircleClip(&sm->cp, t, 0x320000))
             continue;
         coorddef ts, td;
-        ts.x = (sint32)(uint32(sm->cp.x) - uint32(t->x));
-        ts.y = (sint32)(uint32(sm->cp.y) - uint32(t->y));
-        ts.z = (sint32)(uint32(sm->cp.z) - uint32(t->z));
+        ts.x = (sm->cp.x - t->x);
+        ts.y = (sm->cp.y - t->y);
+        ts.z = (sm->cp.z - t->z);
         transform(&ts, m, &td);
         sd->matB.t[0] = td.x >> 6;
         sd->matB.t[1] = td.y >> 6;
@@ -1550,13 +1531,9 @@ void Draw::kCtrlSkidmark(Draw::tCtrlSkidmark *fskid)
             gte_ldv0(&segment->next->svx[0]);
             gte_rtps();
             gte_stlvnl(&sd->tVn3);
-            if (!(sd->tVn0.vx < sd->tVn0.vz || sd->tVn1.vx < sd->tVn1.vz ||
-                sd->tVn2.vx < sd->tVn2.vz || sd->tVn3.vx < sd->tVn3.vz))
+            if (!(sd->tVn0.vx < sd->tVn0.vz || sd->tVn1.vx < sd->tVn1.vz || sd->tVn2.vx < sd->tVn2.vz || sd->tVn3.vx < sd->tVn3.vz))
                 continue;
-            if (!((sint32)(0U - uint32(sd->tVn0.vx)) < sd->tVn0.vz ||
-                (sint32)(0U - uint32(sd->tVn1.vx)) < sd->tVn1.vz ||
-                (sint32)(0U - uint32(sd->tVn2.vx)) < sd->tVn2.vz ||
-                (sint32)(0U - uint32(sd->tVn3.vx)) < sd->tVn3.vz))
+            if (!(-sd->tVn0.vx < sd->tVn0.vz || -sd->tVn1.vx < sd->tVn1.vz || -sd->tVn2.vx < sd->tVn2.vz || -sd->tVn3.vx < sd->tVn3.vz))
                 continue;
             sint32 type = segment->type;
             Draw::tPixMap *pmx = gSkidMarkPixmap[type & 1];
@@ -1564,8 +1541,8 @@ void Draw::kCtrlSkidmark(Draw::tCtrlSkidmark *fskid)
             gte_avsz4();
             gte_stotz(&sd->otz);
             sint32 save_pre_otz = sd->otz >> 5;
-            sd->otz = (sint32)(uint32(save_pre_otz) + 50);
-            if (sd->otz <= 0 || (sint32)(uint32(Draw::gViewOtSize) - 3) < sd->otz)
+            sd->otz = (save_pre_otz + 50);
+            if (sd->otz <= 0 || (Draw::gViewOtSize - 3) < sd->otz)
                 return;
             if (type == 0)
             {
@@ -1591,13 +1568,13 @@ void Draw::kCtrlSkidmark(Draw::tCtrlSkidmark *fskid)
             prim->p[3].uv_attr = uv[3];
             if (prim->p[0].uv_attr >> 16 == 0xFFFF)
             {
-                sint32 depth_index = (sint32)((uint32(save_pre_otz) - uint32((sint32)sd->startfog)) << 4);
+                sint32 depth_index = ((uint32(save_pre_otz) - uint32((sint32)sd->startfog)) << 4);
                 depth_index >>= (uint16)sd->distfog & 31;
                 if (depth_index < 0)
                     depth_index = 0;
                 else if (depth_index > 15)
                     depth_index = 15;
-                uint16 clut = (uint16)gClutDepth[pmx->pad2][depth_index];
+                uint16 clut = gClutDepth[pmx->pad2][depth_index];
                 prim->p[0].uv_attr = (prim->p[0].uv_attr & 0xFFFF) | (uint32(clut) << 16);
             }
             prim = reinterpret_cast<POLY_GT4 *>(sd->head.cprim.PrimPtr);
@@ -1656,7 +1633,7 @@ void DrawW::OnyxLinePrim(CCOORD16 *geomVertices, Trk::Line *lineQuad, sint32 cou
 {
     FUNCTION_MARKER(0x800C98B8, "NFS4.EXE");
     sd->offsubdivid = 512;
-    sint32 end = (sint32)(uint32(count) - 1);
+    sint32 end = (count - 1);
     for (sint32 lineQuadCount = 0; lineQuadCount < end; ++lineQuadCount, ++lineQuad, geomVertices += 2)
     {
         sint32 linetype = lineQuad->type;
@@ -1681,13 +1658,9 @@ void DrawW::OnyxLinePrim(CCOORD16 *geomVertices, Trk::Line *lineQuad, sint32 cou
         gte_ldv0(&vt3);
         gte_rtps();
         gte_stlvnl(&sd->tVn3);
-        if (!(sd->tVn0.vx < sd->tVn0.vz || sd->tVn1.vx < sd->tVn1.vz ||
-            sd->tVn2.vx < sd->tVn2.vz || sd->tVn3.vx < sd->tVn3.vz))
+        if (!(sd->tVn0.vx < sd->tVn0.vz || sd->tVn1.vx < sd->tVn1.vz || sd->tVn2.vx < sd->tVn2.vz || sd->tVn3.vx < sd->tVn3.vz))
             continue;
-        if (!((sint32)(0U - uint32(sd->tVn0.vx)) < sd->tVn0.vz ||
-            (sint32)(0U - uint32(sd->tVn1.vx)) < sd->tVn1.vz ||
-            (sint32)(0U - uint32(sd->tVn2.vx)) < sd->tVn2.vz ||
-            (sint32)(0U - uint32(sd->tVn3.vx)) < sd->tVn3.vz))
+        if (!(-sd->tVn0.vx < sd->tVn0.vz || -sd->tVn1.vx < sd->tVn1.vz || -sd->tVn2.vx < sd->tVn2.vz || -sd->tVn3.vx < sd->tVn3.vz))
             continue;
         gte_stsxy3(&prim->p[1].xy, &prim->p[3].xy, &prim->p[2].xy);
         gte_avsz4();
@@ -1696,14 +1669,14 @@ void DrawW::OnyxLinePrim(CCOORD16 *geomVertices, Trk::Line *lineQuad, sint32 cou
         gte_nclip();
         gte_swc2(24, &bfct);
         if (sd->head.mirror == 1)
-            bfct = (sint32)(0U - uint32(bfct));
+            bfct = (-bfct);
         if (bfct < 0)
             continue;
         sint32 rawOtz = sd->otz;
         sint32 save_pre_otz = rawOtz >> 1;
-        sd->otz = (sint32)(uint32(save_pre_otz) + 75);
+        sd->otz = (save_pre_otz + 75);
         bool doSubdivision = rawOtz < 200;
-        if (sd->otz <= 0 || (sint32)(uint32(Draw::gViewOtSize) - 3) < sd->otz)
+        if (sd->otz <= 0 || (Draw::gViewOtSize - 3) < sd->otz)
             continue;
         if (doSubdivision)
             prim = &sd->GT4Prim;
@@ -1783,13 +1756,13 @@ void DrawW::OnyxLinePrim(CCOORD16 *geomVertices, Trk::Line *lineQuad, sint32 cou
         prim->p[3].uv_attr = uv[3];
         if (prim->p[0].attr == 0xFFFF)
         {
-            sint32 depth_index = (sint32)((uint32(save_pre_otz) - uint32((sint32)sd->startfog)) << 4);
+            sint32 depth_index = ((uint32(save_pre_otz) - uint32((sint32)sd->startfog)) << 4);
             depth_index >>= (uint16)sd->distfog & 31;
             if (depth_index < 0)
                 depth_index = 0;
             else if (depth_index > 15)
                 depth_index = 15;
-            prim->p[0].attr = (uint16)gClutDepth[pmx->pad2][depth_index];
+            prim->p[0].attr = gClutDepth[pmx->pad2][depth_index];
         }
         if (doSubdivision)
         {
@@ -1870,17 +1843,17 @@ void DrawW::DoLines(DRender::tView *Vi, tBuildEntry *buildList, Draw::DCache *sd
             if ((Cars::gList[Vi->player]->control.lights & 6) != 0)
                 world->nightFlags = nightFlags | 5;
             coorddef tmp, tmp2;
-            tmp.x = (sint32)((uint32)Vi->cview.translation.x - (uint32)Camera::gInfo[Vi->player].target->position.x);
-            tmp.y = (sint32)((uint32)Vi->cview.translation.y - (uint32)Camera::gInfo[Vi->player].target->position.y);
-            tmp.z = (sint32)((uint32)Vi->cview.translation.z - (uint32)Camera::gInfo[Vi->player].target->position.z);
+            tmp.x = (Vi->cview.translation.x - Camera::gInfo[Vi->player].target->position.x);
+            tmp.y = (Vi->cview.translation.y - Camera::gInfo[Vi->player].target->position.y);
+            tmp.z = (Vi->cview.translation.z - Camera::gInfo[Vi->player].target->position.z);
             transform(&tmp, &gNightMat, &tmp2);
             WorldSetUpTranslation(&tmp2, &world->matNight);
             Car::tObj *cop = BW::gCopCarObj;
             if (cop != 0)
             {
-                tmp.x = (sint32)((uint32)Vi->cview.translation.x - (uint32)cop->N.position.x);
-                tmp.y = (sint32)((uint32)Vi->cview.translation.y - (uint32)cop->N.position.y);
-                tmp.z = (sint32)((uint32)Vi->cview.translation.z - (uint32)cop->N.position.z);
+                tmp.x = (Vi->cview.translation.x - cop->N.position.x);
+                tmp.y = (Vi->cview.translation.y - cop->N.position.y);
+                tmp.z = (Vi->cview.translation.z - cop->N.position.z);
                 transform(&tmp, &gCopMat, &tmp2);
                 WorldSetUpTranslation(&tmp2, &world->matCop);
             }
@@ -1891,9 +1864,9 @@ void DrawW::DoLines(DRender::tView *Vi, tBuildEntry *buildList, Draw::DCache *sd
         }
         coorddef *pChunkCp = Chunk::chunkCenters + buildList->chunkInd;
         COORD16 trans;
-        trans.x = (sint16)((sint32)((uint32)pChunkCp->x - (uint32)Vi->cview.translation.x) >> 10);
-        trans.y = (sint16)((sint32)((uint32)pChunkCp->y - (uint32)Vi->cview.translation.y) >> 10);
-        trans.z = (sint16)((sint32)((uint32)pChunkCp->z - (uint32)Vi->cview.translation.z) >> 10);
+        trans.x = (sint16)((pChunkCp->x - (uint32)Vi->cview.translation.x) >> 10);
+        trans.y = (sint16)((pChunkCp->y - (uint32)Vi->cview.translation.y) >> 10);
+        trans.z = (sint16)((pChunkCp->z - (uint32)Vi->cview.translation.z) >> 10);
         BuildChunkCenterLineFacets(chunkDat, group, world, &trans);
     }
 }
@@ -1968,9 +1941,9 @@ void DrawW::BuildSpikeBelt(DRender::tView *Vi, sint32 scale, Draw::DCache *sd)
     Draw::tGiveShelbyMoreCache *world = reinterpret_cast<Draw::tGiveShelbyMoreCache *>(sd);
     world->nightFlags = 0;
     coorddef tmp, tmp2;
-    tmp.x = (sint32)(uint32(sliceData->center[0]) - uint32(Vi->cview.translation.x));
-    tmp.y = (sint32)(uint32(sliceData->center[1]) - uint32(Vi->cview.translation.y));
-    tmp.z = (sint32)(uint32(sliceData->center[2]) - uint32(Vi->cview.translation.z));
+    tmp.x = (sliceData->center[0] - Vi->cview.translation.x);
+    tmp.y = (sliceData->center[1] - Vi->cview.translation.y);
+    tmp.z = (sliceData->center[2] - Vi->cview.translation.z);
     transform(&tmp, &gWorldMat, &tmp2);
     WorldSetUpTranslation(&tmp2, &world->matB);
     world->vertices = vertex3d;

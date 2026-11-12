@@ -20,11 +20,11 @@ void AIDelayCar::SetNewTargetCar(Car::tObj *targetCar)
     targetCar_ = targetCar;
     deltaMeters_ = AIWorld::ApxSplineDistance(basisCar_, targetCar);
     slice_ = targetCar_->N.simRoadInfo.slice;
-    deltaPosition_.x = (sint32)((uint32)basisCar_->N.position.x - (uint32)targetCar_->N.position.x);
-    deltaPosition_.y = (sint32)((uint32)basisCar_->N.position.y - (uint32)targetCar_->N.position.y);
-    deltaPosition_.z = (sint32)((uint32)basisCar_->N.position.z - (uint32)targetCar_->N.position.z);
+    deltaPosition_.x = (basisCar_->N.position.x - targetCar_->N.position.x);
+    deltaPosition_.y = (basisCar_->N.position.y - targetCar_->N.position.y);
+    deltaPosition_.z = (basisCar_->N.position.z - targetCar_->N.position.z);
     position_ = targetCar_->N.position;
-    deltaRoadPosition_ = (sint32)((uint32)basisCar_->roadPosition - (uint32)targetCar_->roadPosition);
+    deltaRoadPosition_ = (basisCar_->roadPosition - targetCar_->roadPosition);
     roadPosition_ = targetCar_->roadPosition;
     laneIndex_ = targetCar_->laneIndex;
     currentSpeed_ = targetCar_->currentSpeed;
@@ -34,40 +34,40 @@ void AIDelayCar::Update(void)
 {
     FUNCTION_MARKER(0x8005AB44, "NFS4.EXE");
     sint32 distance = AIWorld::ApxSplineDistance(targetCar_, basisCar_);
-    sint32 change = fixedmult((sint32)((uint32)distance - (uint32)deltaMeters_), delayFactor_);
-    deltaMeters_ = (sint32)((uint32)deltaMeters_ + (uint32)change);
+    sint32 change = fixedmult(((distance - deltaMeters_)), delayFactor_);
+    deltaMeters_ = (deltaMeters_ + change);
     sint32 sliceOffset = deltaMeters_ / 0x60000;
-    sint32 slice = (sint32)((uint32)basisCar_->N.simRoadInfo.slice + (uint32)sliceOffset);
+    sint32 slice = (basisCar_->N.simRoadInfo.slice + sliceOffset);
     if (sliceOffset >= 0)
     {
         if (slice >= gNumSlices)
-            slice = (sint32)((uint32)slice - (uint32)gNumSlices);
+            slice = (slice - gNumSlices);
     }
     else if (slice < 0)
-        slice = (sint32)((uint32)slice + (uint32)gNumSlices);
+        slice = (slice + gNumSlices);
     slice_ = slice;
     coorddef currentDeltaPosition;
-    currentDeltaPosition.x = (sint32)((uint32)targetCar_->N.position.x - (uint32)basisCar_->N.position.x);
-    currentDeltaPosition.y = (sint32)((uint32)targetCar_->N.position.y - (uint32)basisCar_->N.position.y);
-    currentDeltaPosition.z = (sint32)((uint32)targetCar_->N.position.z - (uint32)basisCar_->N.position.z);
+    currentDeltaPosition.x = (targetCar_->N.position.x - basisCar_->N.position.x);
+    currentDeltaPosition.y = (targetCar_->N.position.y - basisCar_->N.position.y);
+    currentDeltaPosition.z = (targetCar_->N.position.z - basisCar_->N.position.z);
     coorddef changeDeltaPosition;
-    changeDeltaPosition.x = (sint32)((uint32)currentDeltaPosition.x - (uint32)deltaPosition_.x);
-    changeDeltaPosition.y = (sint32)((uint32)currentDeltaPosition.y - (uint32)deltaPosition_.y);
-    changeDeltaPosition.z = (sint32)((uint32)currentDeltaPosition.z - (uint32)deltaPosition_.z);
+    changeDeltaPosition.x = (currentDeltaPosition.x - deltaPosition_.x);
+    changeDeltaPosition.y = (currentDeltaPosition.y - deltaPosition_.y);
+    changeDeltaPosition.z = (currentDeltaPosition.z - deltaPosition_.z);
     change = fixedmult(changeDeltaPosition.x, delayFactor_);
-    deltaPosition_.x = (sint32)((uint32)deltaPosition_.x + (uint32)change);
+    deltaPosition_.x = (deltaPosition_.x + change);
     change = fixedmult(changeDeltaPosition.y, delayFactor_);
-    deltaPosition_.y = (sint32)((uint32)deltaPosition_.y + (uint32)change);
+    deltaPosition_.y = (deltaPosition_.y + change);
     change = fixedmult(changeDeltaPosition.z, delayFactor_);
-    deltaPosition_.z = (sint32)((uint32)deltaPosition_.z + (uint32)change);
-    position_.x = (sint32)((uint32)basisCar_->N.position.x + (uint32)deltaPosition_.x);
-    position_.y = (sint32)((uint32)basisCar_->N.position.y + (uint32)deltaPosition_.y);
-    position_.z = (sint32)((uint32)basisCar_->N.position.z + (uint32)deltaPosition_.z);
-    sint32 currentDeltaRoadPosition = (sint32)((uint32)targetCar_->roadPosition - (uint32)basisCar_->roadPosition);
-    change = fixedmult((sint32)((uint32)currentDeltaRoadPosition - (uint32)deltaRoadPosition_), delayFactor_);
-    deltaRoadPosition_ = (sint32)((uint32)deltaRoadPosition_ + (uint32)change);
-    roadPosition_ = (sint32)((uint32)basisCar_->roadPosition + (uint32)deltaRoadPosition_);
+    deltaPosition_.z = (deltaPosition_.z + change);
+    position_.x = (basisCar_->N.position.x + deltaPosition_.x);
+    position_.y = (basisCar_->N.position.y + deltaPosition_.y);
+    position_.z = (basisCar_->N.position.z + deltaPosition_.z);
+    sint32 currentDeltaRoadPosition = (targetCar_->roadPosition - basisCar_->roadPosition);
+    change = fixedmult(((currentDeltaRoadPosition - deltaRoadPosition_)), delayFactor_);
+    deltaRoadPosition_ = (deltaRoadPosition_ + change);
+    roadPosition_ = (basisCar_->roadPosition + deltaRoadPosition_);
     laneIndex_ = AIWorld::LaneIndex(slice_, roadPosition_);
-    change = fixedmult((sint32)((uint32)targetCar_->currentSpeed - (uint32)currentSpeed_), delayFactor_);
-    currentSpeed_ = (sint32)((uint32)currentSpeed_ + (uint32)change);
+    change = fixedmult(((targetCar_->currentSpeed - currentSpeed_)), delayFactor_);
+    currentSpeed_ = (currentSpeed_ + change);
 }

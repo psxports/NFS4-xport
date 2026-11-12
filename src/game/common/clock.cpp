@@ -15,14 +15,14 @@ void Clock::MasterInterruptHandler(void)
 
     if (stopClock == 0)
     {
-        clock_realTime.time128Hz = (sint32)((uint32)clock_realTime.time128Hz + 1);
-        generic128HzClock = (sint32)((uint32)generic128HzClock + 1);
+        clock_realTime.time128Hz = (clock_realTime.time128Hz + 1);
+        generic128HzClock = (generic128HzClock + 1);
         if ((clock_realTime.time128Hz & 1) == 0)
         {
-            clock_realTime.time64Hz = (sint32)((uint32)clock_realTime.time64Hz + 1);
+            clock_realTime.time64Hz = (clock_realTime.time64Hz + 1);
             if ((clock_realTime.time64Hz & 1) == 0)
             {
-                clock_realTime.time32Hz = (sint32)((uint32)clock_realTime.time32Hz + 1);
+                clock_realTime.time32Hz = (clock_realTime.time32Hz + 1);
                 if ((clock_realTime.time32Hz & 1) == 0)
                     Input::Update();
                 Input::Store();

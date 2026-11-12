@@ -125,7 +125,7 @@ static bool CameraWallBlocked(sint32 player, BWorldSm::Pos *slicePos)
         return true;
     if (slicePos->simQuad != 0 && (slicePos->simQuad->surface & 0x80) != 0)
     {
-        sint32 height = (sint32)((uint32)quadUnderCamera.y - (uint32)Camera::gInfo[player].anchor->position.y);
+        sint32 height = (quadUnderCamera.y - Camera::gInfo[player].anchor->position.y);
         if (height > 0x38000)
             return true;
     }
@@ -172,9 +172,9 @@ void EulerToMat(matrixtdef *m, sint32 ax, sint32 ay, sint32 az)
     sint32 x = m->m[3];
     sint32 y = m->m[4];
     sint32 z = m->m[5];
-    m->m[3] = (sint32)(0u - (uint32)m->m[6]);
-    m->m[5] = (sint32)(0u - (uint32)m->m[8]);
-    m->m[4] = (sint32)(0u - (uint32)m->m[7]);
+    m->m[3] = (-m->m[6]);
+    m->m[5] = (-m->m[8]);
+    m->m[4] = (-m->m[7]);
     m->m[6] = x;
     m->m[7] = y;
     m->m[8] = z;
@@ -191,11 +191,11 @@ void SetCameraZoom(sint32 player, sint32 targetDist)
         sint32 zoom = info->zooming;
         if (zoom == 1 || zoom == 2)
         {
-            sint32 product = (sint32)((uint32)targetDist * 190u);
+            sint32 product = (targetDist * 190);
             Camera::gGeomScreen = product / 0x3000;
             if (zoom == 2 && Camera::gGeomScreen > 1200)
             {
-                Camera::gGeomScreen = (sint32)(6000u - (uint32)Camera::gGeomScreen) >> 2;
+                Camera::gGeomScreen = (6000 - Camera::gGeomScreen) >> 2;
                 if (Camera::gGeomScreen < 750)
                     Camera::gGeomScreen = 750;
             }
@@ -214,15 +214,15 @@ void Camera::SetCamera(DRender::tView *cview)
 void Camera::LookBack(matrixtdef *src, matrixtdef *tgt)
 {
     FUNCTION_MARKER(0x8008073C, "NFS4.EXE");
-    tgt->m[0] = (sint32)(0u - (uint32)src->m[0]);
-    tgt->m[1] = (sint32)(0u - (uint32)src->m[1]);
-    tgt->m[2] = (sint32)(0u - (uint32)src->m[2]);
+    tgt->m[0] = (-src->m[0]);
+    tgt->m[1] = (-src->m[1]);
+    tgt->m[2] = (-src->m[2]);
     tgt->m[3] = src->m[3];
     tgt->m[4] = src->m[4];
     tgt->m[5] = src->m[5];
-    tgt->m[6] = (sint32)(0u - (uint32)src->m[6]);
-    tgt->m[7] = (sint32)(0u - (uint32)src->m[7]);
-    tgt->m[8] = (sint32)(0u - (uint32)src->m[8]);
+    tgt->m[6] = (-src->m[6]);
+    tgt->m[7] = (-src->m[7]);
+    tgt->m[8] = (-src->m[8]);
 }
 
 void Camera::TunnelLimit(sint32 player, sint32 *armheight)
@@ -236,11 +236,9 @@ void Camera::TunnelLimit(sint32 player, sint32 *armheight)
         sint32 roadheight = Newton::FindGroundElevationGeneral(&underCam, &quadnormal, slicePos->quadPts);
         sint32 track = GameSetup::gData.track;
         if (track >= 16)
-            track = (sint32)((uint32)track - 7u);
-        sint32 maxheight = (sint32)((uint32)gTunnelCamHeight[track] -
-            (uint32)gInfo[player].anchor->position.y + (uint32)roadheight);
-        if (maxheight < *armheight)
-            *armheight = maxheight;
+            track = (track - 7);
+        sint32 maxheight = ((gTunnelCamHeight[track] - gInfo[player].anchor->position.y) + roadheight);
+        if (maxheight < *armheight) *armheight = maxheight;
     }
 }
 
@@ -254,21 +252,21 @@ void Camera::UpdateCollisionCam(sint32 player)
         return;
     camera_info *info = &gInfo[player];
     if (info->direction)
-        arm.z = (sint32)(0u - (uint32)arm.z);
+        arm.z = (-arm.z);
     coorddef newarm;
     transform(&arm, &info->anchor->roadMatrix, &newarm);
     TunnelLimit(player, &newarm.y);
     coorddef oldarm = info->relpos;
-    sint32 step = fixedmult((sint32)((uint32)newarm.x - (uint32)oldarm.x), 0x51e);
-    info->relpos.x = (sint32)((uint32)oldarm.x + (uint32)step);
-    step = fixedmult((sint32)((uint32)newarm.y - (uint32)oldarm.y), 0x51e);
-    info->relpos.y = (sint32)((uint32)oldarm.y + (uint32)step);
-    step = fixedmult((sint32)((uint32)newarm.z - (uint32)oldarm.z), 0x51e);
+    sint32 step = fixedmult(((newarm.x - oldarm.x)), 0x51e);
+    info->relpos.x = (oldarm.x + step);
+    step = fixedmult(((newarm.y - oldarm.y)), 0x51e);
+    info->relpos.y = (oldarm.y + step);
+    step = fixedmult(((newarm.z - oldarm.z)), 0x51e);
     BO::tNewtonObj *anchor = info->anchor;
-    info->relpos.z = (sint32)((uint32)oldarm.z + (uint32)step);
-    info->position.x = (sint32)((uint32)anchor->position.x + (uint32)info->relpos.x);
-    info->position.y = (sint32)((uint32)anchor->position.y + (uint32)info->relpos.y);
-    sint32 z = (sint32)((uint32)anchor->position.z + (uint32)info->relpos.z);
+    info->relpos.z = (oldarm.z + step);
+    info->position.x = (anchor->position.x + info->relpos.x);
+    info->position.y = (anchor->position.y + info->relpos.y);
+    sint32 z = (anchor->position.z + info->relpos.z);
     bool tumbling = info->tumbling != 0;
     info->position.z = z;
     if (!tumbling)
@@ -289,11 +287,11 @@ void Camera::UpdateSimpleCam(sint32 player)
     coorddef newarm;
     transform(&arm, &info->anchor->orientMat, &newarm);
     TunnelLimit(player, &newarm.y);
-    sint32 x = (sint32)((uint32)info->anchor->position.x + (uint32)newarm.x);
+    sint32 x = (info->anchor->position.x + newarm.x);
     BO::tNewtonObj *anchor = info->anchor;
     info->position.x = x;
-    info->position.y = (sint32)((uint32)anchor->position.y + (uint32)newarm.y);
-    info->position.z = (sint32)((uint32)anchor->position.z + (uint32)newarm.z);
+    info->position.y = (anchor->position.y + newarm.y);
+    info->position.z = (anchor->position.z + newarm.z);
     LookBack(&anchor->orientMat, &info->rotation);
 }
 
@@ -307,19 +305,19 @@ void Camera::UpdateBumperCam(sint32 player)
     if (lookingBehind)
     {
         transform(&arm, &info->anchor->orientMat, &newarm);
-        sint32 x = (sint32)((uint32)info->anchor->position.x + (uint32)newarm.x);
+        sint32 x = (info->anchor->position.x + newarm.x);
         BO::tNewtonObj *anchor = info->anchor;
         info->audioPos.x = x;
-        info->audioPos.y = (sint32)((uint32)anchor->position.y + (uint32)newarm.y);
-        info->audioPos.z = (sint32)((uint32)anchor->position.z + (uint32)newarm.z);
-        arm.z = (sint32)(0u - (uint32)arm.z);
+        info->audioPos.y = (anchor->position.y + newarm.y);
+        info->audioPos.z = (anchor->position.z + newarm.z);
+        arm.z = (-arm.z);
     }
     transform(&arm, &info->anchor->orientMat, &newarm);
-    sint32 x = (sint32)((uint32)info->anchor->position.x + (uint32)newarm.x);
+    sint32 x = (info->anchor->position.x + newarm.x);
     BO::tNewtonObj *anchor = info->anchor;
     info->position.x = x;
-    info->position.y = (sint32)((uint32)anchor->position.y + (uint32)newarm.y);
-    info->position.z = (sint32)((uint32)anchor->position.z + (uint32)newarm.z);
+    info->position.y = (anchor->position.y + newarm.y);
+    info->position.z = (anchor->position.z + newarm.z);
     if (lookingBehind)
         LookBack(&anchor->orientMat, &info->rotation);
     else
@@ -352,14 +350,14 @@ void Camera::UpdateTailCam(sint32 player, sint32 behavior)
         sint32 vx = anchor->linearVel_ch.x;
         sint32 vz = anchor->linearVel_ch.z;
         if (vx < 0)
-            vx = (sint32)(0u - (uint32)vx);
+            vx = (-vx);
         if (vz < 0)
-            vz = (sint32)(0u - (uint32)vz);
+            vz = (-vz);
         sint32 speed;
         if (vz < vx)
-            speed = (sint32)((uint32)vx + (uint32)(vz >> 2));
+            speed = (vx + (vz >> 2));
         else
-            speed = (sint32)((uint32)vz + (uint32)(vx >> 2));
+            speed = (vz + (vx >> 2));
         rate = speed / 900;
         if (rate > maxrate)
             rate = maxrate;
@@ -372,20 +370,20 @@ void Camera::UpdateTailCam(sint32 player, sint32 behavior)
     if (lookahead < 0)
     {
         if (slice < 0)
-            slice = (sint32)((uint32)slice + (uint32)gNumSlices);
+            slice = (slice + gNumSlices);
     }
     else if (slice >= gNumSlices)
-        slice = (sint32)((uint32)slice - (uint32)gNumSlices);
+        slice = (slice - gNumSlices);
     sint32 height = BWorldSm::slices[slice].center[1];
     sint32 backSlice = slice - lookahead;
     if (lookahead <= 0)
     {
         if (backSlice >= gNumSlices)
-            backSlice = (sint32)((uint32)backSlice - (uint32)gNumSlices);
+            backSlice = (backSlice - gNumSlices);
     }
     else if (backSlice < 0)
-        backSlice = (sint32)((uint32)backSlice + (uint32)gNumSlices);
-    sint32 vertigo = (sint32)((uint32)height - (uint32)BWorldSm::slices[backSlice].center[1]) / 3;
+        backSlice = (backSlice + gNumSlices);
+    sint32 vertigo = (height - BWorldSm::slices[backSlice].center[1]) / 3;
     if (behavior == 0)
         vertigo = 0;
     else if (behavior == 1)
@@ -402,24 +400,24 @@ void Camera::UpdateTailCam(sint32 player, sint32 behavior)
         if (vertigo < -0x4000)
             vertigo = -0x4000;
     }
-    arm.y = (sint32)((uint32)arm.y + (uint32)vertigo);
+    arm.y = (arm.y + vertigo);
     coorddef newarm;
     if (Input::gLookBehind[player] != 0)
     {
         transform(&arm, &info->anchor->orientMat, &newarm);
-        sint32 x = (sint32)((uint32)info->anchor->position.x + (uint32)newarm.x);
+        sint32 x = (info->anchor->position.x + newarm.x);
         BO::tNewtonObj *body = info->anchor;
         info->audioPos.x = x;
-        info->audioPos.y = (sint32)((uint32)body->position.y + (uint32)newarm.y);
-        info->audioPos.z = (sint32)((uint32)body->position.z + (uint32)newarm.z);
-        arm.z = (sint32)(0u - (uint32)arm.z);
+        info->audioPos.y = (body->position.y + newarm.y);
+        info->audioPos.z = (body->position.z + newarm.z);
+        arm.z = (-arm.z);
         transform(&arm, &info->anchor->orientMat, &newarm);
         TunnelLimit(player, &newarm.y);
-        x = (sint32)((uint32)info->anchor->position.x + (uint32)newarm.x);
+        x = (info->anchor->position.x + newarm.x);
         body = info->anchor;
         info->position.x = x;
-        info->position.y = (sint32)((uint32)body->position.y + (uint32)newarm.y);
-        info->position.z = (sint32)((uint32)body->position.z + (uint32)newarm.z);
+        info->position.y = (body->position.y + newarm.y);
+        info->position.z = (body->position.z + newarm.z);
         return;
     }
     transform(&arm, &info->anchor->orientMat, &newarm);
@@ -431,13 +429,13 @@ void Camera::UpdateTailCam(sint32 player, sint32 behavior)
         rateY = 0x1999;
         rate = 0x1999;
     }
-    sint32 step = fixedmult((sint32)((uint32)newarm.x - (uint32)oldarm.x), rate);
-    info->relpos.x = (sint32)((uint32)oldarm.x + (uint32)step);
-    step = fixedmult((sint32)((uint32)newarm.y - (uint32)oldarm.y), rateY);
-    info->relpos.y = (sint32)((uint32)oldarm.y + (uint32)step);
-    step = fixedmult((sint32)((uint32)newarm.z - (uint32)oldarm.z), rate);
+    sint32 step = fixedmult(((newarm.x - oldarm.x)), rate);
+    info->relpos.x = (oldarm.x + step);
+    step = fixedmult(((newarm.y - oldarm.y)), rateY);
+    info->relpos.y = (oldarm.y + step);
+    step = fixedmult(((newarm.z - oldarm.z)), rate);
     bool transitioning = info->intransition != 0;
-    info->relpos.z = (sint32)((uint32)oldarm.z + (uint32)step);
+    info->relpos.z = (oldarm.z + step);
     if (!transitioning)
     {
         sint32 len = Math::VectorLength(&info->relpos);
@@ -453,11 +451,11 @@ void Camera::UpdateTailCam(sint32 player, sint32 behavior)
             info->relpos.z = fixedmult(scale, z);
         }
     }
-    sint32 x = (sint32)((uint32)info->anchor->position.x + (uint32)info->relpos.x);
+    sint32 x = (info->anchor->position.x + info->relpos.x);
     BO::tNewtonObj *body = info->anchor;
     info->position.x = x;
-    info->position.y = (sint32)((uint32)body->position.y + (uint32)info->relpos.y);
-    info->position.z = (sint32)((uint32)body->position.z + (uint32)info->relpos.z);
+    info->position.y = (body->position.y + info->relpos.y);
+    info->position.z = (body->position.z + info->relpos.z);
 }
 
 void Camera::UpdateHeliCam(sint32 player, sint32 behavior)
@@ -486,14 +484,14 @@ void Camera::UpdateHeliCam(sint32 player, sint32 behavior)
         sint32 vx = anchor->linearVel_ch.x;
         sint32 vz = anchor->linearVel_ch.z;
         if (vx < 0)
-            vx = (sint32)(0u - (uint32)vx);
+            vx = (-vx);
         if (vz < 0)
-            vz = (sint32)(0u - (uint32)vz);
+            vz = (-vz);
         sint32 speed;
         if (vz < vx)
-            speed = (sint32)((uint32)vx + (uint32)(vz >> 2));
+            speed = (vx + (vz >> 2));
         else
-            speed = (sint32)((uint32)vz + (uint32)(vx >> 2));
+            speed = (vz + (vx >> 2));
         rate = speed / 900;
         if (rate > maxrate)
             rate = maxrate;
@@ -507,36 +505,36 @@ void Camera::UpdateHeliCam(sint32 player, sint32 behavior)
     sint32 vx = anchor->linearVel_ch.x;
     sint32 vz = anchor->linearVel_ch.z;
     if (vx < 0)
-        vx = (sint32)(0u - (uint32)vx);
+        vx = (-vx);
     if (vz < 0)
-        vz = (sint32)(0u - (uint32)vz);
+        vz = (-vz);
     sint32 speed;
     if (vz < vx)
-        speed = (sint32)((uint32)vx + (uint32)(vz >> 2));
+        speed = (vx + (vz >> 2));
     else
-        speed = (sint32)((uint32)vz + (uint32)(vx >> 2));
+        speed = (vz + (vx >> 2));
     sint32 fallback = speed / 20;
     if (fallback > 0x20000)
         fallback = 0x20000;
-    arm.z = (sint32)((uint32)arm.z - (uint32)fallback);
+    arm.z = (arm.z - fallback);
     sint32 slice = info->anchor->simRoadInfo.slice + lookahead;
     if (lookahead < 0)
     {
         if (slice < 0)
-            slice = (sint32)((uint32)slice + (uint32)gNumSlices);
+            slice = (slice + gNumSlices);
     }
     else if (slice >= gNumSlices)
-        slice = (sint32)((uint32)slice - (uint32)gNumSlices);
+        slice = (slice - gNumSlices);
     sint32 height = BWorldSm::slices[slice].center[1];
     sint32 backSlice = slice - lookahead;
     if (lookahead <= 0)
     {
         if (backSlice >= gNumSlices)
-            backSlice = (sint32)((uint32)backSlice - (uint32)gNumSlices);
+            backSlice = (backSlice - gNumSlices);
     }
     else if (backSlice < 0)
-        backSlice = (sint32)((uint32)backSlice + (uint32)gNumSlices);
-    sint32 vertigo = (sint32)((uint32)height - (uint32)BWorldSm::slices[backSlice].center[1]) / 2;
+        backSlice = (backSlice + gNumSlices);
+    sint32 vertigo = (height - BWorldSm::slices[backSlice].center[1]) / 2;
     if (behavior == 0)
         vertigo = 0;
     else if (behavior == 1)
@@ -553,24 +551,24 @@ void Camera::UpdateHeliCam(sint32 player, sint32 behavior)
         if (vertigo < -0xc000)
             vertigo = -0xc000;
     }
-    arm.y = (sint32)((uint32)arm.y + (uint32)vertigo);
+    arm.y = (arm.y + vertigo);
     coorddef newarm;
     if (Input::gLookBehind[player] != 0)
     {
         transform(&arm, &info->anchor->orientMat, &newarm);
-        sint32 x = (sint32)((uint32)info->anchor->position.x + (uint32)newarm.x);
+        sint32 x = (info->anchor->position.x + newarm.x);
         BO::tNewtonObj *body = info->anchor;
         info->audioPos.x = x;
-        info->audioPos.y = (sint32)((uint32)body->position.y + (uint32)newarm.y);
-        info->audioPos.z = (sint32)((uint32)body->position.z + (uint32)newarm.z);
-        arm.z = (sint32)(0u - (uint32)arm.z);
+        info->audioPos.y = (body->position.y + newarm.y);
+        info->audioPos.z = (body->position.z + newarm.z);
+        arm.z = (-arm.z);
         transform(&arm, &info->anchor->orientMat, &newarm);
         TunnelLimit(player, &newarm.y);
-        x = (sint32)((uint32)info->anchor->position.x + (uint32)newarm.x);
+        x = (info->anchor->position.x + newarm.x);
         body = info->anchor;
         info->position.x = x;
-        info->position.y = (sint32)((uint32)body->position.y + (uint32)newarm.y);
-        info->position.z = (sint32)((uint32)body->position.z + (uint32)newarm.z);
+        info->position.y = (body->position.y + newarm.y);
+        info->position.z = (body->position.z + newarm.z);
         return;
     }
     transform(&arm, &info->anchor->orientMat, &newarm);
@@ -582,13 +580,13 @@ void Camera::UpdateHeliCam(sint32 player, sint32 behavior)
         rateY = 0x1999;
         rate = 0x1999;
     }
-    sint32 step = fixedmult((sint32)((uint32)newarm.x - (uint32)oldarm.x), rate);
-    info->relpos.x = (sint32)((uint32)oldarm.x + (uint32)step);
-    step = fixedmult((sint32)((uint32)newarm.y - (uint32)oldarm.y), rateY);
-    info->relpos.y = (sint32)((uint32)oldarm.y + (uint32)step);
-    step = fixedmult((sint32)((uint32)newarm.z - (uint32)oldarm.z), rate);
+    sint32 step = fixedmult(((newarm.x - oldarm.x)), rate);
+    info->relpos.x = (oldarm.x + step);
+    step = fixedmult(((newarm.y - oldarm.y)), rateY);
+    info->relpos.y = (oldarm.y + step);
+    step = fixedmult(((newarm.z - oldarm.z)), rate);
     bool transitioning = info->intransition != 0;
-    info->relpos.z = (sint32)((uint32)oldarm.z + (uint32)step);
+    info->relpos.z = (oldarm.z + step);
     if (!transitioning)
     {
         sint32 len = Math::VectorLength(&info->relpos);
@@ -604,18 +602,17 @@ void Camera::UpdateHeliCam(sint32 player, sint32 behavior)
             info->relpos.z = fixedmult(scale, z);
         }
     }
-    sint32 x = (sint32)((uint32)info->anchor->position.x + (uint32)info->relpos.x);
+    sint32 x = (info->anchor->position.x + info->relpos.x);
     BO::tNewtonObj *body = info->anchor;
     info->position.x = x;
-    info->position.y = (sint32)((uint32)body->position.y + (uint32)info->relpos.y);
-    info->position.z = (sint32)((uint32)body->position.z + (uint32)info->relpos.z);
+    info->position.y = (body->position.y + info->relpos.y);
+    info->position.z = (body->position.z + info->relpos.z);
 }
 
 void Camera::UpdateCircleCam(sint32 player)
 {
     FUNCTION_MARKER(0x80081AB8, "NFS4.EXE");
-    if ((simVar.quickPauseSim != 0 && Replay::ReplayInterface.changeCamera == 0) ||
-        InBetween != 0 || simVar.pauseSim != 0)
+    if ((simVar.quickPauseSim != 0 && Replay::ReplayInterface.changeCamera == 0) || InBetween != 0 || simVar.pauseSim != 0)
         return;
 
     const sint32 circle_height[3] = { 0x10000, 0x20000, 0x30000 };
@@ -648,9 +645,9 @@ void Camera::UpdateCircleCam(sint32 player)
     transform(&src, &info->anchor->orientMat, &des);
     TunnelLimit(player, &des.y);
     const coorddef &position = info->anchor->position;
-    info->position.x = (sint32)((uint32)position.x + (uint32)des.x);
-    info->position.y = (sint32)((uint32)position.y + (uint32)des.y);
-    info->position.z = (sint32)((uint32)position.z + (uint32)des.z);
+    info->position.x = (position.x + des.x);
+    info->position.y = (position.y + des.y);
+    info->position.z = (position.z + des.z);
 }
 
 void Camera::UpdateTVCam(sint32 player)
@@ -663,19 +660,19 @@ void Camera::UpdateTVCam(sint32 player)
     bool positive = dist > 0;
     dist = Math::Dist3D(&info->target->position, &info->position);
     if (!positive)
-        dist = (sint32)(0u - (uint32)dist);
+        dist = (-dist);
     sint32 targetDist = dist >> 4;
     if (lastX[player] != info->position.x)
     {
         lastX[player] = info->position.x;
         lastY[player] = info->position.y;
     }
-    sint32 height = fixedmult(info->TVHeight >> 2, (sint32)((uint32)targetDist - 0x4000u));
+    sint32 height = fixedmult(info->TVHeight >> 2, ((targetDist - 0x4000)));
     if (info->TVHeight < height)
         height = info->TVHeight;
     if (height < 0)
         height = 0;
-    info->position.y = (sint32)((uint32)lastY[player] + (uint32)height);
+    info->position.y = (lastY[player] + height);
     SetCameraZoom(player, targetDist);
 }
 
@@ -720,9 +717,9 @@ void Camera::UpdateAnimCam(sint32 player)
         coorddef newarm;
         transform(&animPos, &info->anchor->orientMat, &newarm);
         BO::tNewtonObj *anchor = info->anchor;
-        info->position.x = (sint32)((uint32)anchor->position.x + (uint32)newarm.x);
-        info->position.y = (sint32)((uint32)anchor->position.y + (uint32)newarm.y);
-        info->position.z = (sint32)((uint32)anchor->position.z + (uint32)newarm.z);
+        info->position.x = (anchor->position.x + newarm.x);
+        info->position.y = (anchor->position.y + newarm.y);
+        info->position.z = (anchor->position.z + newarm.z);
         Math::fasttransmult(&animRot, &anchor->orientMat, &info->rotation);
     }
 }
@@ -739,11 +736,11 @@ void Camera::UpdateFinishCam(sint32 player)
     if (script->GetTimedAnimPosRot(&finishPos, &finishRot) <= 0)
         Anim::GetLastAnimPosRot(1, 6, &finishPos, &finishRot);
     transform(&finishPos, &info->anchor->orientMat, &newarm);
-    sint32 x = (sint32)((uint32)info->anchor->position.x + (uint32)newarm.x);
+    sint32 x = (info->anchor->position.x + newarm.x);
     BO::tNewtonObj *anchor = info->anchor;
     info->position.x = x;
-    info->position.y = (sint32)((uint32)anchor->position.y + (uint32)newarm.y);
-    info->position.z = (sint32)((uint32)anchor->position.z + (uint32)newarm.z);
+    info->position.y = (anchor->position.y + newarm.y);
+    info->position.z = (anchor->position.z + newarm.z);
     Math::fasttransmult(&finishRot, &anchor->orientMat, &info->rotation);
     info->pitch = 0;
     info->jostling = 0;
@@ -760,20 +757,20 @@ void Camera::UpdateBlimpCam(sint32 player)
     coorddef arm = gFlags[info->mode].arm;
     TunnelLimit(player, &arm.y);
     coorddef oldarm;
-    oldarm.x = (sint32)((uint32)info->position.x - (uint32)info->anchor->position.x);
-    oldarm.y = (sint32)((uint32)info->position.y - (uint32)info->anchor->position.y);
-    oldarm.z = (sint32)((uint32)info->position.z - (uint32)info->anchor->position.z);
-    sint32 step = fixedmult((sint32)((uint32)arm.x - (uint32)oldarm.x), 0x1999);
-    oldarm.x = (sint32)((uint32)oldarm.x + (uint32)step);
-    step = fixedmult((sint32)((uint32)arm.y - (uint32)oldarm.y), 0x1999);
-    oldarm.y = (sint32)((uint32)oldarm.y + (uint32)step);
-    step = fixedmult((sint32)((uint32)arm.z - (uint32)oldarm.z), 0x1999);
-    oldarm.z = (sint32)((uint32)oldarm.z + (uint32)step);
-    sint32 x = (sint32)((uint32)info->anchor->position.x + (uint32)oldarm.x);
+    oldarm.x = (info->position.x - info->anchor->position.x);
+    oldarm.y = (info->position.y - info->anchor->position.y);
+    oldarm.z = (info->position.z - info->anchor->position.z);
+    sint32 step = fixedmult(((arm.x - oldarm.x)), 0x1999);
+    oldarm.x = (oldarm.x + step);
+    step = fixedmult(((arm.y - oldarm.y)), 0x1999);
+    oldarm.y = (oldarm.y + step);
+    step = fixedmult(((arm.z - oldarm.z)), 0x1999);
+    oldarm.z = (oldarm.z + step);
+    sint32 x = (info->anchor->position.x + oldarm.x);
     BO::tNewtonObj *anchor = info->anchor;
     info->position.x = x;
-    info->position.y = (sint32)((uint32)anchor->position.y + (uint32)oldarm.y);
-    info->position.z = (sint32)((uint32)anchor->position.z + (uint32)oldarm.z);
+    info->position.y = (anchor->position.y + oldarm.y);
+    info->position.z = (anchor->position.z + oldarm.z);
 }
 
 void Camera::SetSplineCam(sint32 player)
@@ -781,8 +778,8 @@ void Camera::SetSplineCam(sint32 player)
     FUNCTION_MARKER(0x800824C0, "NFS4.EXE");
     camera_info *info = &gInfo[player];
     Car::tObj *anchor = reinterpret_cast<Car::tObj *>(info->anchor);
-    uint32 difference = 0x10000u - (uint32)CameraSplineSpeed((uint8)info->splineMode);
-    sint32 numSlice = ((sint32)(difference * 15u) >> 16) + 1;
+    uint32 difference = 0x10000u - CameraSplineSpeed((uint8)info->splineMode);
+    sint32 numSlice = ((sint32)(difference * 15) >> 16) + 1;
     if (numSlice >= 9)
         numSlice = 8;
     if (Replay::ReplayCamera[player].defaultCamera != 0)
@@ -790,12 +787,12 @@ void Camera::SetSplineCam(sint32 player)
     sint32 first = fixedmult(info->rotation.m[6], anchor->N.roadMatrix.m[6]);
     sint32 second = fixedmult(info->rotation.m[7], info->anchor->roadMatrix.m[7]);
     sint32 third = fixedmult(info->rotation.m[8], info->anchor->roadMatrix.m[8]);
-    sint32 dot = (sint32)((uint32)first + (uint32)second + (uint32)third);
+    sint32 dot = ((first + second) + third);
     sint32 direction = numSlice;
     if (dot < 0)
-        direction = (sint32)(0u - (uint32)direction);
+        direction = (-direction);
     if (anchor->linearVel_ch.z < 0)
-        direction = (sint32)(0u - (uint32)direction);
+        direction = (-direction);
     sint32 current = anchor->N.simRoadInfo.slice;
     uint16 next = (uint16)((uint16)current + direction);
     if (direction < 0)
@@ -805,7 +802,7 @@ void Camera::SetSplineCam(sint32 player)
     }
     else if (current + direction >= gNumSlices)
         next = (uint16)(next - (uint16)gNumSlices);
-    info->slicePos.slice = (sint16)next;
+    info->slicePos.slice = next;
     Trk::NewSlice *slice = &BWorldSm::slices[info->slicePos.slice];
     coorddef center = { slice->center[0], slice->center[1], slice->center[2] };
     info->position = center;
@@ -827,9 +824,9 @@ void Camera::UpdateSplineCam(sint32 player)
     {
         difference = anchor->N.simRoadInfo.slice - info->slicePos.slice;
         if (difference > 0)
-            sliceDist = (sint32)((uint32)gNumSlices - (uint32)difference);
+            sliceDist = (gNumSlices - difference);
         else
-            sliceDist = (sint32)((uint32)gNumSlices - (uint32)(info->slicePos.slice - anchor->N.simRoadInfo.slice));
+            sliceDist = (gNumSlices - (info->slicePos.slice - anchor->N.simRoadInfo.slice));
     }
     else
     {
@@ -837,7 +834,7 @@ void Camera::UpdateSplineCam(sint32 player)
         sliceDist = difference > 0 ? difference : -difference;
     }
     sint32 speed = CameraSplineSpeed((uint8)info->splineMode);
-    sint32 change = (sint32)((0x10000u - (uint32)speed) * 15u) >> 16;
+    sint32 change = ((0x10000 - speed) * 15) >> 16;
     if (change + 2 < sliceDist && speed < 0x10000 && Replay::ReplayCamera[player].defaultCamera == 0)
     {
         sint32 numSlice = change + 1;
@@ -846,12 +843,12 @@ void Camera::UpdateSplineCam(sint32 player)
         sint32 first = fixedmult(info->rotation.m[6], info->anchor->roadMatrix.m[6]);
         sint32 second = fixedmult(info->rotation.m[7], info->anchor->roadMatrix.m[7]);
         sint32 third = fixedmult(info->rotation.m[8], info->anchor->roadMatrix.m[8]);
-        sint32 dot = (sint32)((uint32)first + (uint32)second + (uint32)third);
+        sint32 dot = ((first + second) + third);
         sint32 direction = numSlice;
         if (dot < 0)
-            direction = (sint32)(0u - (uint32)direction);
+            direction = (-direction);
         if (anchor->linearVel_ch.z < 0)
-            direction = (sint32)(0u - (uint32)direction);
+            direction = (-direction);
         sint32 current = anchor->N.simRoadInfo.slice;
         uint16 next = (uint16)((uint16)current + direction);
         if (direction < 0)
@@ -861,7 +858,7 @@ void Camera::UpdateSplineCam(sint32 player)
         }
         else if (current + direction >= gNumSlices)
             next = (uint16)(next - (uint16)gNumSlices);
-        info->slicePos.slice = (sint16)next;
+        info->slicePos.slice = next;
         Trk::NewSlice *slice = &BWorldSm::slices[info->slicePos.slice];
         coorddef center = { slice->center[0], slice->center[1], slice->center[2] };
         info->position = center;
@@ -872,14 +869,14 @@ void Camera::UpdateSplineCam(sint32 player)
     sint32 next = info->slicePos.slice + 1;
     Trk::NewSlice *nextSlice = next < gNumSlices ? &BWorldSm::slices[next] : BWorldSm::slices;
     coorddef nextVel = { nextSlice->center[0], nextSlice->center[1], nextSlice->center[2] };
-    splineVel.x = (sint32)((uint32)nextVel.x - (uint32)splineVel.x);
-    splineVel.y = (sint32)((uint32)nextVel.y - (uint32)splineVel.y);
-    splineVel.z = (sint32)((uint32)nextVel.z - (uint32)splineVel.z);
+    splineVel.x = (nextVel.x - splineVel.x);
+    splineVel.y = (nextVel.y - splineVel.y);
+    splineVel.z = (nextVel.z - splineVel.z);
     Math::NormalizeVector(&splineVel);
     sint32 first = fixedmult(anchor->N.linearVel.x, splineVel.x);
     sint32 second = fixedmult(anchor->N.linearVel.y, splineVel.y);
     sint32 third = fixedmult(anchor->N.linearVel.z, splineVel.z);
-    sint32 relativeVel = (sint32)((uint32)first + (uint32)second + (uint32)third);
+    sint32 relativeVel = ((first + second) + third);
     if ((GameSetup::gData.sgge & 4) != 0)
         relativeVel = fixedmult(relativeVel, 0xcccc);
     relativeVel = fixedmult(relativeVel, CameraSplineSpeed((uint8)info->splineMode));
@@ -888,14 +885,14 @@ void Camera::UpdateSplineCam(sint32 player)
     cameraVel.y = fixedmult(relativeVel, splineVel.y);
     cameraVel.z = fixedmult(relativeVel, splineVel.z);
     BO::tNewtonObj *target = info->target;
-    info->position.x = (sint32)((uint32)info->position.x + (uint32)(cameraVel.x >> 6));
-    info->position.y = (sint32)((uint32)info->position.y + (uint32)(cameraVel.y >> 6));
-    info->position.z = (sint32)((uint32)info->position.z + (uint32)(cameraVel.z >> 6));
+    info->position.x = (info->position.x + (cameraVel.x >> 6));
+    info->position.y = (info->position.y + (cameraVel.y >> 6));
+    info->position.z = (info->position.z + (cameraVel.z >> 6));
     sint32 dist = Math::Dist3D(&target->position, &info->position);
     bool positive = dist > 0;
     dist = Math::Dist3D(&info->target->position, &info->position);
     if (!positive)
-        dist = (sint32)(0u - (uint32)dist);
+        dist = (-dist);
     SetCameraZoom(player, dist >> 4);
 }
 
@@ -936,41 +933,41 @@ void Camera::UpdatePulloverCam(sint32 player)
     sForward.y = (sint8)slice->forward[1] * 512;
     sForward.z = (sint8)slice->forward[2] * 512;
     coorddef sccVec;
-    sccVec.x = (sint32)((uint32)info->anchor->position.x - (uint32)sCenter.x);
-    sccVec.y = (sint32)((uint32)info->anchor->position.y - (uint32)sCenter.y);
-    sccVec.z = (sint32)((uint32)info->anchor->position.z - (uint32)sCenter.z);
+    sccVec.x = (info->anchor->position.x - sCenter.x);
+    sccVec.y = (info->anchor->position.y - sCenter.y);
+    sccVec.z = (info->anchor->position.z - sCenter.z);
     coorddef sRight;
     sRight.x = (sint8)slice->right[0] * 2048;
     sRight.y = (sint8)slice->right[1] * 2048;
     sRight.z = (sint8)slice->right[2] * 2048;
     sint32 first = fixedmult(sccVec.z, sForward.x);
     sint32 second = fixedmult(sccVec.x, sForward.z);
-    sint32 ySign = (sint32)((uint32)first - (uint32)second);
+    sint32 ySign = (first - second);
     sint32 island = IslandProfile((uint16)BWorldSm::slices[info->anchor->simRoadInfo.slice].pavedProfile);
     if (ySign < 0)
         island ^= 1;
     if (island != 0)
     {
-        sRight.x = (sint32)(0u - (uint32)sRight.x);
-        sRight.z = (sint32)(0u - (uint32)sRight.z);
-        sRight.y = (sint32)(0u - (uint32)sRight.y);
+        sRight.x = (-sRight.x);
+        sRight.z = (-sRight.z);
+        sRight.y = (-sRight.y);
     }
     coorddef newarm;
     newarm.y = 0x60000;
     TunnelLimit(player, &newarm.y);
-    newarm.x = (sint32)((uint32)sCenter.x + (uint32)sRight.x);
-    newarm.y = (sint32)((uint32)newarm.y + (uint32)sCenter.y + (uint32)sRight.y);
-    newarm.z = (sint32)((uint32)sCenter.z + (uint32)sRight.z);
-    sint32 step = fixedmult((sint32)((uint32)newarm.x - (uint32)info->position.x), 0x7ae);
+    newarm.x = (sCenter.x + sRight.x);
+    newarm.y = ((newarm.y + sCenter.y) + sRight.y);
+    newarm.z = (sCenter.z + sRight.z);
+    sint32 step = fixedmult(((newarm.x - info->position.x)), 0x7ae);
     sint32 oldX = info->position.x;
     sint32 oldY = info->position.y;
-    info->position.x = (sint32)((uint32)oldX + (uint32)step);
-    step = fixedmult((sint32)((uint32)newarm.y - (uint32)oldY), 0x7ae);
+    info->position.x = (oldX + step);
+    step = fixedmult(((newarm.y - oldY)), 0x7ae);
     oldY = info->position.y;
     sint32 oldZ = info->position.z;
-    info->position.y = (sint32)((uint32)oldY + (uint32)step);
-    step = fixedmult((sint32)((uint32)newarm.z - (uint32)oldZ), 0x7ae);
-    info->position.z = (sint32)((uint32)info->position.z + (uint32)step);
+    info->position.y = (oldY + step);
+    step = fixedmult(((newarm.z - oldZ)), 0x7ae);
+    info->position.z = (info->position.z + step);
     info->pitch = 0;
     info->jostling = 0;
     info->tracking = 1;
@@ -984,24 +981,24 @@ void Camera::UpdateCopCam1(sint32 player)
     FUNCTION_MARKER(0x80083010, "NFS4.EXE");
     camera_info *info = &gInfo[player];
     coorddef vec;
-    vec.x = (sint32)((uint32)info->anchor->position.x + (uint32)info->target->position.x);
-    vec.y = (sint32)((uint32)info->anchor->position.y + (uint32)info->target->position.y);
-    vec.z = (sint32)((uint32)info->anchor->position.z + (uint32)info->target->position.z);
+    vec.x = (info->anchor->position.x + info->target->position.x);
+    vec.y = (info->anchor->position.y + info->target->position.y);
+    vec.z = (info->anchor->position.z + info->target->position.z);
     gCop1Target[player].x = vec.x >> 1;
     gCop1Target[player].y = vec.y >> 1;
     gCop1Target[player].z = vec.z >> 1;
-    vec.x = (sint32)((uint32)info->anchor->position.x - (uint32)info->target->position.x);
-    vec.y = (sint32)((uint32)info->anchor->position.y - (uint32)info->target->position.y);
-    vec.z = (sint32)((uint32)info->anchor->position.z - (uint32)info->target->position.z);
+    vec.x = (info->anchor->position.x - info->target->position.x);
+    vec.y = (info->anchor->position.y - info->target->position.y);
+    vec.z = (info->anchor->position.z - info->target->position.z);
     Math::NormalizeVector(&vec);
     vec.x = fixedmult(0x40000, vec.x);
     vec.y = fixedmult(0x40000, vec.y);
     vec.z = fixedmult(0x40000, vec.z);
-    sint32 x = (sint32)((uint32)info->anchor->position.x + (uint32)vec.x + (uint32)vec.z);
+    sint32 x = ((info->anchor->position.x + vec.x) + vec.z);
     BO::tNewtonObj *anchor = info->anchor;
     info->position.x = x;
-    info->position.y = (sint32)((uint32)anchor->position.y + 0x18000u);
-    info->position.z = (sint32)((uint32)anchor->position.z - (uint32)vec.x + (uint32)vec.z);
+    info->position.y = (anchor->position.y + 0x18000);
+    info->position.z = ((anchor->position.z - vec.x) + vec.z);
 }
 
 void Camera::UpdateCopCam2(sint32 player)
@@ -1009,15 +1006,15 @@ void Camera::UpdateCopCam2(sint32 player)
     FUNCTION_MARKER(0x800831A8, "NFS4.EXE");
     camera_info *info = &gInfo[player];
     coorddef dirVec;
-    dirVec.x = (sint32)((uint32)info->target->position.x - (uint32)info->anchor->position.x) / 4;
-    dirVec.y = (sint32)((uint32)info->target->position.y - (uint32)info->anchor->position.y) / 4;
-    dirVec.z = (sint32)((uint32)info->target->position.z - (uint32)info->anchor->position.z) / 4;
+    dirVec.x = (info->target->position.x - info->anchor->position.x) / 4;
+    dirVec.y = (info->target->position.y - info->anchor->position.y) / 4;
+    dirVec.z = (info->target->position.z - info->anchor->position.z) / 4;
     Math::NormalizeVector(&dirVec);
     BO::tNewtonObj *anchor = info->anchor;
-    sint32 x = (sint32)((uint32)anchor->position.x - ((uint32)dirVec.x << 1));
+    sint32 x = (anchor->position.x - ((uint32)dirVec.x << 1));
     info->position.x = x;
-    info->position.y = (sint32)((uint32)anchor->position.y + 0x13333u);
-    info->position.z = (sint32)((uint32)anchor->position.z - ((uint32)dirVec.z << 1));
+    info->position.y = (anchor->position.y + 0x13333);
+    info->position.z = (anchor->position.z - ((uint32)dirVec.z << 1));
 }
 
 void Camera::UpdateBTCopCam(sint32 player)
@@ -1042,7 +1039,7 @@ void Camera::UpdateBTCopCam(sint32 player)
         UpdateCopCam2(player);
     }
     gGeomScreen = 190;
-    info->POInhibitor = (sint32)((uint32)simGlobal.gameTicks + 0x140u);
+    info->POInhibitor = (simGlobal.gameTicks + 0x140);
     info->pitch = 0;
     info->jostling = 0;
     info->tracking = 1;
@@ -1073,12 +1070,12 @@ void Camera::Update(void)
                 sint32 x = fixedmult(info->rotation.m[6], anchor->N.roadMatrix.m[6]);
                 sint32 y = fixedmult(info->rotation.m[7], info->anchor->roadMatrix.m[7]);
                 sint32 z = fixedmult(info->rotation.m[8], info->anchor->roadMatrix.m[8]);
-                sint32 direction = (sint32)((uint32)x + (uint32)y + (uint32)z);
+                sint32 direction = ((x + y) + z);
                 info->direction = direction < 0;
                 info->tumbling = 100;
             }
         }
-        if (((uint32)anchor->carFlags & 1u) != 0 && anchor->stats.finishType == 2)
+        if ((anchor->carFlags & 1u) != 0 && anchor->stats.finishType == 2)
         {
             UpdateFinishCam(player);
             info->inCar = 0;
@@ -1170,9 +1167,7 @@ void Camera::Init(void)
         info->zooming = 0;
         info->inCar = 0;
         info->animNum = gAnimCams[GameSetup::gData.track][0];
-        if ((GameSetup::gData.raceType == 1 || GameSetup::gData.raceType == 5) &&
-            (((uint32)Cars::gHumanRaceCarList[0]->carFlags & 0x200u) != 0 ||
-            (Cars::gNumHumanRaceCars == 2 && ((uint32)Cars::gHumanRaceCarList[1]->carFlags & 0x200u) != 0)))
+        if ((GameSetup::gData.raceType == 1 || GameSetup::gData.raceType == 5) && ((Cars::gHumanRaceCarList[0]->carFlags & 0x200u) != 0 || (Cars::gNumHumanRaceCars == 2 && (Cars::gHumanRaceCarList[1]->carFlags & 0x200u) != 0)))
             info->animNum = 1;
         info->animHandle = (char)0xFF;
         info->splineMode = 0;
@@ -1184,7 +1179,7 @@ void Camera::Init(void)
     ResetRelPos(3);
     sint32 type = Cars::gHumanRaceCarList[0]->carInfo->carType;
     gGeomScreen = 190;
-    if (type < 28 && ((uint32)GameSetup::gData.sgge & 0x100u) != 0 && splitScreen == 0)
+    if (type < 28 && (GameSetup::gData.sgge & 0x100u) != 0 && splitScreen == 0)
     {
         GameSetup::gData.carInfo[0].Camera[0] = 1;
         gFlags[1].arm = gDriverCam[type];
@@ -1209,9 +1204,9 @@ void Camera::PitchAndRoll(sint32 player)
     FUNCTION_MARKER(0x80083C74, "NFS4.EXE");
     Car::tObj *anchor = reinterpret_cast<Car::tObj *>(gInfo[player].anchor);
     matrixtdef m1, m2, m3;
-    sint32 pitch = (sint32)((uint32)anchor->render.bodyPitch << 1);
+    sint32 pitch = ((uint32)anchor->render.bodyPitch << 1);
     fixedxformz(&m1, anchor->render.bodyRoll);
-    pitch = (sint32)((uint32)pitch | (uint32)gInfo[player].pitch);
+    pitch = (sint32)(pitch | (uint32)gInfo[player].pitch);
     fixedxformx(&m2, pitch);
     Math::fasttransmult(&m1, &m2, &m3);
     Math::fasttransmult(&m3, &gInfo[player].rotation, &gInfo[player].rotation);
@@ -1226,17 +1221,17 @@ sint32 Camera::TooSteep(sint32 player, BWorldSm::Pos *slicePos)
     sint32 first = fixedmult(normUnderCam.x, normUnderCar.x);
     sint32 second = fixedmult(normUnderCam.y, normUnderCar.y);
     sint32 third = fixedmult(normUnderCam.z, normUnderCar.z);
-    sint32 dot = (sint32)((uint32)first + (uint32)second + (uint32)third);
+    sint32 dot = ((first + second) + third);
     if (dot > 0xb4fc)
         return 0;
     coorddef camToCar;
-    camToCar.x = (sint32)((uint32)gInfo[player].anchor->position.x - (uint32)gInfo[player].position.x);
-    camToCar.y = (sint32)((uint32)gInfo[player].anchor->position.y - (uint32)gInfo[player].position.y);
-    camToCar.z = (sint32)((uint32)gInfo[player].anchor->position.z - (uint32)gInfo[player].position.z);
+    camToCar.x = (gInfo[player].anchor->position.x - gInfo[player].position.x);
+    camToCar.y = (gInfo[player].anchor->position.y - gInfo[player].position.y);
+    camToCar.z = (gInfo[player].anchor->position.z - gInfo[player].position.z);
     first = fixedmult(normUnderCam.x, camToCar.x);
     second = fixedmult(normUnderCam.y, camToCar.y);
     third = fixedmult(normUnderCam.z, camToCar.z);
-    dot = (sint32)((uint32)first + (uint32)second + (uint32)third);
+    dot = ((first + second) + third);
     return dot > 0 && gInfo[player].anchor->flightTime == 0;
 }
 
@@ -1249,9 +1244,9 @@ void Camera::CheckWallCollisions(sint32 player, coorddef *pos)
     for (i = 0; i < 3; ++i)
     {
         transform(&feeler3[i], &gInfo[player].anchor->orientMat, &triVec);
-        triPnt.x = (sint32)((uint32)pos->x + (uint32)triVec.x);
-        triPnt.y = (sint32)((uint32)pos->y + (uint32)triVec.y);
-        triPnt.z = (sint32)((uint32)pos->z + (uint32)triVec.z);
+        triPnt.x = (pos->x + triVec.x);
+        triPnt.y = (pos->y + triVec.y);
+        triPnt.z = (pos->z + triVec.z);
         BWorldSm::FindClosestQuadMaxIterations(&triPnt, &slicePos, 3);
         if (CameraWallBlocked(player, &slicePos))
             break;
@@ -1259,9 +1254,9 @@ void Camera::CheckWallCollisions(sint32 player, coorddef *pos)
     if (i == 3)
         return;
     coorddef step;
-    step.x = (sint32)((uint32)gInfo[player].anchor->position.x - (uint32)triPnt.x);
-    step.y = (sint32)((uint32)gInfo[player].anchor->position.y - (uint32)triPnt.y);
-    step.z = (sint32)((uint32)gInfo[player].anchor->position.z - (uint32)triPnt.z);
+    step.x = (gInfo[player].anchor->position.x - triPnt.x);
+    step.y = (gInfo[player].anchor->position.y - triPnt.y);
+    step.z = (gInfo[player].anchor->position.z - triPnt.z);
     coorddef edge = gInfo[player].anchor->position;
     step.x >>= 7;
     step.z >>= 7;
@@ -1269,17 +1264,17 @@ void Camera::CheckWallCollisions(sint32 player, coorddef *pos)
     sint32 count = 0;
     do
     {
-        edge.x = (sint32)((uint32)edge.x - (uint32)step.x);
-        edge.y = (sint32)((uint32)edge.y - (uint32)step.y);
-        edge.z = (sint32)((uint32)edge.z - (uint32)step.z);
+        edge.x = (edge.x - step.x);
+        edge.y = (edge.y - step.y);
+        edge.z = (edge.z - step.z);
         BWorldSm::FindClosestQuadMaxIterations(&edge, &slicePos, 3);
         if (CameraWallBlocked(player, &slicePos))
             break;
         ++count;
     } while (count < 128);
-    step.x = (sint32)((uint32)gInfo[player].anchor->position.x - (uint32)edge.x) >> 1;
-    step.y = (sint32)((uint32)gInfo[player].anchor->position.y - (uint32)edge.y) >> 1;
-    step.z = (sint32)((uint32)gInfo[player].anchor->position.z - (uint32)edge.z) >> 1;
+    step.x = (gInfo[player].anchor->position.x - edge.x) >> 1;
+    step.y = (gInfo[player].anchor->position.y - edge.y) >> 1;
+    step.z = (gInfo[player].anchor->position.z - edge.z) >> 1;
     coorddef temp;
     for (sint32 side = 0; side < 2; ++side)
     {
@@ -1290,14 +1285,14 @@ void Camera::CheckWallCollisions(sint32 player, coorddef *pos)
             intsincos(camAngle, &sin, &cos);
             sint32 first = fixedmult(cos, step.x);
             sint32 second = fixedmult(sin, step.z);
-            temp.x = (sint32)((uint32)first - (uint32)second);
+            temp.x = (first - second);
             temp.y = step.y;
             first = fixedmult(sin, step.x);
             second = fixedmult(cos, step.z);
-            temp.z = (sint32)((uint32)first + (uint32)second);
-            temp.x = (sint32)((uint32)edge.x + (uint32)temp.x);
-            temp.y = (sint32)((uint32)edge.y + (uint32)temp.y);
-            temp.z = (sint32)((uint32)edge.z + (uint32)temp.z);
+            temp.z = (first + second);
+            temp.x = (edge.x + temp.x);
+            temp.y = (edge.y + temp.y);
+            temp.z = (edge.z + temp.z);
             BWorldSm::FindClosestQuadMaxIterations(&temp, &slicePos, 3);
             if (CameraWallBlocked(player, &slicePos))
             {
@@ -1310,31 +1305,31 @@ void Camera::CheckWallCollisions(sint32 player, coorddef *pos)
             camAngle += side == 0 ? 4 : -4;
         } while (side == 0 ? camAngle < 1024 : camAngle > -1024);
     }
-    temp.x = (sint32)((uint32)gInfo[player].wallRight.x - (uint32)gInfo[player].wallLeft.x);
-    temp.y = (sint32)((uint32)gInfo[player].wallRight.y - (uint32)gInfo[player].wallLeft.y + 0x8000u);
-    temp.z = (sint32)((uint32)gInfo[player].wallRight.z - (uint32)gInfo[player].wallLeft.z);
+    temp.x = (gInfo[player].wallRight.x - gInfo[player].wallLeft.x);
+    temp.y = ((gInfo[player].wallRight.y - gInfo[player].wallLeft.y) + 0x8000);
+    temp.z = (gInfo[player].wallRight.z - gInfo[player].wallLeft.z);
     Math::NormalizeVector(&temp);
-    coorddef normal = { (sint32)(0u - (uint32)temp.z), temp.y, temp.x };
-    edge.x = (sint32)((uint32)edge.x - (uint32)triPnt.x);
-    edge.z = (sint32)((uint32)edge.z - (uint32)triPnt.z);
-    edge.y = (sint32)((uint32)edge.y - (uint32)triPnt.y);
+    coorddef normal = { -temp.z, temp.y, temp.x };
+    edge.x = (edge.x - triPnt.x);
+    edge.z = (edge.z - triPnt.z);
+    edge.y = (edge.y - triPnt.y);
     sint32 first = fixedmult(edge.x, normal.x);
     sint32 second = fixedmult(edge.y, normal.y);
     sint32 third = fixedmult(edge.z, normal.z);
-    sint32 camDotNorm = (sint32)((uint32)first + (uint32)second + (uint32)third);
+    sint32 camDotNorm = ((first + second) + third);
     first = fixedmult(triVec.x, normal.x);
     second = fixedmult(triVec.y, normal.y);
     third = fixedmult(triVec.z, normal.z);
-    sint32 edgeDotNorm = (sint32)((uint32)first + (uint32)second + (uint32)third);
-    camDotNorm = (sint32)((uint32)camDotNorm + (uint32)edgeDotNorm + 0x10000u);
+    sint32 edgeDotNorm = ((first + second) + third);
+    camDotNorm = ((camDotNorm + edgeDotNorm) + 0x10000);
     if (camDotNorm > 0)
     {
         temp.x = fixedmult(camDotNorm, normal.x);
         temp.y = fixedmult(camDotNorm, normal.y);
         temp.z = fixedmult(camDotNorm, normal.z);
-        pos->x = (sint32)((uint32)pos->x + (uint32)temp.x);
-        pos->y = (sint32)((uint32)pos->y + (uint32)temp.y);
-        pos->z = (sint32)((uint32)pos->z + (uint32)temp.z);
+        pos->x = (pos->x + temp.x);
+        pos->y = (pos->y + temp.y);
+        pos->z = (pos->z + temp.z);
     }
 }
 
@@ -1344,7 +1339,7 @@ void Camera::SetAboveGround(sint32 player, coorddef *pos)
     BWorldSm::Pos *slicePos = &gInfo[player].slicePos;
     coorddef quadnormal = *BWorldSm::UNormal(slicePos);
     sint32 elevation = Newton::FindGroundElevationGeneral(pos, &quadnormal, slicePos->quadPts);
-    elevation = (sint32)((uint32)elevation + 0x10000u);
+    elevation = (elevation + 0x10000);
     if (pos->y < elevation)
         pos->y = elevation;
 }
@@ -1352,22 +1347,21 @@ void Camera::SetAboveGround(sint32 player, coorddef *pos)
 void Camera::AcquireTarget(sint32 player, coorddef *point, coorddef *pos, matrixtdef *rot, sint32 hirez)
 {
     FUNCTION_MARKER(0x80084898, "NFS4.EXE");
-    (void)hirez;
     coorddef upvector = { 0, 0x10000, 0 };
     coorddef tgtPos = point ? *point : gInfo[player].target->position;
     coorddef *rotx = reinterpret_cast<coorddef *>(&rot->m[0]);
     coorddef *roty = reinterpret_cast<coorddef *>(&rot->m[3]);
     coorddef *rotz = reinterpret_cast<coorddef *>(&rot->m[6]);
-    sint32 delta = (sint32)((uint32)tgtPos.x - (uint32)pos->x);
+    sint32 delta = (tgtPos.x - pos->x);
     rotz->x = delta / 4;
-    delta = (sint32)((uint32)tgtPos.y - (uint32)pos->y);
+    delta = (tgtPos.y - pos->y);
     rotz->y = delta / 4;
-    delta = (sint32)((uint32)tgtPos.z - (uint32)pos->z);
+    delta = (tgtPos.z - pos->z);
     rotz->z = delta / 4;
     if (gInfo[player].pitch)
     {
-        uint32 offset = (uint32)(uint16)gInfo[player].mode - 2u < 3u ? 0x5333u : 0x6666u;
-        rotz->y = (sint32)((uint32)rotz->y + offset);
+        uint32 offset = ((uint16)gInfo[player].mode) - 2u < 3u ? 0x5333u : 0x6666u;
+        rotz->y = (rotz->y + offset);
     }
     if (Replay::ReplayMode == 2)
         upvector.x = gInfo[player].twist;
@@ -1375,35 +1369,35 @@ void Camera::AcquireTarget(sint32 player, coorddef *point, coorddef *pos, matrix
     sint32 first = fixedmult(upvector.x, rotz->x);
     sint32 second = fixedmult(upvector.y, rotz->y);
     sint32 third = fixedmult(upvector.z, rotz->z);
-    sint32 dot = (sint32)((uint32)first + (uint32)second + (uint32)third);
+    sint32 dot = ((first + second) + third);
     bool positive = dot > 0;
     first = fixedmult(upvector.x, rotz->x);
     second = fixedmult(upvector.y, rotz->y);
     third = fixedmult(upvector.z, rotz->z);
-    dot = (sint32)((uint32)first + (uint32)second + (uint32)third);
+    dot = ((first + second) + third);
     if (!positive)
-        dot = (sint32)(0u - (uint32)dot);
+        dot = (-dot);
     if (dot > 0xfd70)
         upvector = *roty;
     first = fixedmult(upvector.y, rotz->z);
     second = fixedmult(upvector.z, rotz->y);
-    rotx->x = (sint32)((uint32)first - (uint32)second);
+    rotx->x = (first - second);
     first = fixedmult(upvector.z, rotz->x);
     second = fixedmult(upvector.x, rotz->z);
-    rotx->y = (sint32)((uint32)first - (uint32)second);
+    rotx->y = (first - second);
     first = fixedmult(upvector.x, rotz->y);
     second = fixedmult(upvector.y, rotz->x);
-    rotx->z = (sint32)((uint32)first - (uint32)second);
+    rotx->z = (first - second);
     Math::NormalizeVector(rotx);
     first = fixedmult(rotz->y, rotx->z);
     second = fixedmult(rotz->z, rotx->y);
-    roty->x = (sint32)((uint32)first - (uint32)second);
+    roty->x = (first - second);
     first = fixedmult(rotz->z, rotx->x);
     second = fixedmult(rotz->x, rotx->z);
-    roty->y = (sint32)((uint32)first - (uint32)second);
+    roty->y = (first - second);
     first = fixedmult(rotz->x, rotx->y);
     second = fixedmult(rotz->y, rotx->x);
-    roty->z = (sint32)((uint32)first - (uint32)second);
+    roty->z = (first - second);
     Math::NormalizeVector(roty);
 }
 
@@ -1430,23 +1424,23 @@ void Camera::OpponentLookBehind(sint32 player, coorddef *pos, sint32 reset)
         if (dist < 0)
             dist = -dist;
         if (gNumSlices / 2 < dist)
-            dist = (sint32)((uint32)gNumSlices - (uint32)dist);
+            dist = (gNumSlices - dist);
         if (dist >= 11)
             continue;
         coorddef tempVector;
-        tempVector.x = (sint32)((uint32)pos->x - (uint32)opponent->N.position.x);
-        tempVector.y = (sint32)((uint32)pos->y - (uint32)Cars::gList[i]->N.position.y);
-        tempVector.z = (sint32)((uint32)pos->z - (uint32)Cars::gList[i]->N.position.z);
+        tempVector.x = (pos->x - opponent->N.position.x);
+        tempVector.y = (pos->y - Cars::gList[i]->N.position.y);
+        tempVector.z = (pos->z - Cars::gList[i]->N.position.z);
         Math::NormalizeVector(&tempVector);
         sint32 first = fixedmult(Cars::gHumanRaceCarList[player]->N.orientMat.m[6], tempVector.x);
         sint32 second = fixedmult(Cars::gHumanRaceCarList[player]->N.orientMat.m[7], tempVector.y);
         sint32 third = fixedmult(Cars::gHumanRaceCarList[player]->N.orientMat.m[8], tempVector.z);
-        sint32 dot = (sint32)((uint32)first + (uint32)second + (uint32)third);
+        sint32 dot = ((first + second) + third);
         sint32 oppAngle = intarccos(dot);
         bool positive = oppAngle > 0;
         oppAngle = intarccos(dot);
         if (!positive)
-            oppAngle = (sint32)(0u - (uint32)oppAngle);
+            oppAngle = (-oppAngle);
         if (oppAngle < 0x80 && dist < oppSlice)
         {
             oppVector = tempVector;
@@ -1454,32 +1448,32 @@ void Camera::OpponentLookBehind(sint32 player, coorddef *pos, sint32 reset)
         }
     }
     coorddef *last = &lastOppVector[player];
-    sint32 delta = (sint32)((uint32)oppVector.x - (uint32)last->x);
+    sint32 delta = (oppVector.x - last->x);
     sint32 step = fixedmult(delta, 0x4ccc);
-    last->x = (sint32)((uint32)last->x + (uint32)step);
-    delta = (sint32)((uint32)oppVector.y - (uint32)last->y);
+    last->x = (last->x + step);
+    delta = (oppVector.y - last->y);
     step = fixedmult(delta, 0x4ccc);
-    last->y = (sint32)((uint32)last->y + (uint32)step);
-    delta = (sint32)((uint32)oppVector.z - (uint32)last->z);
+    last->y = (last->y + step);
+    delta = (oppVector.z - last->z);
     step = fixedmult(delta, 0x4ccc);
-    last->z = (sint32)((uint32)last->z + (uint32)step);
-    oppVector.x = (sint32)((uint32)pos->x - (uint32)last->x);
-    oppVector.y = (sint32)((uint32)pos->y - (uint32)last->y);
-    oppVector.z = (sint32)((uint32)pos->z - (uint32)last->z);
+    last->z = (last->z + step);
+    oppVector.x = (pos->x - last->x);
+    oppVector.y = (pos->y - last->y);
+    oppVector.z = (pos->z - last->z);
     sint32 mode = (sint16)((uint16)gInfo[player].mode - 2);
     switch (mode)
     {
     case 0:
     case 1:
     case 2:
-        oppVector.y = (sint32)((uint32)oppVector.y - 0x14cccu);
+        oppVector.y = (oppVector.y - 0x14ccc);
         break;
     case 5:
-        oppVector.y = (sint32)((uint32)oppVector.y - 0x6666u);
+        oppVector.y = (oppVector.y - 0x6666);
 
     case 3:
     case 4:
-        oppVector.y = (sint32)((uint32)oppVector.y - 0x19999u);
+        oppVector.y = (oppVector.y - 0x19999);
         break;
     }
     AcquireTarget(player, &oppVector, pos, &gInfo[player].rotation, 1);
@@ -1488,7 +1482,6 @@ void Camera::OpponentLookBehind(sint32 player, coorddef *pos, sint32 reset)
 void Camera::GetViewInfo(sint32 cviewP, DRender::tCalcView *cview, sint32 viewID)
 {
     FUNCTION_MARKER(0x80085008, "NFS4.EXE");
-    (void)viewID;
     camera_info *info = &gInfo[cviewP];
     if (info->jostling)
         PitchAndRoll(cviewP);
@@ -1510,10 +1503,10 @@ void Camera::GetViewInfo(sint32 cviewP, DRender::tCalcView *cview, sint32 viewID
     {
         sint32 t1 = cview->mrotation.m[0];
         sint32 t3 = cview->mrotation.m[2];
-        cview->mrotation.m[0] = (sint32)(0u - (uint32)t1);
+        cview->mrotation.m[0] = (-t1);
         sint32 t2 = cview->mrotation.m[1];
-        cview->mrotation.m[2] = (sint32)(0u - (uint32)t3);
-        cview->mrotation.m[1] = (sint32)(0u - (uint32)t2);
+        cview->mrotation.m[2] = (-t3);
+        cview->mrotation.m[1] = (-t2);
     }
     transpose(&cview->mrotation, &cview->mrotationInv);
     CopyCameraMatrix(&cview->mrotationInv, &cview->mrotationInvRaw);
@@ -1526,9 +1519,9 @@ void Camera::GetViewInfo(sint32 cviewP, DRender::tCalcView *cview, sint32 viewID
     cview->mrotation.m[5] = t3;
     transpose(&cview->mrotation, &cview->mrotationInv);
     coorddef tmp;
-    tmp.x = (sint32)(0u - (uint32)cview->translation.x);
-    tmp.y = (sint32)(0u - (uint32)cview->translation.y);
-    tmp.z = (sint32)(0u - (uint32)cview->translation.z);
+    tmp.x = (-cview->translation.x);
+    tmp.y = (-cview->translation.y);
+    tmp.z = (-cview->translation.z);
     transform(&tmp, &cview->mrotationInv, &cview->translationInv);
 }
 
@@ -1553,10 +1546,8 @@ void Camera::GetAudioViewInfo(sint32 cviewP, DRender::tCalcView *cview, coorddef
             LookBack(&info->rotation, &cview->mrotation);
     }
     sint32 mode = gInfo[cviewP].mode;
-    if (mode == 12 || mode == 14)
-        *cvel = 0;
-    else
-        *cvel = &gInfo[cviewP].anchor->linearVel;
+    if (mode == 12 || mode == 14) *cvel = 0;
+    else *cvel = &gInfo[cviewP].anchor->linearVel;
 }
 
 sint32 Camera::GetMode(sint32 cviewP)
@@ -1578,13 +1569,13 @@ void Camera::SetMode(sint32 cviewP, sint32 mode)
     InBetween = 0;
     if (info->modechange)
         return;
-    if ((uint32)(uint16)info->mode - 11u < 2u)
+    if (((uint16)info->mode) - 11u < 2u)
     {
         gGeomScreen = 190;
         TrsProj::SetProjection(0, 0, 320, 240);
     }
-    if ((uint32)(uint16)info->mode - 2u >= 6u)
-        ResetRelPos((sint32)((uint32)cviewP + 1u));
+    if (((uint16)info->mode) - 2u >= 6u)
+        ResetRelPos((cviewP + 1));
     sint32 handle = (sint8)info->animHandle;
     if (handle >= 0)
     {
@@ -1606,13 +1597,13 @@ void Camera::NextMode(sint32 cviewP)
     camera_info *info = &gInfo[cviewP];
     if (info->mode == 14 || info->modechange)
         return;
-    if ((uint32)(uint16)info->mode - 11u < 2u)
+    if (((uint16)info->mode) - 11u < 2u)
     {
         gGeomScreen = 190;
         TrsProj::SetProjection(0, 0, 320, 240);
     }
-    if ((uint32)(uint16)info->mode - 2u >= 6u)
-        ResetRelPos((sint32)((uint32)cviewP + 1u));
+    if (((uint16)info->mode) - 2u >= 6u)
+        ResetRelPos((cviewP + 1));
     sint32 handle = (sint8)info->animHandle;
     if (handle >= 0)
     {
@@ -1624,9 +1615,7 @@ void Camera::NextMode(sint32 cviewP)
         info->camNum = (sint16)((uint16)info->camNum + 1);
         info->mode = (sint16)gSplitCameras[info->camNum % 3];
     }
-    else if ((GameSetup::gData.raceType == 1 || GameSetup::gData.raceType == 5) &&
-        ((Cars::gHumanRaceCarList[0]->carFlags & 0x200) != 0 ||
-        (Cars::gNumHumanRaceCars == 2 && (Cars::gHumanRaceCarList[1]->carFlags & 0x200) != 0)))
+    else if ((GameSetup::gData.raceType == 1 || GameSetup::gData.raceType == 5) && ((Cars::gHumanRaceCarList[0]->carFlags & 0x200) != 0 || (Cars::gNumHumanRaceCars == 2 && (Cars::gHumanRaceCarList[1]->carFlags & 0x200) != 0)))
     {
         info->camNum = (sint16)((uint16)info->camNum + 1);
         info->mode = (sint16)GameSetup::gData.carInfo[cviewP].Camera[(uint16)info->camNum & 3];
@@ -1671,15 +1660,15 @@ void Camera::ResetRelPos(sint32 bitMask)
     if ((bitMask & 1) != 0)
     {
         BO::tNewtonObj *anchor = gInfo[0].anchor;
-        gInfo[0].relpos.x = (sint32)(0u - ((uint32)anchor->orientMat.m[6] << 2));
-        gInfo[0].relpos.y = (sint32)(0u - ((uint32)anchor->orientMat.m[7] << 2));
-        gInfo[0].relpos.z = (sint32)(0u - ((uint32)anchor->orientMat.m[8] << 2));
+        gInfo[0].relpos.x = (-(sint32)((uint32)anchor->orientMat.m[6] << 2));
+        gInfo[0].relpos.y = (-(sint32)((uint32)anchor->orientMat.m[7] << 2));
+        gInfo[0].relpos.z = (-(sint32)((uint32)anchor->orientMat.m[8] << 2));
     }
     if ((bitMask & 2) != 0 && GameSetup::gData.commMode == 1)
     {
         BO::tNewtonObj *anchor = gInfo[1].anchor;
-        gInfo[1].relpos.x = (sint32)(0u - ((uint32)anchor->orientMat.m[6] << 2));
-        gInfo[1].relpos.y = (sint32)(0u - ((uint32)anchor->orientMat.m[7] << 2));
-        gInfo[1].relpos.z = (sint32)(0u - ((uint32)anchor->orientMat.m[8] << 2));
+        gInfo[1].relpos.x = (-(sint32)((uint32)anchor->orientMat.m[6] << 2));
+        gInfo[1].relpos.y = (-(sint32)((uint32)anchor->orientMat.m[7] << 2));
+        gInfo[1].relpos.z = (-(sint32)((uint32)anchor->orientMat.m[8] << 2));
     }
 }

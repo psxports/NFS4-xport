@@ -23,6 +23,19 @@ typedef sint32 (*SoundBankRemoveHook)(sint32 bank, sint32 unused);
 
 typedef struct SoundGlobalState SoundGlobalState;
 typedef struct NativeCdLevels NativeCdLevels;
+typedef struct NativeSoundBank NativeSoundBank;
+
+struct NativeSoundBank
+{
+    uint8 *header;
+    union
+    {
+        uint8 *sampleData;
+        sint32 spuAddress;
+    } storage;
+    sint8 unavailable;
+    sint8 wholeSpuAllocation;
+};
 
 struct SoundGlobalState
 {
@@ -45,7 +58,7 @@ struct SoundGlobalState
     SoundRestoreHook restoreHook140;
     SoundRestoreHook restoreHook144;
     void *voiceMemory;
-    void *bankMemory;
+    NativeSoundBank *bankMemory;
     uint8 unknown156[4];
     sint32 unknown160;
     sint32 unknown164;

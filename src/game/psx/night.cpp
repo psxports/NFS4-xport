@@ -57,15 +57,15 @@ Night::tCopLightingTable *Night::gCopColor[2];
 sint32 Night::FindClosestColor(CVECTOR colorMatch, sint32 *bestIndex)
 {
     FUNCTION_MARKER(0x800DB318, "NFS4.EXE");
-    sint32 maxLights = (sint32)((uint32)gTotalLights + 1U);
+    sint32 maxLights = (gTotalLights + 1);
     tCompRGB searchColor;
     memcpy(&searchColor, gTableCache, sizeof(searchColor));
     sint32 bestDiff = 0x2FA03;
     for (sint32 search = 1; search < maxLights; ++search)
     {
-        sint32 diffR = (sint32)colorMatch.r - (uint8)searchColor.r;
-        sint32 diffG = (sint32)colorMatch.g - (uint8)searchColor.g;
-        sint32 diffB = (sint32)colorMatch.b - (uint8)searchColor.b;
+        sint32 diffR = colorMatch.r - (uint8)searchColor.r;
+        sint32 diffG = colorMatch.g - (uint8)searchColor.g;
+        sint32 diffB = colorMatch.b - (uint8)searchColor.b;
         memcpy(&searchColor, gTableCache + search, sizeof(searchColor));
         sint32 diffSum = diffR * diffR + diffG * diffG + diffB * diffB;
         if (diffSum < bestDiff)
@@ -82,9 +82,9 @@ sint32 Night::FindClosestColor(CVECTOR colorMatch, sint32 *bestIndex)
 void Night::CreateNightTableElement(sint32 colorIndex, sint32 colorH, sint32 bright, uint8 *colorval)
 {
     FUNCTION_MARKER(0x800DB3E0, "NFS4.EXE");
-    uint32 b15 = (uint32)bright * 273U;
+    uint32 b15 = bright * 273U;
     tCompRGB *source = gTableCache + colorIndex;
-    uint32 channels = (uint32)colorH;
+    uint32 channels = colorH;
     sint32 newR = (uint8)source->r + ((sint32)((channels & 255U) * b15) >> 12);
     sint32 newG = (uint8)source->g + ((sint32)(((channels >> 8) & 255U) * b15) >> 12);
     sint32 newB = (uint8)source->b + ((sint32)(((channels >> 16) & 255U) * b15) >> 12);
@@ -102,15 +102,14 @@ void Night::CreateNightTableElement(sint32 colorIndex, sint32 colorH, sint32 bri
     newColor.cd = 0;
     sint32 bestIndex;
     sint32 diff = FindClosestColor(newColor, &bestIndex);
-    if (diff < 513 || (sint32)((uint32)Chunk::numLight + 4U) <= colorIndex || gTotalLights > 255)
-        *colorval = (uint8)bestIndex;
+    if (diff < 513 || (Chunk::numLight + 4) <= colorIndex || gTotalLights > 255) *colorval = (uint8)bestIndex;
     else
     {
         gTableCache[gTotalLights].r = (char)newColor.r;
         gTableCache[gTotalLights].g = (char)newColor.g;
         gTableCache[gTotalLights].b = (char)newColor.b;
         *colorval = (uint8)gTotalLights;
-        gTotalLights = (sint32)((uint32)gTotalLights + 1U);
+        gTotalLights = (gTotalLights + 1);
     }
 }
 
@@ -124,13 +123,13 @@ void Night::GenerateNextLightningEvent(void)
 {
     FUNCTION_MARKER(0x800DB5CC, "NFS4.EXE");
     uint32 value = random();
-    gNextLightning = (sint32)((uint32)simGlobal.gameTicks + (value & 0x7FFU) + 31U);
+    gNextLightning = (simGlobal.gameTicks + (value & 0x7FFU) + 31U);
     value = random();
     sint32 next = gNextLightning;
-    gEndNextLightning = (sint32)((uint32)next + (value & 15U) + 15U);
+    gEndNextLightning = (next + (value & 15U) + 15U);
     gNextFlicker = next;
     value = random();
-    gFlashAzimuth = value & 0xFFFFU;
+    gFlashAzimuth = value & 0xFFFF;
     value = random();
     gShowForks = (char)(value & 1U);
 }
@@ -167,14 +166,14 @@ void Night::DoLightningEffect(DRender::tView *Vi)
     if (gNextLightning < currentTick && currentTick < gEndNextLightning && gNextFlicker < currentTick)
     {
         uint32 value = random();
-        gLightningType = value & 1U;
+        gLightningType = value & 1;
         Hrz::LightningFlicker(1);
         gDrawLightning = BWorldSm::TunnelFlagSm(&Camera::gInfo[Vi->player].slicePos) == 0;
         gLightning = 1;
         value = random();
-        gNextFlicker = (sint32)((uint32)simGlobal.gameTicks + (value & 3U));
+        gNextFlicker = (simGlobal.gameTicks + (value & 3U));
         value = random();
-        gFlashIntensity = (sint32)(((uint32)gLightningType + 1U) * (value & 31U) + 64U);
+        gFlashIntensity = ((gLightningType + 1U) * (value & 31U) + 64U);
         if (lightningInit != 0)
         {
             if (gShowForks != 0)
@@ -194,7 +193,7 @@ void Night::DoLightningEffect(DRender::tView *Vi)
 void Night::SetCopColor(GameSetup::tCarData *carinfo)
 {
     FUNCTION_MARKER(0x800DB848, "NFS4.EXE");
-    sint32 cartype = (sint32)((uint32)carinfo->carType - 22U);
+    sint32 cartype = (carinfo->carType - 22);
     sint32 country = carinfo->Country;
     sint32 carTable = (uint8)CopCarTypeLights[cartype];
     tCopLightingTable *copColors[2] = { gCopLightingTableRed, gCopLightingTableBlue };
@@ -289,7 +288,7 @@ void Night::GenerateAllLightTables(void)
     }
     for (sint32 i = 0; i < 16; ++i)
     {
-        gAdditiveHeadlightColor[i].r = (uint8)(((uint32)gPlayerHeadLightColor[0] & 255U) * i / 15U);
+        gAdditiveHeadlightColor[i].r = (uint8)((gPlayerHeadLightColor[0] & 255U) * i / 15U);
         gAdditiveHeadlightColor[i].g = (uint8)((((uint32)gPlayerHeadLightColor[0] >> 8) & 255U) * i / 15U);
         gAdditiveHeadlightColor[i].b = (uint8)((((uint32)gPlayerHeadLightColor[0] >> 16) & 255U) * i / 15U);
     }
@@ -330,10 +329,10 @@ void Night::InitNightDriving(void)
     {
         gLightning = 0;
         uint32 value = random();
-        gNextLightning = (sint32)((uint32)simGlobal.gameTicks + (value & 0x1FFU));
+        gNextLightning = (simGlobal.gameTicks + (value & 0x1FFU));
         value = random();
         sint32 next = gNextLightning;
-        gEndNextLightning = (sint32)((uint32)next + (value & 0x31U));
+        gEndNextLightning = (next + (value & 0x31U));
         gNextFlicker = next;
         Hrz::CalculateLightning();
     }
@@ -375,10 +374,10 @@ void Night::RestartNightDriving(void)
     {
         gLightning = 0;
         uint32 value = random();
-        gNextLightning = (sint32)((uint32)simGlobal.gameTicks + (value & 0x1FFU));
+        gNextLightning = (simGlobal.gameTicks + (value & 0x1FFU));
         value = random();
         sint32 next = gNextLightning;
-        gEndNextLightning = (sint32)((uint32)next + (value & 0x31U));
+        gEndNextLightning = (next + (value & 0x31U));
         gNextFlicker = next;
         Hrz::LightningFlicker(0);
     }
@@ -412,10 +411,10 @@ void Night::SetEnviroment(DRender::tView *Vi)
         gZNear = -512;
     sint32 xShift = gXDistShift;
     sint32 zShift = gZDistShift;
-    gXDist = (sint32)(1U << ((uint32)xShift & 31U));
-    gZDist = (sint32)(1U << ((uint32)zShift & 31U));
-    gZDistShift = (sint32)((uint32)zShift - 6U);
-    gXDistShift = (sint32)((uint32)xShift - 5U);
+    gXDist = (1U << (xShift & 31U));
+    gZDist = (1U << (zShift & 31U));
+    gZDistShift = (zShift - 6);
+    gXDistShift = (xShift - 5);
 }
 
 void Night::AdditiveNightCalc(VECTOR *v, CVECTOR *color)
@@ -423,19 +422,19 @@ void Night::AdditiveNightCalc(VECTOR *v, CVECTOR *color)
     FUNCTION_MARKER(0x800DC1B8, "NFS4.EXE");
     sint32 z = v->vz;
     sint32 znear = gZNear;
-    uint32 zShift = (uint32)gZDistShift & 31U;
-    sint32 zfar = (sint32)((uint32)znear + (1U << (((uint32)gZDistShift + 6U) & 31U)));
+    uint32 zShift = gZDistShift & 31U;
+    sint32 zfar = (znear + (1U << (((uint32)gZDistShift + 6U) & 31U)));
     if (z <= znear || z >= zfar)
         return;
-    uint32 xShift = (uint32)gXDistShift & 31U;
+    uint32 xShift = gXDistShift & 31U;
     sint32 x = v->vx;
-    sint32 xdist = (sint32)(1U << (((uint32)gXDistShift + 5U) & 31U));
-    sint32 negativeXdist = (sint32)(0U - (uint32)xdist);
+    sint32 xdist = (1U << ((gXDistShift + 5U) & 31U));
+    sint32 negativeXdist = (-xdist);
     if (x <= negativeXdist || x >= xdist)
         return;
-    sint32 row = (sint32)((uint32)z - (uint32)znear) >> zShift;
-    sint32 column = (sint32)((uint32)x + (uint32)xdist) >> xShift;
-    sint32 index = (sint32)(((uint32)row << 6) + (uint32)column);
+    sint32 row = (z - znear) >> zShift;
+    sint32 column = (x + xdist) >> xShift;
+    sint32 index = (((uint32)row << 6) + column);
     sint32 lookup = (uint8)gNightTbl[index];
     CVECTOR addColor = gAdditiveHeadlightColor[lookup];
     sint32 newR = color->r + addColor.r;

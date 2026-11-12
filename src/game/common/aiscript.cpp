@@ -36,7 +36,7 @@ void AIScript::SubmitPlayerAction(AIScript::AIScript_t *script, sint32 humCarInd
 {
     FUNCTION_MARKER(0x8006F768, "NFS4.EXE");
 
-    if (script->lastActionTime < (sint32)((uint32)currentTime64 - 0x500))
+    if (script->lastActionTime < (currentTime64 - 0x500))
         ClearLastReactionIndex(script);
     script->lastActionTime = currentTime64;
     if (script->actionIndex == AISCRIPT_PLAYACTION_SENTINAL && (sint32)playerAction < (sint32)script->detectAction)
@@ -66,11 +66,11 @@ void AIScript::ProcessActionsAndReactions(AIScript::AIScript_t *script, sint32 e
             script->reactionIndex = reactionIndex;
             while (go != 0)
             {
-                sint32 nextIndex = (sint32)((uint32)script->reactionIndex + 1);
+                sint32 nextIndex = (script->reactionIndex + 1);
                 if (nextIndex < 4 && (1U << ((uint8)(*scriptData)[script->actionIndex].reaction[nextIndex] & 31)) != 2)
                 {
                     script->reactionIndex = nextIndex;
-                    *lastReactionIndex = (sint32)((uint32)*lastReactionIndex + 1);
+                    *lastReactionIndex = ((*lastReactionIndex) + 1);
                 }
                 tAIReaction newReaction = (tAIReaction)(1U << ((uint8)(*scriptData)[script->actionIndex].reaction[script->reactionIndex] & 31));
                 script->reaction = (tAIReaction)((uint32)script->reaction | (uint32)newReaction);
@@ -91,7 +91,7 @@ void AIScript::ProcessActionsAndReactions(AIScript::AIScript_t *script, sint32 e
             return;
     }
     if (script->reactionTicksLeft > 0)
-        script->reactionTicksLeft = (sint32)((uint32)script->reactionTicksLeft - (uint32)elapsedTicks);
+        script->reactionTicksLeft = (script->reactionTicksLeft - elapsedTicks);
     else
     {
         script->actionIndex = AISCRIPT_PLAYACTION_SENTINAL;

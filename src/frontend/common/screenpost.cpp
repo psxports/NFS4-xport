@@ -61,8 +61,8 @@ void DrawMoney(sint32 x, sint32 y, sint32 numplaces, sint32 number, sint32 colfo
     else if (numplaces == 9)
         sprintf(string1, TextSys::Word(136), 0, 0, 0);
     FeTools::FormatMoney(string2, number);
-    FETextRender::FullTextRGB(string2, (sint16)x, (sint16)y, colfore, 0, 1);
-    FETextRender::FullTextRGB(string1, (sint16)x, (sint16)y, colback, 0, 1);
+    FETextRender::FullTextRGB(string2, x, y, colfore, 0, 1);
+    FETextRender::FullTextRGB(string1, x, y, colback, 0, 1);
 }
 
 tScreenTournamentStandings::tScreenTournamentStandings(void)
@@ -81,14 +81,14 @@ void tScreenTournamentStandings::Initialize(void)
     gotbonus = 0;
     gotbilled = 0;
     if (fDrawMoney == 0)
-        moneyFinal = (sint32)(uint32(tournamentManager.fMoney) - uint32(tInfo.fTournMoney));
+        moneyFinal = (tournamentManager.fMoney - tInfo.fTournMoney);
     else
     {
         if (tInfo.fMoney != 0)
             gotmoney = 1;
-        moneyFinal = (sint32)(uint32(tournamentManager.fMoney) - uint32(tInfo.fTournMoney));
+        moneyFinal = (tournamentManager.fMoney - tInfo.fTournMoney);
         if (tInfo.fCompletedGarageFull != 0)
-            moneyFinal = (sint32)(uint32(moneyFinal) - uint32(tInfo.fCompletedBonusMoney));
+            moneyFinal = (moneyFinal - tInfo.fCompletedBonusMoney);
         moneyAwarded = tInfo.fMoney;
         tournamentManager.CalcTrackFinishDamageBill(false, moneyDamage, moneyBonus);
         if (moneyBonus > 0)
@@ -153,10 +153,9 @@ void tScreenTournamentStandings::DrawBackground(void)
     sint32 fade = fScreenFadeVal;
     sint32 fadeline = fade;
     sint32 row = 766;
-    sint32 index = (uint8)tournamentManager.fDefinition->fTiers[tournamentManager.fTier].fTournOffset +
-        tournamentManager.fTournament;
+    sint32 index = tournamentManager.fDefinition->fTiers[tournamentManager.fTier].fTournOffset + tournamentManager.fTournament;
     tTourneyInfo *tourneyInfo = &tournamentManager.fDefinition->fTournaments[index];
-    sint32 numRacers = (sint16)((sint16)tournamentManager.fNumRacers + ((uint8)tourneyInfo->fKnockout != 0));
+    sint32 numRacers = (sint16)((sint16)tournamentManager.fNumRacers + (tourneyInfo->fKnockout != 0));
     sint32 lastRacer = numRacers - 1;
     for (sint32 i = 0; i < numRacers; ++i, ++row)
     {
@@ -172,7 +171,7 @@ void tScreenTournamentStandings::DrawBackground(void)
         y = (sint16)TextSys::WordY(row);
         FETextRender::FullTextFade(fade, text, x, y, textType_TrackRecords, state, 0);
         char sBuildOutput[80];
-        if ((uint8)tourneyInfo->fKnockout == 0)
+        if (tourneyInfo->fKnockout == 0)
         {
             sint16 points = tournamentManager.TournPointTotal(&p);
             char *units = TextSys::Word(797);
@@ -194,7 +193,7 @@ void tScreenTournamentStandings::DrawBackground(void)
     sint32 title = iterator->tListIteratorTournament::TextValue(kPlayerBoth) + 19;
     x = (sint16)TextSys::WordX(758);
     y = (sint16)TextSys::WordY(764);
-    FETextRender::MenuTextPositionedJustifyFade(fade, (sint16)title, x, y, 2, textState_Hilighted, textType_TrackRecords);
+    FETextRender::MenuTextPositionedJustifyFade(fade, title, x, y, 2, textState_Hilighted, textType_TrackRecords);
     sint32 wwwww = textpixels(TextSys::Word(title));
     sint32 titleX = TextSys::WordX(758);
     sint32 titleY = TextSys::WordY(764);
@@ -225,16 +224,16 @@ void tScreenTournamentStandings::DrawBackground(void)
         if (moneyAwarded > 0 || moneyDamage > 0 || moneyBonus > 0)
             AudioCmn::PlayFESFX(21);
         sint32 speed = fCountSpeed;
-        moneyAwarded = (sint32)(uint32(moneyAwarded) - uint32(speed));
+        moneyAwarded = (moneyAwarded - speed);
         if (moneyAwarded <= 0)
         {
             moneyAwarded = 0;
-            moneyDamage = (sint32)(uint32(moneyDamage) - uint32(speed));
+            moneyDamage = (moneyDamage - speed);
             if (moneyDamage <= 0)
             {
                 sint32 bonus = moneyBonus;
                 fCountedDown = 1;
-                bonus = (sint32)(uint32(bonus) - uint32(speed));
+                bonus = (bonus - speed);
                 moneyDamage = 0;
                 if (bonus < 0)
                     bonus = 0;
@@ -247,24 +246,21 @@ void tScreenTournamentStandings::DrawBackground(void)
         text = TextSys::Word(786);
         x = (sint16)TextSys::WordX(762);
         y = (sint16)TextSys::WordY(786);
-        FETextRender::FullTextFade(fade, text, x, y, textType_TrackRecords,
-            gotmoney != 0 ? textState_Selected : textState_Unselected, 1);
+        FETextRender::FullTextFade(fade, text, x, y, textType_TrackRecords, gotmoney != 0 ? textState_Selected : textState_Unselected, 1);
         sint32 moneyX = TextSys::WordX(763);
         sint32 moneyY = TextSys::WordY(786);
         DrawMoney(moneyX, moneyY, 6, moneyAwarded, colf, colb);
         text = TextSys::Word(787);
         x = (sint16)TextSys::WordX(762);
         y = (sint16)TextSys::WordY(787);
-        FETextRender::FullTextFade(fade, text, x, y, textType_TrackRecords,
-            gotbilled != 0 ? textState_Selected : textState_Unselected, 1);
+        FETextRender::FullTextFade(fade, text, x, y, textType_TrackRecords, gotbilled != 0 ? textState_Selected : textState_Unselected, 1);
         moneyX = TextSys::WordX(763);
         moneyY = TextSys::WordY(787);
         DrawMoney(moneyX, moneyY, 6, moneyDamage, colf, colb);
         text = TextSys::Word(788);
         x = (sint16)TextSys::WordX(762);
         y = (sint16)TextSys::WordY(788);
-        FETextRender::FullTextFade(fade, text, x, y, textType_TrackRecords,
-            gotbonus != 0 ? textState_Selected : textState_Unselected, 1);
+        FETextRender::FullTextFade(fade, text, x, y, textType_TrackRecords, gotbonus != 0 ? textState_Selected : textState_Unselected, 1);
         moneyX = TextSys::WordX(763);
         moneyY = TextSys::WordY(788);
         DrawMoney(moneyX, moneyY, 6, moneyBonus, colf, colb);
@@ -275,7 +271,7 @@ void tScreenTournamentStandings::DrawBackground(void)
     FETextRender::FullTextFade(fade, text, x, y, textType_TrackRecords, textState_Hilighted, 1);
     sint32 moneyX = TextSys::WordX(763);
     sint32 moneyY = TextSys::WordY(789);
-    sint32 total = (sint32)(uint32(moneyFinal) - uint32(moneyAwarded) + uint32(moneyDamage) - uint32(moneyBonus));
+    sint32 total = (((moneyFinal - moneyAwarded) + moneyDamage) - moneyBonus);
     DrawMoney(moneyX, moneyY, 9, total, colf, colb);
     DrawBackgroundImage(10, 29, gCurrentShapes, 0);
 }
@@ -294,8 +290,7 @@ void tScreenPinkSlipStandings::DrawBackground(void)
         trackManager.GetTrack((uint8)frontEnd.track[i], trackInfo);
         sint16 x = (sint16)TextSys::WordX(759);
         sint16 y = (sint16)TextSys::WordY(row);
-        FETextRender::MenuTextPositionedJustifyFade(fScreenFadeVal, (sint16)((sint8)trackInfo.fTrackID + 213),
-            x, y, 0, state, textType_TrackRecords);
+        FETextRender::MenuTextPositionedJustifyFade(fScreenFadeVal, ((sint8)trackInfo.fTrackID + 213), x, y, 0, state, textType_TrackRecords);
         sint16 winner = frontEnd.pinkSlipsWinner[i];
         char *text = winner == -1 ? TextSys::Word(781) : PlayerName(winner);
         char string[30];

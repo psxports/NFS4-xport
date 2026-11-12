@@ -17,7 +17,6 @@ typedef sint16 (*tPA32)[32];
 void Control::AI(Car::tObj *carObj)
 {
     FUNCTION_MARKER(0x80091FDC, "NFS4.EXE");
-    (void)carObj;
 }
 
 void Control::Human(Car::tObj *carObj)

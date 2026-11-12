@@ -120,24 +120,24 @@ sint32 tCarManager::CalcUsedPrice(sint16 garageNumber)
     FUNCTION_MARKER(0x80016344, "FRONT.BIN");
     if ((uint32)(sint32)garageNumber < fNumCars)
         return 0;
-    uint32 index = (uint32)(sint32)garageNumber - fNumCars;
-    sint32 carID = (sint8)fCarGarage[index / 32][index % 32].fCarID;
+    uint32 index = (garageNumber) - fNumCars;
+    sint32 carID = (sint8)fCarGarage[(index >> 5)][index % 32].fCarID;
     if (carID == -1)
         return 0;
     tCarInfo *carInfo = GetCarFromID((sint16)carID);
     if (carInfo == 0)
         return 0;
-    index = (uint32)(sint32)garageNumber - fNumCars;
-    uint8 upgrades = fCarGarage[index / 32][index % 32].fUpgrades;
+    index = (garageNumber) - fNumCars;
+    uint8 upgrades = fCarGarage[(index >> 5)][index % 32].fUpgrades;
     sint32 result = carInfo->fPrices[0];
     if (upgrades & 1)
-        result = (sint32)((uint32)result + (uint32)carInfo->fPrices[1]);
+        result = (result + carInfo->fPrices[1]);
     if (upgrades & 2)
-        result = (sint32)((uint32)result + (uint32)carInfo->fPrices[2]);
+        result = (result + carInfo->fPrices[2]);
     if (upgrades & 4)
-        result = (sint32)((uint32)result + (uint32)carInfo->fPrices[3]);
+        result = (result + carInfo->fPrices[3]);
     if (carInfo->fExoticCar)
-        return (sint32)((uint32)result * 3) / 4;
+        return (result * 3) / 4;
     return result >> 1;
 }
 
@@ -162,7 +162,7 @@ sint32 tCarManager::PurchaseCar(sint16 carModel, sint16 color, sint16 playerNum)
 sint32 tCarManager::SellCar(sint16 garageNumber, sint16 playerNum)
 {
     FUNCTION_MARKER(0x8001652C, "FRONT.BIN");
-    uint32 index = (uint32)(sint32)garageNumber - fNumCars;
+    uint32 index = (garageNumber) - fNumCars;
     if ((uint32)playerNum >= 2 || index >= 32)
         return 0;
 
@@ -196,7 +196,7 @@ sint32 tCarManager::SellCar(sint16 garageNumber, sint16 playerNum)
 sint32 tCarManager::PurchaseUpgrade(sint16 garageNumber, sint16 upgradeFlags, sint16 playerNum)
 {
     FUNCTION_MARKER(0x800166AC, "FRONT.BIN");
-    uint32 index = (uint32)(sint32)garageNumber - fNumCars;
+    uint32 index = (garageNumber) - fNumCars;
     tCarInfo *carInfo = GetCarFromID((sint8)fCarGarage[playerNum][index].fCarID);
     sint32 result = 0;
     for (sint16 i = 0; i < 3; ++i)
@@ -204,12 +204,12 @@ sint32 tCarManager::PurchaseUpgrade(sint16 garageNumber, sint16 upgradeFlags, si
         sint16 mask = (sint16)(1 << i);
         if (upgradeFlags & mask)
         {
-            index = (uint32)(sint32)garageNumber - fNumCars;
+            index = (garageNumber) - fNumCars;
             uint8 &upgrades = fCarGarage[playerNum][index].fUpgrades;
             if (!(upgrades & mask))
             {
                 upgrades |= (uint8)mask;
-                result = (sint32)((uint32)result + (uint32)carInfo->fPrices[i + 1]);
+                result = (result + carInfo->fPrices[i + 1]);
             }
         }
     }
@@ -236,12 +236,10 @@ void tCarManager::RemoveFromPinkSlipsList(sint16 garageNumber, sint16 playerNum)
     fPinkSlipsCars[playerNum][i - 1].fCarID = (char)0xFF;
     fPinkSlipsCars[playerNum][31].fCarID = (char)0xFF;
     uint8 selected = frontEnd.garageCar[playerNum];
-    uint32 selectedOffset = offsetof(tCarManager, fPinkSlipsCars) + playerNum * 128u +
-        (uint32(selected) - fNumCars) * sizeof(tOwnedCarInfo);
+    uint32 selectedOffset = offsetof(tCarManager, fPinkSlipsCars) + playerNum * 128u + (uint32(selected) - fNumCars) * sizeof(tOwnedCarInfo);
 
     if (reinterpret_cast<const sint8 *>(this)[selectedOffset] < 0)
-        frontEnd.pinkSlipsCar[playerNum] = (uint8)frontEnd.pinkSlipsCar[playerNum] > fNumCars ?
-            (char)(selected - 1) : 0;
+        frontEnd.pinkSlipsCar[playerNum] = (uint8)frontEnd.pinkSlipsCar[playerNum] > fNumCars ? (char)(selected - 1) : 0;
 }
 
 void tCarManager::AddToPinkSlipsList(sint16 carModel, sint16 color, sint16 playerNum)
@@ -263,14 +261,14 @@ void tCarManager::AddToPinkSlipsList(sint16 carModel, sint16 color, sint16 playe
 void tCarManager::AddUpgradesToPinkSlipsList(sint16 garageNumber, sint16 upgradeFlags, sint16 playerNum)
 {
     FUNCTION_MARKER(0x8001697C, "FRONT.BIN");
-    uint32 index = (uint32)(sint32)garageNumber - fNumCars;
+    uint32 index = (garageNumber) - fNumCars;
     GetCarFromID((sint8)fPinkSlipsCars[playerNum][index].fCarID);
     for (sint16 i = 0; i < 3; ++i)
     {
         sint16 mask = (sint16)(1 << i);
         if (upgradeFlags & mask)
         {
-            index = (uint32)(sint32)garageNumber - fNumCars;
+            index = (garageNumber) - fNumCars;
             uint8 &upgrades = fPinkSlipsCars[playerNum][index].fUpgrades;
             if (!(upgrades & mask))
                 upgrades |= (uint8)mask;
@@ -479,14 +477,14 @@ void tCarManager::GetGarageCar(sint16 garageNumber, tCarInfo &carInfo, sint16 pl
     FUNCTION_MARKER(0x80016F4C, "FRONT.BIN");
     if (playerNum == 1 && GetNumOwnedCars(1) <= 0)
         playerNum = 0;
-    uint32 index = (uint32)(sint32)garageNumber - fNumCars;
+    uint32 index = (garageNumber) - fNumCars;
     tCarInfo *original = GetCarFromID((sint8)fCarGarage[playerNum][index].fCarID);
     blockmove(original, &carInfo, 204);
     carInfo.fAvailable = 1;
     carInfo.fViewable = 1;
-    index = (uint32)(sint32)garageNumber - fNumCars;
+    index = (garageNumber) - fNumCars;
     carInfo.fUpgrades = fCarGarage[playerNum][index].fUpgrades;
-    index = (uint32)(sint32)garageNumber - fNumCars;
+    index = (garageNumber) - fNumCars;
     uint8 color = fCarGarage[playerNum][index].fCarColor;
     carInfo.fCountry = 0;
     carInfo.fCarIndex = (uint8)garageNumber;
@@ -496,14 +494,14 @@ void tCarManager::GetGarageCar(sint16 garageNumber, tCarInfo &carInfo, sint16 pl
 void tCarManager::GetPinkSlipsCar(sint16 garageNumber, tCarInfo &carInfo, sint16 playerNum)
 {
     FUNCTION_MARKER(0x80017058, "FRONT.BIN");
-    uint32 index = (uint32)(sint32)garageNumber - fNumCars;
+    uint32 index = (garageNumber) - fNumCars;
     tCarInfo *original = GetCarFromID((sint8)fPinkSlipsCars[playerNum][index].fCarID);
     blockmove(original, &carInfo, 204);
     carInfo.fAvailable = 1;
     carInfo.fViewable = 1;
-    index = (uint32)(sint32)garageNumber - fNumCars;
+    index = (garageNumber) - fNumCars;
     carInfo.fUpgrades = fPinkSlipsCars[playerNum][index].fUpgrades;
-    index = (uint32)(sint32)garageNumber - fNumCars;
+    index = (garageNumber) - fNumCars;
     uint8 color = fPinkSlipsCars[playerNum][index].fCarColor;
     carInfo.fCountry = 0;
     carInfo.fCarIndex = (uint8)garageNumber;
@@ -632,7 +630,7 @@ sint16 tCarManager::GetClassList(tCarClassType carClass, sint16 numElements, tCa
     {
         if (numCars == 0)
             abort();
-        for (i = (uint16)numCars; i < numElements; ++i)
+        for (i = numCars; i < numElements; ++i)
             models[i] = models[i % numCars];
     }
     return numCars;
@@ -750,10 +748,10 @@ void tListIteratorCar::AdjustPosition(tPlayer atIndex, sint16 direction)
     sint32 firstCar = 0;
     sint32 lastCar;
     if ((fCarListFilter & 0x89) != 0)
-        lastCar = (sint32)fCarManager->fNumCars;
+        lastCar = fCarManager->fNumCars;
     else
     {
-        firstCar = (sint32)fCarManager->fNumCars;
+        firstCar = fCarManager->fNumCars;
         tOwnedCarInfo *ownedCars;
         if ((fCarListFilter & 0x42) != 0)
         {
@@ -766,7 +764,7 @@ void tListIteratorCar::AdjustPosition(tPlayer atIndex, sint16 direction)
         lastCar = 0;
         while ((sint8)ownedCars[lastCar].fCarID >= 0)
             ++lastCar;
-        lastCar = (sint32)(uint32(lastCar) + uint32(firstCar));
+        lastCar = (lastCar + firstCar);
     }
     if ((uint8)fValue[i] >= lastCar)
         fValue[i] = (char)(uint32(lastCar) - 1u);
@@ -782,8 +780,7 @@ void tListIteratorCar::AdjustPosition(tPlayer atIndex, sint16 direction)
             carInfo = &fCarManager->fCars[number];
             if (carInfo->fCarClass == 7)
             {
-                frontEnd.carCountry[i][(sint8)carInfo->fCarID] =
-                    (char)((uint8)frontEnd.carCountry[i][(sint8)carInfo->fCarID] + direction);
+                frontEnd.carCountry[i][(sint8)carInfo->fCarID] = (char)((uint8)frontEnd.carCountry[i][(sint8)carInfo->fCarID] + direction);
                 if ((sint8)frontEnd.carCountry[i][(sint8)carInfo->fCarID] >= 5)
                 {
                     frontEnd.carCountry[i][(sint8)carInfo->fCarID] = 0;
@@ -841,8 +838,7 @@ void tListIteratorCar::AdjustPosition(tPlayer atIndex, sint16 direction)
                 frontEnd.carCountry[i][(sint8)carInfo->fCarID] = 4;
             }
         }
-        if (oldValue == fValue[i] && ((sint8)fValue[i] >= (sint32)fCarManager->fNumCars ||
-            (sint8)frontEnd.carCountry[i][(sint8)carInfo->fCarID] == (uint8)oldCountry))
+        if (oldValue == fValue[i] && ((sint8)fValue[i] >= (sint32)fCarManager->fNumCars || (sint8)frontEnd.carCountry[i][(sint8)carInfo->fCarID] == (uint8)oldCountry))
             return;
         if (ValidCar(atIndex, fValue[i]))
             return;
@@ -942,9 +938,9 @@ char tListIteratorCarColor::Value(tPlayer)
 {
     FUNCTION_MARKER(0x80018548, "FRONT.BIN");
     uint8 player = *fPlayer;
-    sint32 offset = (sint32)((uint32)player * (uint32)fIndexSize);
+    sint32 offset = (player * fIndexSize);
     tCarInfo *carInfo = &fCarManager->fCars[fPlayerCar[player]];
-    offset = (sint32)((uint32)offset + (uint32)(sint8)carInfo->fCarID);
+    offset = (offset + ((sint8)carInfo->fCarID));
     return fValue[offset];
 }
 
@@ -958,25 +954,22 @@ void tListIteratorCarColor::Increment(tPlayer)
 {
     FUNCTION_MARKER(0x800185B0, "FRONT.BIN");
     uint8 player = *fPlayer;
-    sint32 offset = (sint32)((uint32)player * (uint32)fIndexSize);
+    sint32 offset = (player * fIndexSize);
     tCarInfo *carInfo = &fCarManager->fCars[fPlayerCar[player]];
-    char *value = fValue + (sint32)((uint32)offset + (uint32)(sint8)carInfo->fCarID);
+    char *value = fValue + (offset + ((sint8)carInfo->fCarID));
     *value = (char)(*value + 1);
-    value = fValue + (sint32)((uint32)offset + (uint32)(sint8)carInfo->fCarID);
-    if (*value >= carInfo->fNumLightColors + carInfo->fNumDarkColors)
-        *value = 0;
+    value = fValue + (offset + ((sint8)carInfo->fCarID));
+    if (*value >= carInfo->fNumLightColors + carInfo->fNumDarkColors) *value = 0;
 }
 
 void tListIteratorCarColor::Decrement(tPlayer)
 {
     FUNCTION_MARKER(0x80018648, "FRONT.BIN");
     uint8 player = *fPlayer;
-    sint32 offset = (sint32)((uint32)player * (uint32)fIndexSize);
+    sint32 offset = (player * fIndexSize);
     tCarInfo *carInfo = &fCarManager->fCars[fPlayerCar[player]];
-    char *value = fValue + (sint32)((uint32)offset + (uint32)(sint8)carInfo->fCarID);
+    char *value = fValue + (offset + ((sint8)carInfo->fCarID));
     uint8 current = *value;
-    if (current == 0)
-        *value = (char)(carInfo->fNumLightColors + carInfo->fNumDarkColors - 1);
-    else
-        *value = (char)(current - 1);
+    if (current == 0) *value = (char)(carInfo->fNumLightColors + carInfo->fNumDarkColors - 1);
+    else *value = (char)(current - 1);
 }

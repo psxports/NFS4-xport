@@ -24,14 +24,13 @@ sint32 iSNDgettag(uint8 **cursor, uint32 *tag, uint32 *value, uint8 **payload)
     if (length == 0xFF)
     {
         *cursor = current;
-        length = (uint32)iSNDgetdata(current, 4);
+        length = iSNDgetdata(current, 4);
         *cursor += 3;
     }
     current = *cursor + 1;
     *cursor = current;
     *payload = current;
-    if (length < 5)
-        *value = (uint32)iSNDgetdata(*cursor, length);
+    if (length < 5) *value = iSNDgetdata(*cursor, length);
     *cursor = (uint8 *)((uintptr_t)*cursor + length);
     return 1;
 }

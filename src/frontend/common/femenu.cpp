@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdarg.h>
 #include <string.h>
 #include "xport.h"
 #include "psx.h"
@@ -79,8 +80,7 @@ void tListIterator::Increment(tPlayer)
     FUNCTION_MARKER(0x80023E8C, "FRONT.BIN");
 
     ++*fValue;
-    if (fSelectionList[*fValue] == 0)
-        *fValue = 0;
+    if (fSelectionList[*fValue] == 0) *fValue = 0;
 }
 
 void tListIterator::Decrement(tPlayer)
@@ -137,8 +137,7 @@ void tListIteratorIndexed::Increment(tPlayer)
 
     ++fValue[*fIndex];
     char *value = fValue + *fIndex;
-    if (fSelectionList[*value] == 0)
-        *value = 0;
+    if (fSelectionList[*value] == 0) *value = 0;
 }
 
 void tListIteratorIndexed::Decrement(tPlayer)
@@ -160,7 +159,7 @@ char tListIteratorDoubleIndexed::Value(tPlayer)
 {
     FUNCTION_MARKER(0x8002417C, "FRONT.BIN");
 
-    sint32 offset = (sint32)((uint32)*fIndex1 * (uint32)index1multiplier + *fIndex2);
+    sint32 offset = ((uint32)*fIndex1 * index1multiplier + *fIndex2);
     return fValue[offset];
 }
 
@@ -176,28 +175,27 @@ void tListIteratorDoubleIndexed::Increment(tPlayer)
 {
     FUNCTION_MARKER(0x80024208, "FRONT.BIN");
 
-    sint32 offset = (sint32)((uint32)*fIndex1 * (uint32)index1multiplier + *fIndex2);
+    sint32 offset = ((uint32)*fIndex1 * index1multiplier + *fIndex2);
     ++fValue[offset];
-    offset = (sint32)((uint32)*fIndex1 * (uint32)index1multiplier + *fIndex2);
+    offset = ((uint32)*fIndex1 * index1multiplier + *fIndex2);
     char *value = fValue + offset;
-    if (fSelectionList[*value] == 0)
-        *value = 0;
+    if (fSelectionList[*value] == 0) *value = 0;
 }
 
 void tListIteratorDoubleIndexed::Decrement(tPlayer)
 {
     FUNCTION_MARKER(0x800242A4, "FRONT.BIN");
 
-    sint32 offset = (sint32)((uint32)*fIndex1 * (uint32)index1multiplier + *fIndex2);
+    sint32 offset = ((uint32)*fIndex1 * index1multiplier + *fIndex2);
     char *value = fValue + offset;
     if (*value != 0)
         --*value;
     else
         while (fSelectionList[*value + 1] > 0)
         {
-            offset = (sint32)((uint32)*fIndex1 * (uint32)index1multiplier + *fIndex2);
+            offset = ((uint32)*fIndex1 * index1multiplier + *fIndex2);
             ++fValue[offset];
-            offset = (sint32)((uint32)*fIndex1 * (uint32)index1multiplier + *fIndex2);
+            offset = ((uint32)*fIndex1 * index1multiplier + *fIndex2);
             value = fValue + offset;
         }
 }
@@ -227,8 +225,7 @@ void tListIteratorMultiPlayer::Increment(tPlayer atIndex)
         atIndex = kPlayerOne;
     ++fValue[atIndex];
     char *value = fValue + atIndex;
-    if (fSelectionList[*value] == 0)
-        *value = 0;
+    if (fSelectionList[*value] == 0) *value = 0;
 }
 
 void tListIteratorMultiPlayer::Decrement(tPlayer atIndex)
@@ -449,9 +446,9 @@ void tMenuItemLeftRightChoice::Draw(bool selected)
     sint16 x = (sint16)TextSys::WordX(fTextDescription);
     sint16 y = (sint16)TextSys::WordY(fTextDescription);
     tMenuTextState textState = selected ? textState_Selected : textState_Unselected;
-    FETextRender::MenuTextPositioned((sint16)fTextDescription, x, y, textState, textType_Options);
+    FETextRender::MenuTextPositioned(fTextDescription, x, y, textState, textType_Options);
     sint16 index = fData->TextValue(gMenu_SubMenuPlayer);
-    FETextRender::MenuTextPositioned(index, (sint16)(x + 180), y, textState, textType_Options);
+    FETextRender::MenuTextPositioned(index, (x + 180), y, textState, textType_Options);
 }
 
 tMenuItemLeftRightSlider::tMenuItemLeftRightSlider(uint32 textDescription, tListIterator *dataPtr) : tMenuItemInteractive(textDescription)
@@ -471,14 +468,14 @@ tMenuItemLeftRightSlider::~tMenuItemLeftRightSlider(void)
 void DrawSlider(sint16 value, sint16 min, sint16 max, sint16 fX, sint16 fY, sint16 fWidth, sint16 fHeight, sint16 rectwidth, sint16 rectspace, bool reverse, bool shadow, sint16 fSelFade, sint16 fFadeVal)
 {
     FUNCTION_MARKER(0x80024C2C, "FRONT.BIN");
-    sint32 range = sint32(max) - sint32(min);
-    sint32 numerator = (sint32(value) - sint32(min)) * sint32(fWidth);
+    sint32 range = max - min;
+    sint32 numerator = (value - min) * fWidth;
     if (range == 0)
         abort();
     sint16 width = (sint16)(numerator / range);
     sint32 factor = fSelFade == 0 ? 1 : 0;
     sint32 myDarkBlue = 0xC83C1E;
-    sint32 end = sint32(fX) + sint32(fWidth);
+    sint32 end = fX + fWidth;
     sint16 x1 = reverse ? (sint16)(end - 1) : fX;
     if (reverse ? x1 < fX : sint32(x1) >= end)
         return;
@@ -516,18 +513,17 @@ void DrawSlider(sint16 value, sint16 min, sint16 max, sint16 fX, sint16 fY, sint
                     sint32 red = (distance * 190 / sint32(fWidth)) >> factor;
                     sint32 green = (distance * 124 / sint32(fWidth) + 66) >> factor;
                     sint32 blue = (distance * -210 / sint32(fWidth) + 210) >> factor;
-                    uint32 packed = (uint32(blue) << 16) |
-                        uint32((sint32)(uint32(green) << 16) >> 8) | uint32((sint16)red);
+                    uint32 packed = (uint32(blue) << 16) | uint32((sint32)(uint32(green) << 16) >> 8) | uint32((sint16)red);
                     color = CalcFadeVal(myDarkBlue, (sint32)packed, fSelFade);
                 }
             }
             Col = CalcFadeVal(color, fFadeVal);
         }
-        uint32 color = (uint32)Col;
+        uint32 color = Col;
         memcpy(&prim->rgbc, &color, sizeof(color));
         SetPolyF4(prim);
         SetSemiTrans(prim, 0);
-        sint32 step = sint32((uint16)rectwidth) + sint32((uint16)rectspace);
+        sint32 step = ((uint16)rectwidth) + ((uint16)rectspace);
         x1 = (sint16)(reverse ? sint32(x1) - step : sint32(x1) + step);
         if (reverse ? x1 < fX : sint32(x1) >= end)
             break;
@@ -566,7 +562,7 @@ void tMenuItemLeftRightSlider::Draw(bool selected)
         fX = (sint16)TextSys::WordX(fTextDescription);
         fY = (sint16)TextSys::WordY(fTextDescription);
     }
-    FETextRender::MenuTextPositioned((sint16)fTextDescription, (sint16)(fX + 8), (sint16)(fY + 3), selected ? textState_Selected : textState_Unselected, textType_Options);
+    FETextRender::MenuTextPositioned(fTextDescription, (fX + 8), (fY + 3), selected ? textState_Selected : textState_Unselected, textType_Options);
     char value = fData->Value(kPlayerBoth);
     DrawSlider(value, fData->fMinValue, fData->fMaxValue, (sint16)(fX + 115), (sint16)(fY + 4), fWidth, fHeight, 6, 4, false, false, selected ? 128 : 0, 0);
 }
@@ -616,12 +612,12 @@ void tMenu::tMenuConstructor(tMenuItem *firstItem, void *ap)
 
     VertHelp = 0;
     fItemList[0] = firstItem;
-    tMenuItem **items = (tMenuItem **)ap;
+    va_list *items = static_cast<va_list *>(ap);
     sint32 i = 0;
     tMenuItem *p;
     do
     {
-        p = *items++;
+        p = va_arg(*items, tMenuItem *);
         fItemList[++i] = p;
     } while (p != 0);
 }
@@ -657,7 +653,7 @@ void tMenu::Initialize(void)
     {
         if ((fItemList[fCurrentItem]->fFlags & 1U) == 0)
             return;
-        fCurrentItem = (sint32)((uint32)fCurrentItem + 1U);
+        fCurrentItem = (fCurrentItem + 1);
         if (fItemList[fCurrentItem] == 0)
             fCurrentItem = 0;
     } while (fCurrentItem != original);
@@ -682,10 +678,10 @@ void tMenu::ProcessInput(tPlayer fromPlayer, tInputKeyType &keyval, tMenuCommand
         do
         {
             if (fCurrentItem > 0)
-                fCurrentItem = (sint32)((uint32)fCurrentItem - 1U);
+                fCurrentItem = (fCurrentItem - 1);
             else
-                while (fItemList[(sint32)((uint32)fCurrentItem + 1U)] != 0)
-                    fCurrentItem = (sint32)((uint32)fCurrentItem + 1U);
+                while (fItemList[(fCurrentItem + 1)] != 0)
+                    fCurrentItem = (fCurrentItem + 1);
         } while ((fItemList[fCurrentItem]->fFlags & 1U) != 0);
         if (fCurrentItem != lastItem)
             AudioCmn::PlayFESFX(3);
@@ -696,7 +692,7 @@ void tMenu::ProcessInput(tPlayer fromPlayer, tInputKeyType &keyval, tMenuCommand
         sint32 lastItem = fCurrentItem;
         do
         {
-            fCurrentItem = (sint32)((uint32)fCurrentItem + 1U);
+            fCurrentItem = (fCurrentItem + 1);
             if (fItemList[fCurrentItem] == 0)
                 fCurrentItem = 0;
         } while ((fItemList[fCurrentItem]->fFlags & 1U) != 0);

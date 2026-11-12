@@ -59,25 +59,25 @@ void MenuNFS4::DrawTextBox(sint32 helpText, PSX_RECT &r, sint32 initialWidth, si
         s_upper(buffer);
         sint32 textpix = textpixels(buffer);
         sint32 length = (sint32)strlen(buffer);
-        textpix = (sint32)(uint32(textpix) - uint32(length));
+        textpix = (textpix - length);
         sint32 dist = textpix < initialWidth ? initialWidth : textpix;
-        dist = (sint32)(uint32(dist) + 25);
+        dist = (dist + 25);
         sint32 col = CalcTextFadeSelToHi(textType_FlybyHelp, fSelFade, 0);
         if (reflected)
             col = CalcFadeVal(0, col, 240 - r.y);
         char *word = TextSys::Word(helpText);
-        FETextRender::FullTextRGB(word, (sint16)((uint16)r.x + (uint16)drawOffset), (sint16)((uint16)r.y + 4), col, 0, 0);
+        FETextRender::FullTextRGB(word, ((uint16)r.x + (uint16)drawOffset), ((uint16)r.y + 4), col, 0, 0);
         word = TextSys::Word(helpText);
-        FETextRender::FullTextRGB(word, (sint16)(uint32((uint16)r.x) + uint32((uint16)drawOffset) - uint32(dist)), (sint16)((uint16)r.y + 4), col, 0, 0);
+        FETextRender::FullTextRGB(word, (uint32((uint16)r.x) + uint32((uint16)drawOffset) - uint32(dist)), ((uint16)r.y + 4), col, 0, 0);
         if (drawArrows)
         {
             sint32 ypos = r.y + (sint32(r.h) >> 1);
             if (!reflected)
                 ypos += 2;
             DrawShapeExtended(10, 0x118, r.x + drawOffset - 10, ypos, 0, 0, &drawFlags);
-            DrawShapeExtended(11, 0x118, (sint32)(uint32(r.x) + uint32(drawOffset) + uint32(textpix) + 8), ypos, 0, 0, &drawFlags);
-            DrawShapeExtended(10, 0x118, (sint32)(uint32(r.x) + uint32(drawOffset) - uint32(dist) - 10), ypos, 0, 0, &drawFlags);
-            DrawShapeExtended(11, 0x118, (sint32)(uint32(r.x) + uint32(drawOffset) - uint32(dist) + uint32(textpix) + 8), ypos, 0, 0, &drawFlags);
+            DrawShapeExtended(11, 0x118, ((((r.x + drawOffset) + textpix) + 8)), ypos, 0, 0, &drawFlags);
+            DrawShapeExtended(10, 0x118, ((((r.x + drawOffset) - dist) - 10)), ypos, 0, 0, &drawFlags);
+            DrawShapeExtended(11, 0x118, (((((r.x + drawOffset) - dist) + textpix) + 8)), ypos, 0, 0, &drawFlags);
         }
         temp = r;
         temp.y = (sint16)((uint16)temp.y + (uint16)drenv->clip.y);
@@ -127,7 +127,7 @@ void tMenuItemGoToMenuNFS4Button::Draw(sint32 x, sint32 y, bool selected)
         sint32 length = (sint32)strlen(buffer);
         sint16 measured = (sint16)(uint32(pixels) - uint32(length));
         sint16 dist = measured >= 140 ? (sint16)((uint16)measured + 25) : 165;
-        uint16 oldOffset = (uint16)fOffset;
+        uint16 oldOffset = fOffset;
         fOffset = (sint16)(oldOffset - 2);
         if (!selected)
             fOffset = (sint16)(oldOffset - 4);
@@ -223,7 +223,7 @@ void tMenuItemNFS4LeftRightChoice::Draw(sint32 x, sint32 y, bool selected)
         FETextRender::SetFont(0);
         sint16 measured = (sint16)textpixels(TextSys::Word(fTextDescription));
         sint16 dist = measured >= 140 ? (sint16)((uint16)measured + 25) : 165;
-        uint16 oldOffset = (uint16)fOffset;
+        uint16 oldOffset = fOffset;
         fOffset = (sint16)(oldOffset - 2);
         if (!selected)
             fOffset = (sint16)(oldOffset - 4);
@@ -311,14 +311,14 @@ void tMenuItemOptionsLeftRightChoice::Draw(sint32 x, sint32 y, bool selected)
     sint32 col = CalcTextFadeSelToHi(textType_Options, fSelFade, 0);
     char *word = TextSys::Word(fTextDescription);
     sint16 textY = (sint16)((uint16)y + 3);
-    FETextRender::FullTextRGB(word, (sint16)((uint16)x + 148), textY, col, 0, 1);
+    FETextRender::FullTextRGB(word, ((uint16)x + 148), textY, col, 0, 1);
     sint16 textID = fData->TextValue(kPlayerBoth);
     word = TextSys::Word(textID);
-    FETextRender::FullTextRGB(word, (sint16)((uint16)x + 217 + (sint32(left->width) >> 1)), textY, col, 0, 2);
+    FETextRender::FullTextRGB(word, ((uint16)x + 217 + (sint32(left->width) >> 1)), textY, col, 0, 2);
     tDrawShapeExtended drawFlags;
     drawFlags.tint[0] = CalcFadeVal(0xB54200, 0xBEBE, fSelFade);
-    DrawShapeExtended(10, 0x118, (sint32)(uint32(x) + 166), (sint32)(uint32(y) + 6), 0, selected ? 0 : 1, &drawFlags);
-    DrawShapeExtended(11, 0x118, (sint32)(uint32(x) - uint32(left->width) + 303), (sint32)(uint32(y) + 6), 0, selected ? 0 : 1, &drawFlags);
+    DrawShapeExtended(10, 0x118, ((x + 166)), (y + 6), 0, selected ? 0 : 1, &drawFlags);
+    DrawShapeExtended(11, 0x118, (((x - left->width) + 303)), (y + 6), 0, selected ? 0 : 1, &drawFlags);
     PSX_RECT r;
     r.x = (sint16)x;
     r.y = (sint16)y;
@@ -355,15 +355,15 @@ void tMenuItemOptionsTwoItemChoice::Draw(sint32 x, sint32 y, bool selected)
     CalcOnOffFade(textType_Options, fOnOffFade, fSelFade, 0, ColTextOn, ColTextOff);
     char *word = TextSys::Word(fTextDescription);
     sint16 textY = (sint16)((uint16)y + 3);
-    FETextRender::FullTextRGB(word, (sint16)((uint16)x + 148), textY, Col, 0, 1);
+    FETextRender::FullTextRGB(word, ((uint16)x + 148), textY, Col, 0, 1);
     word = TextSys::Word(fData->fSelectionList[0]);
-    FETextRender::FullTextRGB(word, (sint16)((uint16)x + 176), textY, ColTextOff, 0, 0);
+    FETextRender::FullTextRGB(word, ((uint16)x + 176), textY, ColTextOff, 0, 0);
     word = TextSys::Word(fData->fSelectionList[1]);
-    FETextRender::FullTextRGB(word, (sint16)((uint16)x - (uint16)left->width + 294), textY, ColTextOn, 0, 1);
+    FETextRender::FullTextRGB(word, ((uint16)x - (uint16)left->width + 294), textY, ColTextOn, 0, 1);
     tDrawShapeExtended drawFlags;
     drawFlags.tint[0] = CalcFadeVal(0xB54200, 0xBEBE, fSelFade);
-    DrawShapeExtended(10, 0x118, (sint32)(uint32(x) + 166), (sint32)(uint32(y) + 6), 0, selected ? 0 : 1, &drawFlags);
-    DrawShapeExtended(11, 0x118, (sint32)(uint32(x) - uint32(left->width) + 303), (sint32)(uint32(y) + 6), 0, selected ? 0 : 1, &drawFlags);
+    DrawShapeExtended(10, 0x118, ((x + 166)), (y + 6), 0, selected ? 0 : 1, &drawFlags);
+    DrawShapeExtended(11, 0x118, (((x - left->width) + 303)), (y + 6), 0, selected ? 0 : 1, &drawFlags);
     PSX_RECT r;
     r.x = (sint16)x;
     r.y = (sint16)y;
@@ -377,7 +377,7 @@ tMenuNFS4::tMenuNFS4(uint32 flags, tScreen *screenHandler, tMenu *nextMenu, tMen
     FUNCTION_MARKER(0x8001B098, "FRONT.BIN");
     va_list ap;
     va_start(ap, firstItem);
-    tMenuConstructor(firstItem, ap);
+    tMenuConstructor(firstItem, &ap);
     va_end(ap);
 }
 
@@ -470,7 +470,7 @@ tMenuNFS4TwoPlayer::tMenuNFS4TwoPlayer(uint32 flags, tScreen *screenHandler, tMe
     fChildMenu = 0;
     va_list ap;
     va_start(ap, firstItem);
-    tMenuConstructor(firstItem, ap);
+    tMenuConstructor(firstItem, &ap);
     va_end(ap);
 }
 
@@ -491,7 +491,7 @@ tMenuNFS4Bottom::tMenuNFS4Bottom(uint32 flags, tScreen *screenHandler, tMenu *ne
     FUNCTION_MARKER(0x8001B748, "FRONT.BIN");
     va_list ap;
     va_start(ap, firstItem);
-    tMenuConstructor(firstItem, ap);
+    tMenuConstructor(firstItem, &ap);
     va_end(ap);
 }
 
@@ -589,7 +589,7 @@ tMenuOptions::tMenuOptions(uint32 flags, tScreen *screenHandler, tMenu *nextMenu
     FUNCTION_MARKER(0x8001BA4C, "FRONT.BIN");
     va_list ap;
     va_start(ap, firstItem);
-    tMenuConstructor(firstItem, ap);
+    tMenuConstructor(firstItem, &ap);
     va_end(ap);
     fPlayer = player;
 }
@@ -608,7 +608,7 @@ void tMenuOptions::Draw(void)
     sint32 h = numItems * 18;
     if (fInMenuTransition != 0)
     {
-        uint32 deltaTicks = uint32(ticks) - uint32(fMenuEnterTicks);
+        uint32 deltaTicks = uint32(ticks) - fMenuEnterTicks;
         if (deltaTicks > 32)
         {
             deltaTicks = 32;
@@ -634,7 +634,7 @@ void tMenuOptions::Draw(void)
     h += 18;
     sint32 remaining = 240 - h;
     sint32 y = remaining >> 1;
-    sint32 x = (sint32)(uint32(screenwidth) - uint32(w)) >> 1;
+    sint32 x = (screenwidth - w) >> 1;
     if (fPlayer == 0)
         y -= remaining >> 2;
     else if (fPlayer == 1)
@@ -642,7 +642,7 @@ void tMenuOptions::Draw(void)
     if (fInMenuTransition == 0)
     {
         if (fTitle >= 0)
-            FETextRender::MenuTextPositionedJustify(fTitle, (sint16)(x + (w >> 1)), (sint16)(y + 2), 2, textState_Hilighted, textType_PopUpTitle);
+            FETextRender::MenuTextPositionedJustify(fTitle, (x + (w >> 1)), (y + 2), 2, textState_Hilighted, textType_PopUpTitle);
         sint32 itemY = y + 18;
         for (sint16 i = 0; fItemList[i] != 0; ++i)
         {
@@ -687,7 +687,7 @@ void tMenuOptions::TransitionOn(void)
 bool tMenuOptions::TransitionIsFinished(void)
 {
     FUNCTION_MARKER(0x8001BE98, "FRONT.BIN");
-    fInMenuTransition = uint32(ticks) - uint32(fMenuEnterTicks) < 32 ? 1 : 0;
+    fInMenuTransition = uint32(ticks) - fMenuEnterTicks < 32 ? 1 : 0;
     return fInMenuTransition == 0;
 }
 

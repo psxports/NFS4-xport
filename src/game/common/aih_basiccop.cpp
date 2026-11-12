@@ -44,11 +44,11 @@ static void PlacePointOnRoad(sint32 slice, coorddef *offset)
     sint32 vecZz = static_cast<sint8>(road->forward[2]) * 512;
     sint32 x = fixedmult(vecXx, ioff.x);
     sint32 z = fixedmult(vecZx, ioff.z);
-    offset->x = (uint32)slicecenter.x + (uint32)x + (uint32)z;
+    offset->x = (slicecenter.x + x) + z;
     offset->y = slicecenter.y;
     x = fixedmult(vecXz, ioff.x);
     z = fixedmult(vecZz, ioff.z);
-    offset->z = (uint32)slicecenter.z + (uint32)x + (uint32)z;
+    offset->z = (slicecenter.z + x) + z;
     BWorldSm::FindClosestQuadRez(offset, &testSimRoadInfo, 1);
     const coorddef *normal = BWorldSm::UNormal(&testSimRoadInfo);
     const coorddef *pointOnPlane;
@@ -82,7 +82,7 @@ void AIHigh_BasicCop::CheckSpikeBelt(void)
     FUNCTION_MARKER(0x8005C1EC, "NFS4.EXE");
     if (AICop::spikeBelt.active_) {
         sint32 timeNow = simGlobal.gameTicks;
-        sint32 elapsed = (sint32)((uint32)timeNow - (uint32)AICop::spikeBelt.freshenTime_);
+        sint32 elapsed = (timeNow - AICop::spikeBelt.freshenTime_);
         if (elapsed >= 320) {
             if (!AILife::IsSliceInAnyVisibleArea(AICop::spikeBelt.slice_)) {
                 BWorld::InitSpikeBelt();
@@ -92,8 +92,7 @@ void AIHigh_BasicCop::CheckSpikeBelt(void)
             }
         }
     }
-    if (AICop::gRoadBlockState == AICop::kAICop_RoadBlockState_PerpPassed &&
-        !AILife::IsSliceInAnyVisibleArea(Object::customSliceNum)) {
+    if (AICop::gRoadBlockState == AICop::kAICop_RoadBlockState_PerpPassed && !AILife::IsSliceInAnyVisibleArea(Object::customSliceNum)) {
         Object::ClearCustomObjects();
         AICop::gRoadBlockState = AICop::kAICop_RoadBlockState_None;
     }
@@ -102,8 +101,8 @@ void AIHigh_BasicCop::CheckSpikeBelt(void)
 sint32 AIHigh_BasicCop::ShouldIPerformCutOffBlock(sint32 chancePerSecond, Car::tObj *target)
 {
     FUNCTION_MARKER(0x8005C2B4, "NFS4.EXE");
-    sint32 chanceForElapsedTime = (sint32)((uint32)(chancePerSecond / 32) * (uint32)AI::elapsedTime);
-    sint32 scaledChance = (sint32)((uint32)chanceForElapsedTime * 1000);
+    sint32 chanceForElapsedTime = (((chancePerSecond / 32)) * AI::elapsedTime);
+    sint32 scaledChance = (chanceForElapsedTime * 1000);
     sint32 chanceOutOf1000 = scaledChance / 65536;
     uint32 product = fastRandom * randSeed;
     randtemp = product;
@@ -112,16 +111,16 @@ sint32 AIHigh_BasicCop::ShouldIPerformCutOffBlock(sint32 chancePerSecond, Car::t
     if (random1000 >= chanceOutOf1000)
         return 0;
     Car::tObj *car = carObj_;
-    sint32 relLatPosition = (sint32)((uint32)car->roadPosition - (uint32)target->roadPosition);
+    sint32 relLatPosition = (car->roadPosition - target->roadPosition);
     sint32 absRelLatPosition = relLatPosition;
     if (absRelLatPosition < 0)
-        absRelLatPosition = (sint32)(0 - (uint32)absRelLatPosition);
-    sint32 minimumLateralGap = (sint32)((uint32)target->N.dimension.x + 0x10000);
+        absRelLatPosition = (-absRelLatPosition);
+    sint32 minimumLateralGap = (target->N.dimension.x + 0x10000);
     if (absRelLatPosition <= minimumLateralGap || absRelLatPosition >= 0x40000)
         return 0;
     sint32 distance = AIWorld::SplineDistance(car, target);
-    sint32 metersBetween = (sint32)((uint32)distance * (uint32)carObj_->direction);
-    sint32 carLength = (sint32)(((uint32)target->N.dimension.z << 1) + 0x20000);
+    sint32 metersBetween = (distance * carObj_->direction);
+    sint32 carLength = (((uint32)target->N.dimension.z << 1) + 0x20000);
     return carLength < metersBetween && metersBetween < 0xC0000;
 }
 
@@ -137,7 +136,7 @@ void Blockade::AddRoadFlare(coorddef *pos)
     sfxInstance->type = 22;
     sfxInstance->pad = 0;
     sfxInstance->point[2] = z;
-    group->m_num_elements = (uint32)group->m_num_elements + 1;
+    group->m_num_elements = group->m_num_elements + 1;
 }
 
 void Blockade::AddObject(sint32 slice, coorddef *pos, sint32 objectID)
@@ -162,11 +161,11 @@ void Blockade::AddObject(sint32 slice, coorddef *pos, sint32 objectID)
     theObj.orient.m[7] = rotz->y;
     theObj.orient.m[8] = rotz->z;
     sint32 first = fixedmult(theObj.orient.m[4], theObj.orient.m[8]);
-    theObj.orient.m[0] = (sint32)((uint32)first - (uint32)fixedmult(theObj.orient.m[5], theObj.orient.m[7]));
+    theObj.orient.m[0] = (first - fixedmult(theObj.orient.m[5], theObj.orient.m[7]));
     first = fixedmult(theObj.orient.m[5], theObj.orient.m[6]);
-    theObj.orient.m[1] = (sint32)((uint32)first - (uint32)fixedmult(theObj.orient.m[3], theObj.orient.m[8]));
+    theObj.orient.m[1] = (first - fixedmult(theObj.orient.m[3], theObj.orient.m[8]));
     first = fixedmult(theObj.orient.m[3], theObj.orient.m[7]);
-    theObj.orient.m[2] = (sint32)((uint32)first - (uint32)fixedmult(theObj.orient.m[4], theObj.orient.m[6]));
+    theObj.orient.m[2] = (first - fixedmult(theObj.orient.m[4], theObj.orient.m[6]));
     transpose(&theObj.orient, &theObj.orient);
     Object::AddCustomObject(&theObj, 1);
 }
@@ -186,7 +185,7 @@ void AIHigh_BasicCop::SetupBlockadeElements(blockade_t *blockade)
         for (sint32 i = 0; i < 5; ++i) {
             pt.x = i * 0x20000;
             pt.y = 0;
-            pt.z = (sint32)((uint32)blockade->direction * (uint32)longitudinal);
+            pt.z = (blockade->direction * longitudinal);
             PlacePointOnRoad(slice, &pt);
             Blockade::AddRoadFlare(&pt);
             longitudinal += 0x40000;
@@ -195,7 +194,7 @@ void AIHigh_BasicCop::SetupBlockadeElements(blockade_t *blockade)
         for (sint32 i = 1; i < 5; ++i) {
             pt.x = -i * 0x20000;
             pt.y = 0;
-            pt.z = (sint32)((uint32)blockade->direction * (uint32)longitudinal);
+            pt.z = (blockade->direction * longitudinal);
             PlacePointOnRoad(slice, &pt);
             Blockade::AddRoadFlare(&pt);
             longitudinal += 0x40000;
@@ -205,7 +204,7 @@ void AIHigh_BasicCop::SetupBlockadeElements(blockade_t *blockade)
         for (sint32 i = 0; i < 7; ++i) {
             pt.x = -0x60000 + i * 0x20000;
             pt.y = 0;
-            pt.z = (sint32)((uint32)blockade->direction * (uint32)longitudinal);
+            pt.z = (blockade->direction * longitudinal);
             PlacePointOnRoad(slice, &pt);
             Blockade::AddRoadFlare(&pt);
             longitudinal += 0x40000;
@@ -215,7 +214,7 @@ void AIHigh_BasicCop::SetupBlockadeElements(blockade_t *blockade)
             if (i != 3) {
                 pt.x = 0x60000 - i * 0x20000;
                 pt.y = 0;
-                pt.z = (sint32)((uint32)blockade->direction * (uint32)longitudinal);
+                pt.z = (blockade->direction * longitudinal);
                 PlacePointOnRoad(slice, &pt);
                 Blockade::AddRoadFlare(&pt);
             }
@@ -227,12 +226,12 @@ void AIHigh_BasicCop::SetupBlockadeElements(blockade_t *blockade)
         if (objId != -1) {
             pt.x = -0x28000;
             pt.y = 0;
-            pt.z = (sint32)(0 - ((uint32)blockade->direction << 18));
+            pt.z = (-(sint32)((uint32)blockade->direction << 18));
             PlacePointOnRoad(slice, &pt);
             Blockade::AddObject(slice, &pt, objId);
             pt.x = 0x28000;
             pt.y = 0;
-            pt.z = (sint32)(0 - ((uint32)blockade->direction << 18));
+            pt.z = (-(sint32)((uint32)blockade->direction << 18));
             PlacePointOnRoad(slice, &pt);
             Blockade::AddObject(slice, &pt, objId);
         }
@@ -243,7 +242,7 @@ void AIHigh_BasicCop::SetupBlockadeElements(blockade_t *blockade)
 void AIHigh_BasicCop::HandleBlockadeSpeech(void)
 {
     FUNCTION_MARKER(0x8005CA28, "NFS4.EXE");
-    uint16 flags = (uint16)blockade_.blockadeSpeechFlags;
+    uint16 flags = blockade_.blockadeSpeechFlags;
     if (flags == 0)
         return;
     Car::tObj *theCar = blockade_.target->carObj_;
@@ -252,17 +251,17 @@ void AIHigh_BasicCop::HandleBlockadeSpeech(void)
         return;
     }
     sint32 carSlice = theCar->stats.slice;
-    sint32 sliceDiff = (sint32)((uint32)carSlice - (uint32)blockade_.slice);
+    sint32 sliceDiff = (carSlice - blockade_.slice);
     if (theCar->blowout) {
         blockade_.blockadeSpeechFlags = 0;
         return;
     }
     sint32 distance = sliceDiff;
     if (distance < 0)
-        distance = (sint32)(0 - (uint32)distance);
+        distance = (-distance);
     if (distance >= 33)
         return;
-    sint32 scaledSpeed = (sint32)((uint32)Cars::topSpeedCap[theCar->render.currentCarType] * 28);
+    sint32 scaledSpeed = (Cars::topSpeedCap[theCar->render.currentCarType] * 28);
     sint32 checkSlice = scaledSpeed / 0x640000;
     if (sliceDiff < checkSlice)
         blockade_.blockadeSpeechFlags = (sint16)(flags | 2);

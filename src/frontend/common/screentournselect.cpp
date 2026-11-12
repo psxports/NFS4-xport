@@ -126,7 +126,7 @@ void tScreenTournSelect::DrawVideoWall(void)
     for (sint32 j = 89; j < 137; j += 48)
         PSXDrawTransSquare(0x141414, 165, j, 321, 1, 1);
     FeDraw_SetABRMode(2);
-    sint32 i = ((uint32)ticks - (uint32)fTVTicks) >> 2;
+    sint32 i = ((uint32)ticks - fTVTicks) >> 2;
     if (fTransitionDirection > 0)
     {
         for (sint32 j = 0; j < 4 && j < i; ++j)
@@ -234,7 +234,7 @@ void tScreenTournSelect::DrawBackground(void)
         if (result == 1)
         {
             hVideo = 2;
-            fFrame = (sint32)((uint32)fFrame + 1);
+            fFrame = (fFrame + 1);
         }
         else if (result < 0)
         {
@@ -259,14 +259,14 @@ void tScreenTournSelect::DrawBackground(void)
         fPrevi = descriptionWord;
         char *description = TextSys::Word(descriptionWord);
         sint32 height = FETextRender::WordWrapHeight(r.w, description);
-        PreCalculatedTournamentY = (sint32)((uint32)117 - (uint32)height);
+        PreCalculatedTournamentY = (117 - height);
     }
     r.y = (sint16)PreCalculatedTournamentY;
     char *description = TextSys::Word(descriptionWord);
     sint32 color = CalcFadeVal(0x505050, fScreenFadeVal);
     FETextRender::WordWrapTextRGB(description, r, color);
     FETextRender::MenuTextPositionedJustifyFade(fScreenFadeVal, 0x3DB, 170, 117, 0, textState_Selected, textType_ScreenInfo);
-    FETextRender::MenuTextPositionedJustifyFade(fScreenFadeVal, (sint16)(textValue + 0x39), 170, 125, 0, textState_Hilighted, textType_ScreenInfo);
+    FETextRender::MenuTextPositionedJustifyFade(fScreenFadeVal, (textValue + 0x39), 170, 125, 0, textState_Hilighted, textType_ScreenInfo);
     for (sint16 i = 0; i < 8; ++i)
         DrawTV(tvConfigs[i]);
 }

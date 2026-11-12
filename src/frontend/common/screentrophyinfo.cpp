@@ -63,10 +63,10 @@ void tScreenTrophyInfo::DrawBackground(void)
     text = TextSys::Word(word);
     if (strlen(text) != 0)
     {
-        FETextRender::MenuTextPositionedJustifyFade(FadePartI, 0x3DB, 140, (sint16)yyy, 1, textState_Hilighted, textType_ScreenInfo);
+        FETextRender::MenuTextPositionedJustifyFade(FadePartI, 0x3DB, 140, yyy, 1, textState_Hilighted, textType_ScreenInfo);
         text = TextSys::Word(word);
         col = CalcFadeVal(0x505050, FadePartI);
-        FETextRender::FullTextRGB(text, 145, (sint16)yyy, col, 0, 0);
+        FETextRender::FullTextRGB(text, 145, yyy, col, 0, 0);
         yyy = 183;
     }
     PSX_RECT r;
@@ -74,7 +74,7 @@ void tScreenTrophyInfo::DrawBackground(void)
     text = TextSys::Word(word);
     if (strlen(text) != 0)
     {
-        FETextRender::MenuTextPositionedJustifyFade(FadePartI, 0x3DD, 140, (sint16)yyy, 1, textState_Hilighted, textType_ScreenInfo);
+        FETextRender::MenuTextPositionedJustifyFade(FadePartI, 0x3DD, 140, yyy, 1, textState_Hilighted, textType_ScreenInfo);
         r.x = 145;
         r.w = 347;
         r.h = 100;
@@ -84,13 +84,13 @@ void tScreenTrophyInfo::DrawBackground(void)
         FETextRender::WordWrapTextRGB(text, r, col);
         text = TextSys::Word(word);
         sint32 height = FETextRender::WordWrapHeight(347, text);
-        yyy = (sint32)((uint32)yyy + (uint32)height);
+        yyy = (yyy + height);
     }
     word = tournamentID + 0x38D;
     text = TextSys::Word(word);
     if (strlen(text) != 0)
     {
-        FETextRender::MenuTextPositionedJustifyFade(FadePartI, 0x3DC, 140, (sint16)yyy, 1, textState_Hilighted, textType_ScreenInfo);
+        FETextRender::MenuTextPositionedJustifyFade(FadePartI, 0x3DC, 140, yyy, 1, textState_Hilighted, textType_ScreenInfo);
         r.x = 145;
         r.w = 347;
         r.h = 100;

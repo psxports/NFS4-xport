@@ -4,7 +4,7 @@
 sint32 iSNDabs(sint32 value)
 {
     FUNCTION_MARKER(0x8010AEDC, "NFS4.EXE");
-    return value < 0 ? (sint32)(0 - (uint32)value) : value;
+    return value < 0 ? (~(((uint32)value)) + 1) : value;
 }
 
 void iSNDatodlrv(sint32 angle, sint32 volume, sint32 *left, sint32 *right, sint32 previousLeft, sint32 previousRight)
@@ -35,12 +35,8 @@ void iSNDatodlrv(sint32 angle, sint32 volume, sint32 *left, sint32 *right, sint3
         if (sourceQuadrant >= 3)
             flip = targetQuadrant == 2 && sourceQuadrant == 3 ? 1 : 2;
     }
-    if (previousLeft < 0)
-        *left = (sint32)(0 - (uint32)*left);
-    if (previousRight < 0)
-        *right = (sint32)(0 - (uint32)*right);
-    if (flip == 1)
-        *left = (sint32)(0 - (uint32)*left);
-    else if (flip == 2)
-        *right = (sint32)(0 - (uint32)*right);
+    if (previousLeft < 0) *left = (-(*left));
+    if (previousRight < 0) *right = (-(*right));
+    if (flip == 1) *left = (-(*left));
+    else if (flip == 2) *right = (-(*right));
 }

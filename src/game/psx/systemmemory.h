@@ -20,7 +20,12 @@ struct cluttbl
 
 struct NativeSystemMemoryOwner
 {
-    enum { allocationBytes = 0xB34F4, allocationWords = (allocationBytes + 43 + 3) / 4 };
+    enum
+    {
+        allocationBytes = 0xB34F4,
+        allocationPadding = 31 + ((12 + sizeof(void *) - 1) & (~(sizeof(void *)) + 1)),
+        allocationWords = (allocationBytes + allocationPadding + 3) >> 2
+    };
 
     cluttbl fontPalette;
     uint32 allocation[allocationWords];

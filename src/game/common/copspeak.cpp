@@ -58,13 +58,13 @@ void CopSpeak::RadioStaticActive(sint32 noise)
     uint32 scaledNoise = (uint32)noise * 129;
     for (sint32 i = 0; i < 2; ++i) {
         if ((sint8)gStaticPatch[i] == -1)
-            gStaticPatch[i] = (char)(random() % (uint32)numpatches);
+            gStaticPatch[i] = (char)(random() % numpatches);
         if (gStaticHandle[i] == -1) {
             sint32 bhandle = AudioCmn::GetAsyncSfx(2, (sint8)gStaticPatch[i] + 47, false);
             if (bhandle >= 0) {
                 SNDPLAYOPTS playopts;
                 SNDplaysetdef(&playopts);
-                sint32 volume = (sint32)((uint32)gMasterFENarrationLevel * scaledNoise) >> 14;
+                sint32 volume = (sint32)(gMasterFENarrationLevel * scaledNoise) >> 14;
                 playopts.bhandle = (char)bhandle;
                 playopts.patnum = 0;
                 playopts.vol = (char)volume;
@@ -123,12 +123,12 @@ void CopSpeak::Alloc(CopSpeak::tRequest *r)
         gBufferStart = 0;
         gBufferEnd = 0x7ffc;
     }
-    if (r->size <= (sint32)gBufferEnd - (sint32)gBufferStart) {
+    if (r->size <= gBufferEnd - gBufferStart) {
         r->buffer = gBufferStart;
         gBufferStart = (sint16)((uint16)gBufferStart + (uint16)r->size);
         return;
     }
-    if (r->size <= (sint32)gBufferLow) {
+    if (r->size <= gBufferLow) {
         gBufferHigh = gBufferStart;
         gBufferEnd = gBufferLow;
         gBufferLow = 0;
@@ -143,15 +143,15 @@ void CopSpeak::Free(CopSpeak::tRequest *r)
 {
     FUNCTION_MARKER(0x8009971C, "NFS4.EXE");
     if (r->buffer >= 0 && r->size > 0) {
-        sint32 end = (sint32)((uint32)r->buffer + (uint32)r->size);
+        sint32 end = (r->buffer + r->size);
         if (gBufferHigh == 0) {
-            if (end == (sint32)gBufferStart) {
+            if (end == gBufferStart) {
                 gBufferStart = 0;
                 r->buffer = -1;
                 return;
             }
             gBufferLow = (sint16)((uint16)r->buffer + (uint16)r->size);
-        } else if (end == (sint32)gBufferHigh) {
+        } else if (end == gBufferHigh) {
             gBufferHigh = 0;
             gBufferEnd = 0x7ffc;
         }
@@ -172,7 +172,7 @@ void CopSpeak::ReadyNextRequest(void)
         if (status == 0)
             return;
         ok = status == 1;
-        sint32 completed = XPORT_UNPLACED::FILE::completeop(r->ophandle);
+        sint32 completed = static_cast<sint32>(XPORT_UNPLACED::FILE::completeop(r->ophandle));
         gHandleCount = (char)((uint8)gHandleCount - 1);
         if (completed != r->size)
             ok = 0;
@@ -191,9 +191,9 @@ void CopSpeak::ReadyNextRequest(void)
         } else {
             if ((sint8)r->bank >= 0) {
                 if (r->sfx == 0 && r->phrase < 0) {
-                    sint32 patch = (sint32)((uint32)r->offset + 0x4000);
+                    sint32 patch = (r->offset + 0x4000);
                     if (AudioCmn::GetAsyncSfx((sint8)r->bank, patch, true) == -1) {
-                        patch = (sint32)((uint32)r->offset + 0x4000);
+                        patch = (r->offset + 0x4000);
                         AudioCmn::LoadAsyncSfx((sint8)r->bank, patch, gBuffer + r->buffer, r->size);
                     }
                 } else if (AudioCmn::GetAsyncSfx((sint8)r->bank, r->phrase, true) == -1) {
@@ -270,10 +270,9 @@ void CopSpeak::InitVars(void)
     InitRequest(&gCurrent);
 }
 
-void CopSpeak::DirectRequest(sint32 filehandle, sint32 offset, sint32 size, Car::tObj *car, char *name)
+void CopSpeak::DirectRequest(NativeFileSlot *filehandle, sint32 offset, sint32 size, Car::tObj *car, char *name)
 {
     FUNCTION_MARKER(0x80099BEC, "NFS4.EXE");
-    (void)name;
     tRequest *r = &gQueue[gQueueHead];
     sint32 next = gQueueHead < 63 ? gQueueHead + 1 : 0;
     if (next != gQueuePlay) {
@@ -314,9 +313,9 @@ void CopSpeak::StartUp(void)
         tBank *bank = &Copspeak_gBank[1];
         bank->Count = 0;
         while (strcmp(GameSetup::gCarNames[bank->Count], "BAD!") != 0)
-            bank->Count = (sint32)((uint32)bank->Count + 1);
-        bank->Count = (sint32)((uint32)bank->Count * 2 + 1);
-        bank->Index = (tFileIndex *)reservememadr("ocar index", (sint32)((uint32)bank->Count * 8), 0);
+            bank->Count = (bank->Count + 1);
+        bank->Count = ((bank->Count * 2) + 1);
+        bank->Index = (tFileIndex *)reservememadr("ocar index", ((bank->Count * 8)), 0);
         const char *Generic[1] = { "rain.bnk" };
         for (sint32 i = 0; i < 1; ++i) {
             if (locatebigentryz(header, Generic[i], 0, &bank->Index[i].offset, &bank->Index[i].size) == 0) {
@@ -324,7 +323,7 @@ void CopSpeak::StartUp(void)
                 bank->Index[i].size = 0;
             }
         }
-        for (sint32 i = 0; i < (sint32)((uint32)bank->Count - 1); ++i) {
+        for (sint32 i = 0; i < (bank->Count - 1); ++i) {
             const char *timbre[2] = { "lden", "ldex" };
             char bankname[16];
             sprintf(bankname, "%.4s%.4s.bnk", GameSetup::gCarNames[i / 2], timbre[i % 2]);
@@ -346,7 +345,7 @@ void CopSpeak::StartUp(void)
     if (header != 0) {
         tBank *bank = &Copspeak_gBank[0];
         bank->Count = bigcount(header);
-        bank->Index = (tFileIndex *)reservememadr("trck index", (sint32)((uint32)bank->Count * 8), 0);
+        bank->Index = (tFileIndex *)reservememadr("trck index", ((bank->Count * 8)), 0);
         gNumTrackSfx = bank->Count;
         for (sint32 i = 0; i < bank->Count; ++i)
             locatebigentry(header, 0, i, &bank->Index[i].offset, &bank->Index[i].size);
@@ -375,11 +374,11 @@ void CopSpeak::StartUp(void)
             for (char *p = list; p < list + size; ++p) {
                 if (*p == '"') {
                     if (quoted != 0)
-                        bank->Count = (sint32)((uint32)bank->Count + 1);
+                        bank->Count = (bank->Count + 1);
                     quoted ^= 1;
                 }
             }
-            bank->Index = (tFileIndex *)reservememadr("1sht index", (sint32)((uint32)bank->Count * 8), 0);
+            bank->Index = (tFileIndex *)reservememadr("1sht index", ((bank->Count * 8)), 0);
             quoted = 0;
             sint32 i = 0;
             char *name = list;
@@ -407,9 +406,9 @@ void CopSpeak::StartUp(void)
 sint32 CopSpeak::GetEnginePatch(sint32 type, sint32 timbre)
 {
     FUNCTION_MARKER(0x8009A2CC, "NFS4.EXE");
-    sint32 patch = (sint32)((uint32)type * 2 + (uint32)timbre + 1);
+    sint32 patch = (((type * 2) + timbre) + 1);
     if (Copspeak_gBank[1].Index[patch].size == 0)
-        patch = (sint32)((uint32)timbre + 69);
+        patch = (timbre + 69);
     return patch;
 }
 
@@ -433,12 +432,12 @@ sint32 CopSpeak::Play(CopSpeak::tRequest *r, sint32 handle)
     }
     sint32 vol;
     if (r->filehandle == Copspeak_gBank[2].FileHandle) {
-        sint32 scaled = (sint32)((uint32)gMasterFENarrationLevel * 129) >> 7;
+        sint32 scaled = (gMasterFENarrationLevel * 129) >> 7;
         sint32 boosted = scaled * 2;
         vol = boosted < 128 ? boosted : 127;
     } else {
         sint32 attenuation = 128 - (noise >> 2);
-        vol = (sint32)((uint32)gMasterFENarrationLevel * (uint32)attenuation * 129) >> 14;
+        vol = ((gMasterFENarrationLevel * attenuation) * 129) >> 14;
     }
     playopts.bend = 64;
     playopts.vol = (char)vol;
@@ -478,8 +477,7 @@ sint32 CopSpeak::Request(CopSpeak::tRequest *r)
     if (r->size == 0)
         return -1;
     sint32 head = gQueueHead;
-    memmove(&gQueue[slot], r, 16);
-    memmove((char *)&gQueue[slot] + 16, (const char *)r + 16, 16);
+    memmove(&gQueue[slot], r, sizeof(*r));
     gQueueHead = head < 63 ? head + 1 : 0;
     return slot;
 }
@@ -499,7 +497,7 @@ void CopSpeak::LoadNextRequest(void)
         return;
     for (;;) {
         sint32 slot = gQueueLoad;
-        if (slot == gQueueHead || (((uint32)slot - (uint32)gQueueReady) & 63) >= 8)
+        if (slot == gQueueHead || ((slot - (uint32)gQueueReady) & 63) >= 8)
             return;
         tRequest *r = &gQueue[slot];
         sint32 bank = (sint8)r->bank;
@@ -517,7 +515,7 @@ void CopSpeak::LoadNextRequest(void)
             if (r->phrase >= 0)
                 cached = AudioCmn::GetAsyncSfx(bank, r->phrase, true) >= 0;
             if (!cached && r->sfx == 0) {
-                sint32 patch = (sint32)((uint32)r->offset + 0x4000);
+                sint32 patch = (r->offset + 0x4000);
                 cached = AudioCmn::GetAsyncSfx((sint8)r->bank, patch, true) >= 0;
             }
         }
@@ -551,12 +549,10 @@ void CopSpeak::PlayNextRequest(void)
         if (r->sfx == 0) {
             if (gSpchHandle != -1)
                 return;
-            memmove(&gCurrent, r, 12);
-            memmove((char *)&gCurrent + 12, (const char *)r + 12, 12);
-            memmove((char *)&gCurrent + 24, (const char *)r + 24, 8);
+            memmove(&gCurrent, r, sizeof(*r));
             sint32 patch = r->phrase;
             if (patch == -1)
-                patch = (sint32)((uint32)r->offset + 0x4000);
+                patch = (r->offset + 0x4000);
             sint32 handle = AudioCmn::GetAsyncSfx((sint8)r->bank, patch, true);
             if (handle >= 0 || r->bank == 3)
                 gSpchHandle = Play(r, handle);
@@ -582,11 +578,10 @@ void CopSpeak::Server(void)
     if (gSpchHandle != -1) {
         sint32 patch = gCurrent.phrase;
         if (patch == -1)
-            patch = (sint32)((uint32)gCurrent.offset + 0x4000);
+            patch = (gCurrent.offset + 0x4000);
         AudioCmn::GetAsyncSfx((sint8)gCurrent.bank, patch, true);
         if (SNDtimeremaining(gSpchHandle) < 5) {
-            if (gQueuePlay != gQueueHead && gQueue[gQueuePlay].bank == 3 &&
-                gQueue[gQueuePlay].phrase == 19 && gCurrent.car == 0)
+            if (gQueuePlay != gQueueHead && gQueue[gQueuePlay].bank == 3 && gQueue[gQueuePlay].phrase == 19 && gCurrent.car == 0)
                 gQueue[gQueuePlay].phrase = 20;
             gSpchHandle = -1;
             InitRequest(&gCurrent);
@@ -599,7 +594,7 @@ void CopSpeak::Server(void)
         if (r->sfx == 0 && bank != 3 && bank >= 0) {
             sint32 patch = r->phrase;
             if (patch == -1)
-                patch = (sint32)((uint32)r->offset + 0x4000);
+                patch = (r->offset + 0x4000);
             AudioCmn::GetAsyncSfx(bank, patch, true);
         }
         i = i < 63 ? i + 1 : 0;
@@ -623,9 +618,7 @@ void CopSpeak::Server(void)
         }
         RadioStaticActive(noise);
     }
-    if ((gQueueReady == gQueueHead || gQueue[gQueueReady].sfx != 0 ||
-            gQueue[gQueueReady].car != gQueue[gQueuePlay].car) &&
-        gQueuePlay != gQueueReady && gQueuePlay != gQueueHead)
+    if ((gQueueReady == gQueueHead || gQueue[gQueueReady].sfx != 0 || gQueue[gQueueReady].car != gQueue[gQueuePlay].car) && gQueuePlay != gQueueReady && gQueuePlay != gQueueHead)
         PlayNextRequest();
     LoadNextRequest();
 }
@@ -671,6 +664,6 @@ void CopSpeak::ShowQueue(void)
     {
         Font::TextXY(bufferstat, 10, 6);
         sint32 width = textpixels(bufferstat);
-        Hud::FBuildF4(1, 8, 9, (sint32)((uint32)width + 5U), 9, 0x190505, 0, 0);
+        Hud::FBuildF4(1, 8, 9, (width + 5), 9, 0x190505, 0, 0);
     }
 }

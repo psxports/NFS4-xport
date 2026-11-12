@@ -9,12 +9,14 @@ typedef void (*NativeAsyncCallback)(...);
 
 typedef void (*NativeFileCompletion)(uint32 operation, uint32 result, void *userData);
 
-typedef sint32 (*NativeReadOperation)(sint32 fileHandle, sint32 offset, void *destination, sint32 size, sint32 priority, void *userData);
+struct NativeFileSlot;
+
+typedef sint32 (*NativeReadOperation)(NativeFileSlot *fileHandle, sint32 offset, void *destination, sint32 size, sint32 priority, void *userData);
 
 struct NativeSyncReadState
 {
     sint32 priority;
-    sint32 fileHandle;
+    NativeFileSlot *fileHandle;
     sint32 offset;
     sint32 remaining;
     sint32 transferred;
@@ -33,7 +35,7 @@ struct NativeAsyncRequest
     void *storage;
     NativeAsyncCallback callback;
     uint32 pending;
-    sint32 fileHandle;
+    NativeFileSlot *fileHandle;
     sint32 offset;
     union
     {
@@ -58,7 +60,7 @@ extern "C"
     extern uint32 asyncGeneration;
     extern NativeAsyncQueue asyncFreeQueue;
     extern NativeAsyncQueue asyncCompletionQueue;
-    extern sint32 asyncFile;
+    extern NativeFileSlot *asyncFile;
     extern sint32 asyncFileOffset;
     extern MemMutex *asyncMutex;
 }

@@ -480,8 +480,7 @@ void Controller_SetRamp(void)
     FUNCTION_MARKER(0x80043250, "FRONT.BIN");
     for (sint16 i = 0; i < 2; ++i)
     {
-        sint32 type = frontEnd.controlType[i] == 0x23 ? 0 :
-            (frontEnd.controlType[i] == 0x53 || frontEnd.controlType[i] == 0x73 ? 1 : 2);
+        sint32 type = frontEnd.controlType[i] == 0x23 ? 0 : (frontEnd.controlType[i] == 0x53 || frontEnd.controlType[i] == 0x73 ? 1 : 2);
         sint32 config = (uint8)frontEnd.controlConfig[i];
         frontEnd.rampGas[i] = 1;
         frontEnd.rampBrake[i] = 1;
@@ -541,7 +540,7 @@ void tScreenControllerConfig::TurnOffShakers(void)
 void tScreenControllerConfig::ShakeIt(void)
 {
     FUNCTION_MARKER(0x800431B4, "FRONT.BIN");
-    sint32 padnum = (sint32)(uint32(player) << 4);
+    sint32 padnum = (uint32(player) << 4);
     sint32 padState = PadGetState(padnum);
     if (padState == 6)
     {
@@ -634,12 +633,10 @@ void tScreenControllerConfig::CheckConfigs(void)
         if ((uint8)fTextController == 6)
             fTextController = 5;
     }
-    else if (CurrentlyLoadedArt != -1 &&
-        strcmp(fileNames[(uint8)fCurrentController], fileNames[CurrentlyLoadedArt]) == 0)
+    else if (CurrentlyLoadedArt != -1 && strcmp(fileNames[(uint8)fCurrentController], fileNames[CurrentlyLoadedArt]) == 0)
     {
         fFadeTextOut = 1;
-        if (((uint8)fPrevController == 5 || (uint8)fPrevController == 3) &&
-            ((uint8)fCurrentController == 4 || (uint8)fCurrentController == 6))
+        if (((uint8)fPrevController == 5 || (uint8)fPrevController == 3) && ((uint8)fCurrentController == 4 || (uint8)fCurrentController == 6))
             SwapInController();
     }
     else
@@ -665,8 +662,7 @@ void tScreenControllerConfig::CheckConfigs(void)
 void tScreenControllerConfig::SwapInController(void)
 {
     FUNCTION_MARKER(0x800436EC, "FRONT.BIN");
-    if (CurrentlyLoadedArt == -1 ||
-        strcmp(fileNames[(uint8)fCurrentController], fileNames[CurrentlyLoadedArt]) != 0)
+    if (CurrentlyLoadedArt == -1 || strcmp(fileNames[(uint8)fCurrentController], fileNames[CurrentlyLoadedArt]) != 0)
     {
         AsyncLoadSwapShapeFile(const_cast<char *>(fileNames[(uint8)fCurrentController]));
         CurrentlyLoadedArt = (uint8)fCurrentController;
@@ -750,8 +746,7 @@ void tScreenControllerConfig::SetCurrentController(bool firsttime)
                 bool ready = false;
                 if (PadGetState((player != 0 ? 1 : 0) << 4) == 2)
                     ready = true;
-                else if (fTimeOutStartTick != 0 && PadGetState((player != 0 ? 1 : 0) << 4) == 1 &&
-                    (sint32)(uint32(ticks) - uint32(fTimeOutStartTick)) > 96)
+                else if (fTimeOutStartTick != 0 && PadGetState((player != 0 ? 1 : 0) << 4) == 1 && (sint32)(uint32(ticks) - uint32(fTimeOutStartTick)) > 96)
                     ready = true;
                 if (!ready && (uint8)fCurrentController != 3)
                 {
@@ -770,9 +765,7 @@ void tScreenControllerConfig::SetCurrentController(bool firsttime)
     }
     if (fSetMenu != 0 || setmenutonull)
         menuDefs->itemControllerSettings.SetMenu(firsttime, fSetMenu);
-    menuDefs->menuControllerConfig.VertHelp =
-        ((uint8)fCurrentController == 5 || (uint8)fCurrentController == 6) &&
-        (uint8)fTextConfig < 2;
+    menuDefs->menuControllerConfig.VertHelp = ((uint8)fCurrentController == 5 || (uint8)fCurrentController == 6) && (uint8)fTextConfig < 2;
 }
 
 sint32 tScreenControllerConfig::CalcAnimFrame(sint32 frame)
@@ -807,19 +800,14 @@ void tScreenControllerConfig::ActualDrawController(sint32 frame, sint32 fadeleve
     drawFlags.custom_shapes = fSwapShapes.fShapes;
     if (frame == 0 && CurrentlyLoadedArt != 1)
     {
-        DrawShapeExtended(1, fadelevelmain != 0 ? 0x601 : 0x600,
-            (sint32)(uint32(Offset[CurrentlyLoadedArt][0]) + uint32(shakex)),
-            (sint32)(uint32(Offset[CurrentlyLoadedArt][1]) + uint32(shakey)), fadelevelmain, 0, &drawFlags);
+        DrawShapeExtended(1, fadelevelmain != 0 ? 0x601 : 0x600, ((Offset[CurrentlyLoadedArt][0] + shakex)), (Offset[CurrentlyLoadedArt][1] + shakey), fadelevelmain, 0, &drawFlags);
     }
     else
     {
-        ScaleShapeExtended((sint32)(uint32(frame) + 1U), fadelevelmain != 0 ? 0x601 : 0x600,
-            Offset[CurrentlyLoadedArt][0], Offset[CurrentlyLoadedArt][1], fadelevelmain, 0, &drawFlags);
+        ScaleShapeExtended(((frame + 1)), fadelevelmain != 0 ? 0x601 : 0x600, Offset[CurrentlyLoadedArt][0], Offset[CurrentlyLoadedArt][1], fadelevelmain, 0, &drawFlags);
         if (CurrentlyLoadedArt != 2)
             goto drawTop;
-        DrawShapeExtended(0, fadelevelmain != 0 ? 0x601 : 0x600,
-            (sint32)(uint32(Offset[2][0]) + uint32(shakex)),
-            (sint32)(uint32(Offset[2][1]) + uint32(shakey)), fadelevelmain, 0, &drawFlags);
+        DrawShapeExtended(0, fadelevelmain != 0 ? 0x601 : 0x600, ((Offset[2][0] + shakex)), (Offset[2][1] + shakey), fadelevelmain, 0, &drawFlags);
     }
     if (CurrentlyLoadedArt == 2)
     {
@@ -853,9 +841,7 @@ void tScreenControllerConfig::DrawController(void)
     sint16 maxshakey = 0;
     tDrawShapeExtended drawFlags;
     drawFlags.custom_shapes = fSwapShapes.fShapes;
-    bool onShockMode = (((uint8)fCurrentController == 4 && (sint16)menuDefs->menuControllerDualShock.fCurrentItem == 0) ||
-        ((uint8)fCurrentController == 6 && (sint16)menuDefs->menuControllerDualShockAnalog.fCurrentItem == 0)) &&
-        (sint16)menuDefs->menuControllerConfig.fCurrentItem == 1;
+    bool onShockMode = (((uint8)fCurrentController == 4 && (sint16)menuDefs->menuControllerDualShock.fCurrentItem == 0) || ((uint8)fCurrentController == 6 && (sint16)menuDefs->menuControllerDualShockAnalog.fCurrentItem == 0)) && (sint16)menuDefs->menuControllerConfig.fCurrentItem == 1;
     if (onShockMode && (uint8)frontEnd.shockMode[player] != 0)
     {
         if (fShakingItem != 0)
@@ -870,9 +856,7 @@ void tScreenControllerConfig::DrawController(void)
     }
     else
     {
-        bool onShockImpact = (((uint8)fCurrentController == 4 && (sint16)menuDefs->menuControllerDualShock.fCurrentItem == 1) ||
-            ((uint8)fCurrentController == 6 && (sint16)menuDefs->menuControllerDualShockAnalog.fCurrentItem == 1)) &&
-            (sint16)menuDefs->menuControllerConfig.fCurrentItem == 1;
+        bool onShockImpact = (((uint8)fCurrentController == 4 && (sint16)menuDefs->menuControllerDualShock.fCurrentItem == 1) || ((uint8)fCurrentController == 6 && (sint16)menuDefs->menuControllerDualShockAnalog.fCurrentItem == 1)) && (sint16)menuDefs->menuControllerConfig.fCurrentItem == 1;
         if (onShockImpact && (uint8)frontEnd.shockImpact[player] != 0)
         {
             SetActuators((uint8)frontEnd.shockImpact[player] * 2);
@@ -914,13 +898,12 @@ void tScreenControllerConfig::DrawController(void)
         fGotTick = 0;
         return;
     }
-    if (((uint8)fCurrentController == 5 || (uint8)fCurrentController == 6) &&
-        fAnim == 0 && fFade[0] == 0 && fFade[1] == 0 && fAnimFade == 0)
+    if (((uint8)fCurrentController == 5 || (uint8)fCurrentController == 6) && fAnim == 0 && fFade[0] == 0 && fFade[1] == 0 && fAnimFade == 0)
     {
-        flare_intensity = (sint32)(uint32(flare_intensity) + 250U);
+        flare_intensity = (flare_intensity + 250);
         if (flare_intensity >= max_fi)
         {
-            max_fi = (sint32)(uint32(max_fi) + uint32(max_fidir));
+            max_fi = (max_fi + max_fidir);
             if (max_fi > 4750)
             {
                 max_fi = 4750;
@@ -937,16 +920,14 @@ void tScreenControllerConfig::DrawController(void)
     else
     {
         max_fi = 3750;
-        flare_intensity = (sint32)(uint32(flare_intensity) - 250U);
+        flare_intensity = (flare_intensity - 250);
         if (flare_intensity < 0)
             flare_intensity = 0;
     }
     if (flare_intensity > 0)
     {
         for (sint32 ii = 0; ii < 2; ++ii)
-            Flare::_2DHalo(Offset[(uint8)fCurrentController][0] + shakex + 126,
-                Offset[(uint8)fCurrentController][1] + ii + 63 + shakey,
-                flare_intensity, flare_intensity / 4, 21);
+            Flare::_2DHalo(Offset[(uint8)fCurrentController][0] + shakex + 126, Offset[(uint8)fCurrentController][1] + ii + 63 + shakey, flare_intensity, flare_intensity / 4, 21);
     }
     if (fFade[0] != 0 && fAnimFade == 0)
     {
@@ -1011,8 +992,7 @@ void tScreenControllerConfig::DrawController(void)
         }
         sint32 step = (sint32)(uint32(ticks) - uint32(fStartTick)) / 6;
         fAnimFadeFrame = (sint16)(uint32((uint16)fAnimFadeStart) + uint32(step) * uint32(sint32(fAnimFade)));
-        if ((fAnimFadeFrame > fAnimFadeStop && fAnimFade == 1) ||
-            (fAnimFadeFrame < fAnimFadeStop && fAnimFade == -1))
+        if ((fAnimFadeFrame > fAnimFadeStop && fAnimFade == 1) || (fAnimFadeFrame < fAnimFadeStop && fAnimFade == -1))
         {
             fGotTick = 0;
             fAnimFadeFrame = fAnimFadeStop;
@@ -1022,8 +1002,8 @@ void tScreenControllerConfig::DrawController(void)
                 fArrowFade = 128;
             }
         }
-        sint32 numerator = (sint32(fAnimFadeFrame) - fAnimFadeStart) * 128;
-        sint32 denominator = sint32(fAnimFadeStop) - fAnimFadeStart;
+        sint32 numerator = (fAnimFadeFrame - fAnimFadeStart) * 128;
+        sint32 denominator = fAnimFadeStop - fAnimFadeStart;
         if (denominator == 0)
             abort();
         sint32 fadelevel = numerator / denominator;
@@ -1058,14 +1038,14 @@ void tScreenControllerConfig::DrawController(void)
             fAnimFrame = fAnimStop;
         }
         float elapsed = float((sint32)(uint32(ticks) - uint32(fStartTick)));
-        sint32 duration = (sint32)(uint32(sint32(fAnimStop) - fAnimStart) * uint32(sint32(fAnimStep)) * 6U);
+        sint32 duration = (((fAnimStop - fAnimStart) * fAnimStep) * 6);
         float fraction = elapsed / float(duration);
         sint32 fadelevel = sint32(double(fraction) * 256.0);
         if (fadelevel > 256)
             fadelevel = 256;
         if (fadelevel > 128)
             fadelevel = 256 - fadelevel;
-        fadelevel = (sint32)(uint32(fadelevel) + 10U);
+        fadelevel = (fadelevel + 10);
         if (fadelevel < 0)
             fadelevel = 0;
         if (fadelevel > 128)
@@ -1102,10 +1082,9 @@ void tScreenControllerConfig::DrawController(void)
             DrawShapeExtended(index, 0x600, Offset[CurrentlyLoadedArt][0], Offset[CurrentlyLoadedArt][1], 0, 0, &drawFlags);
     }
     uint8 controller = (uint8)fCurrentController;
-    if ((controller == 1 || controller == 2) &&
-        (menuDefs->itemControllerJoyRange.fActive != 0 || menuDefs->itemControllerCenterPoint.fActive != 0))
+    if ((controller == 1 || controller == 2) && (menuDefs->itemControllerJoyRange.fActive != 0 || menuDefs->itemControllerCenterPoint.fActive != 0))
     {
-        sint32 range = sint32(gPadinfo.buf[player * 4].data.analog.rightx) - 128;
+        sint32 range = gPadinfo.buf[player * 4].data.analog.rightx - 128;
         sint32 frame;
         if (range > 10)
             frame = controller == 2 ? 2 + range * 13 / 129 : 26 + range * 8 / 129;
@@ -1154,8 +1133,7 @@ void tScreenControllerConfig::HorzVertLine(sint16 *ArrowLoc, bool type)
         {
             length = (sint16)((sint32(length) * mult) >> 6);
             sint32 brightlength = sint32(length) >> 3;
-            PSXDrawTransSquare(0xFFFFFF, endx,
-                endy - (sint32(length) - brightlength - extrabitoff + extrabit), 2, -brightlength, 2);
+            PSXDrawTransSquare(0xFFFFFF, endx, (endy - (((length - brightlength) - extrabitoff) + extrabit)), 2, -brightlength, 2);
         }
         PSXDrawTransSquare(LineCol, endx, endy + extrabit, 2, -(sint32(length) - extrabitoff + extrabit), 2);
     }
@@ -1170,8 +1148,7 @@ void tScreenControllerConfig::HorzVertLine(sint16 *ArrowLoc, bool type)
             if (absolute <= extrabit)
                 return;
             sint32 brightlength = sint32(length) >> 3;
-            PSXDrawTransSquare(0xFFFFFF, endx - (sint32(length) - brightlength) + extrabit,
-                starty, -(brightlength + extrabit), 1, 2);
+            PSXDrawTransSquare(0xFFFFFF, ((endx - (length - brightlength)) + extrabit), starty, -(brightlength + extrabit), 1, 2);
         }
         sint32 absolute = length < 0 ? -sint32(length) : sint32(length);
         if (absolute <= extrabit)
@@ -1190,7 +1167,7 @@ void tScreenControllerConfig::DrawArrow(sint16 *ArrowLoc)
     {
         if (fArrowFadeDir < 0)
         {
-            mult = (sint16)(64U - (uint16)fArrowFade);
+            mult = (sint16)(64 - (uint16)fArrowFade);
             if (mult < 0)
                 mult = 0;
         }
@@ -1201,7 +1178,7 @@ void tScreenControllerConfig::DrawArrow(sint16 *ArrowLoc)
     sint16 next = 64;
     if (fArrowFadeDir < 0)
     {
-        mult = (sint16)(128U - (uint16)fArrowFade);
+        mult = (sint16)(128 - (uint16)fArrowFade);
         next = mult;
         if (next > 64)
             next = 64;
@@ -1273,8 +1250,7 @@ void tScreenControllerConfig::DrawForeground(void)
     char brightstring[2];
     brightstring[1] = 0;
     sint16 direction = 8;
-    if (fFadeTextOut == 0 && fAnim == 0 && fAnimFade == 0 && fFade[0] == 0 && fFade[1] == 0 &&
-        menuDefs->menuControllerConfig.tOptionsMenu::TransitionIsFinished() && fTransitioningOut == 0)
+    if (fFadeTextOut == 0 && fAnim == 0 && fAnimFade == 0 && fFade[0] == 0 && fFade[1] == 0 && menuDefs->menuControllerConfig.tOptionsMenu::TransitionIsFinished() && fTransitioningOut == 0)
     {
         direction = -8;
         if (fArrowFadeDir > 0)
@@ -1353,19 +1329,18 @@ void tScreenControllerConfig::DrawForeground(void)
                 FETextRender::SetFont(0);
                 sint32 brightX = TL[0];
                 sint32 advance = textpixels(string1);
-                advance = (sint32)(uint32(advance) - uint32(strlen(string1)));
-                brightX = TL[3] == 1 ? (sint32)(uint32(brightX) - uint32(advance)) :
-                    (sint32)(uint32(brightX) + uint32(advance));
-                FETextRender::FullTextRGB(brightstring, (sint16)brightX, TL[1], ColText2, 0, TL[3] == 0);
+                advance = (uint32(advance) - uint32(strlen(string1)));
+                brightX = TL[3] == 1 ? (brightX - advance) : (brightX + advance);
+                FETextRender::FullTextRGB(brightstring, brightX, TL[1], ColText2, 0, TL[3] == 0);
                 astringpointer = string1;
             }
             else
                 astringpointer = TextSys::Word(TL[2]);
             FETextRender::FullTextRGB(astringpointer, TL[0], TL[1], ColText, 0, TL[3]);
             sint32 width = textpixels(astringpointer);
-            width = (sint32)(uint32(width) - uint32(strlen(astringpointer)));
+            width = (uint32(width) - uint32(strlen(astringpointer)));
             if (TL[3] != 0)
-                width = (sint32)(0U - uint32(width));
+                width = (-width);
             PSXDrawSquare(0, TL[0], TL[1], width, 7);
         }
     }

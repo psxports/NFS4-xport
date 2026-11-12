@@ -20,7 +20,6 @@ sint32 iSNDdownloadbank(uint8 *bank, const uint8 *sampleData)
             slot = bank + (bank[4] == 4 ? 20 : 12) + i * 4;
             memcpy(&relative, slot, sizeof(relative));
             uint8 *patch = slot + relative;
-            memcpy(slot, &patch, sizeof(patch));
             if (iSNDresolvetaggedpatch(patch, sampleData, sampleTable) != 7)
                 result = 8;
         }

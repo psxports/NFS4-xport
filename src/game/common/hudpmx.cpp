@@ -89,8 +89,7 @@ void HudPmx::InitTextures(void)
     sint32 carType0 = GameSetup::gData.carInfo[0].carType;
     sint32 time = GameSetup::gData.Time;
     sint32 carType1 = GameSetup::gData.carInfo[1].carType;
-    shapes[129] = time == 0 ? (carType0 < 30 ? tachs[carType0] : defaultTach) :
-        (carType0 < 30 ? ntachs[carType0] : defaultNightTach);
+    shapes[129] = time == 0 ? (carType0 < 30 ? tachs[carType0] : defaultTach) : (carType0 < 30 ? ntachs[carType0] : defaultNightTach);
     for (sint32 i = 0; i < 131; ++i)
         LoadShape(shapes[i], &gShapes[i]);
     {
@@ -123,8 +122,7 @@ void HudPmx::InitTextures(void)
     LoadShape("acol", &gShapes[73]);
     if (DashHUD::gInfo.splitscreen != 0)
     {
-        shapes[131] = time == 0 ? (carType1 < 30 ? tachs[carType1] : defaultTach) :
-            (carType1 < 30 ? ntachs[carType1] : defaultNightTach);
+        shapes[131] = time == 0 ? (carType1 < 30 ? tachs[carType1] : defaultTach) : (carType1 < 30 ? ntachs[carType1] : defaultNightTach);
         loadShapeXOff = 22;
         LoadShape(shapes[131], &gShapes[131]);
     }

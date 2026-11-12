@@ -9,7 +9,7 @@ uint32 iSNDtimeremaining(sint32 channel)
         return 0x7FFFFFFF;
     uint32 end = voice->unknown14;
     uint32 position = voice->unknown0C;
-    uint32 rate = (uint32)voice->pitch;
+    uint32 rate = voice->pitch;
     if (rate == 0)
         abort();
     return (end - position) / rate;

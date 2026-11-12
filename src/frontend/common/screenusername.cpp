@@ -102,13 +102,13 @@ void tScreenUserName::DrawBackground(void)
             case '^': word = 0x207; offset = 78; separators = 5; break;
             case '-': break;
             default:
-                FETextRender::FullTextRGB(output, (sint16)(x + 8), y, colText, 1, 2);
+                FETextRender::FullTextRGB(output, (x + 8), y, colText, 1, 2);
                 break;
             }
             if (word != 0)
             {
                 char *text = TextSys::Word(word);
-                FETextRender::FullTextRGB(text, (sint16)(x + offset), y, colText, 1, 2);
+                FETextRender::FullTextRGB(text, (x + offset), y, colText, 1, 2);
                 for (sint16 k = 1; k <= separators; ++k)
                     PSXDrawSquare(0, x + k * 28 - 6, rowY - 2, 2, 14);
             }

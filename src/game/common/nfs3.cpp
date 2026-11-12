@@ -78,7 +78,7 @@ sint32 gUseFrontend = 1;
 char gMusicInSimIsOn = 1;
 uint32 gFECheats;
 uint32 gFEBonus;
-sint32 gFEBigHandle;
+NativeFileSlot *gFEBigHandle;
 char gCheckTotalTime = 1;
 char gCheckLapTime = 1;
 char gUpdateTournamentInfoFlag = 1;
@@ -286,8 +286,7 @@ void Nfs2::GameModuleStartUp(sint32 *FrontEndDataStream)
         static char songs[] = "ymus";
         AudioMus::SysStartUp(0x6000, 0x14000, songs);
     }
-    AudioMus::BuildPlayList(GameSetup::gData.userSetting.numplaylistsongs,
-        GameSetup::gData.userSetting.playlist);
+    AudioMus::BuildPlayList(GameSetup::gData.userSetting.numplaylistsongs, GameSetup::gData.userSetting.playlist);
     largestunused();
 }
 
@@ -422,11 +421,7 @@ sint32 Nfs4Main(void)
                     {
                         Replay::ReplayInterface.statsScreen = 1;
                         sint32 opponents = Stats::GetNumOpponents();
-                        if (opponents > 1 &&
-                            ((GameSetup::gData.raceType != 1 && GameSetup::gData.raceType != 5) ||
-                             ((Cars::gHumanRaceCarList[0]->carFlags & 0x200U) == 0 &&
-                              (Cars::gNumHumanRaceCars != 2 ||
-                               (Cars::gHumanRaceCarList[1]->carFlags & 0x200U) == 0))))
+                        if (opponents > 1 && ((GameSetup::gData.raceType != 1 && GameSetup::gData.raceType != 5) || ((Cars::gHumanRaceCarList[0]->carFlags & 0x200U) == 0 && (Cars::gNumHumanRaceCars != 2 || (Cars::gHumanRaceCarList[1]->carFlags & 0x200U) == 0))))
                         {
                             static char win[] = "win*";
                             static char lose[] = "lose*";

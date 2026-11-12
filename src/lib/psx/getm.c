@@ -9,9 +9,9 @@ uint32 getm(const void *data, sint32 length)
     const volatile uint8 *bytes = (const volatile uint8 *)data;
     uint32 first = bytes[0];
     uint32 second = bytes[1];
-    if ((sint32)((uint32)length - 3) < 0)
+    if ((length - 3) < 0)
     {
-        if ((sint32)((uint32)length - 2) < 0)
+        if ((length - 2) < 0)
             return first;
         return (first << 8) | second;
     }
@@ -37,7 +37,7 @@ void putm(void *data, uint32 value, sint32 length)
     FUNCTION_MARKER(0x800F30AC, "NFS4.EXE");
 
     uint8 *bytes = (uint8 *)data;
-    sint32 remaining = (sint32)((uint32)length - 1);
+    sint32 remaining = (length - 1);
     while (remaining >= 0)
     {
         bytes[remaining] = value;
@@ -51,7 +51,7 @@ void puti(void *data, uint32 value, sint32 length)
     FUNCTION_MARKER(0x800F30D4, "NFS4.EXE");
 
     uint8 *bytes = (uint8 *)data;
-    sint32 remaining = (sint32)((uint32)length - 1);
+    sint32 remaining = (length - 1);
     while (remaining >= 0)
     {
         *bytes++ = value;

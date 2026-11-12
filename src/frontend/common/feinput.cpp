@@ -93,13 +93,13 @@ sint32 FEInput::GetDebounceKey(sint32 key, sint32 controller)
     FUNCTION_MARKER(0x80023B74, "FRONT.BIN");
     if (GetNoDebounceKey(key, controller) == 0)
     {
-        debounce[controller] = (sint32)(uint32(debounce[controller]) & ~uint32(key));
+        debounce[controller] = (uint32(debounce[controller]) & ~uint32(key));
         return 0;
     }
     uint32 previous = uint32(debounce[controller]);
     if ((previous & uint32(key)) == 0)
     {
-        debounce[controller] = (sint32)(previous | uint32(key));
+        debounce[controller] = (previous | uint32(key));
         nextTick = 0;
         return 1;
     }
@@ -107,10 +107,10 @@ sint32 FEInput::GetDebounceKey(sint32 key, sint32 controller)
     if (key != 0x10 && key != 0x80 && key != 0x20 && key != 0x40)
         return 0;
     if (nextTick == 0)
-        nextTick = (sint32)(uint32(tick) + uint32(FeTools::gScrollTicksOut) + 10);
+        nextTick = ((tick + FeTools::gScrollTicksOut) + 10);
     if (tick < nextTick)
         return 0;
-    nextTick = (sint32)(uint32(tick) + uint32(FeTools::gScrollTicksOut));
+    nextTick = (tick + FeTools::gScrollTicksOut);
     return 1;
 }
 

@@ -9,12 +9,12 @@ void Quatern::VecInterpolate(coorddef *cp0, coorddef *cp1, sint32 weight, coordd
 {
     FUNCTION_MARKER(0x800AD5C8, "NFS4.EXE");
 
-    sint32 delta = fixedmult((sint32)((uint32)cp1->x - cp0->x), weight);
-    cp->x = (sint32)((uint32)cp0->x + delta);
-    delta = fixedmult((sint32)((uint32)cp1->y - cp0->y), weight);
-    cp->y = (sint32)((uint32)cp0->y + delta);
-    delta = fixedmult((sint32)((uint32)cp1->z - cp0->z), weight);
-    cp->z = (sint32)((uint32)cp0->z + delta);
+    sint32 delta = fixedmult(((cp1->x - cp0->x)), weight);
+    cp->x = (cp0->x + delta);
+    delta = fixedmult(((cp1->y - cp0->y)), weight);
+    cp->y = (cp0->y + delta);
+    delta = fixedmult(((cp1->z - cp0->z)), weight);
+    cp->z = (cp0->z + delta);
 }
 
 void Quatern::Interpolate(tQuat *q0, tQuat *q1, coorddef *cp0, coorddef *cp1, sint32 weight, tQuat *q, coorddef *cp)
@@ -68,9 +68,7 @@ void Quatern::MatToQuat(matrixtdef *matrix, tQuat *q)
 {
     FUNCTION_MARKER(0x800AD890, "NFS4.EXE");
 
-    if (matrix->m[0] == 65536 && matrix->m[1] == 0 && matrix->m[2] == 0 &&
-        matrix->m[3] == 0 && matrix->m[4] == 65536 && matrix->m[5] == 0 &&
-        matrix->m[6] == 0 && matrix->m[7] == 0 && matrix->m[8] == 65536)
+    if (matrix->m[0] == 65536 && matrix->m[1] == 0 && matrix->m[2] == 0 && matrix->m[3] == 0 && matrix->m[4] == 65536 && matrix->m[5] == 0 && matrix->m[6] == 0 && matrix->m[7] == 0 && matrix->m[8] == 65536)
     {
         q->w = 16384;
         q->x = 0;
@@ -78,19 +76,19 @@ void Quatern::MatToQuat(matrixtdef *matrix, tQuat *q)
         q->z = 0;
         return;
     }
-    sint32 tr = (sint32)((uint32)matrix->m[0] + matrix->m[4] + matrix->m[8]);
+    sint32 tr = ((matrix->m[0] + matrix->m[4]) + matrix->m[8]);
     sint32 s;
     sint32 component;
     if (tr > 0)
     {
-        s = fixedsqrt((sint32)((uint32)tr + 65536));
-        q->w = (sint16)((sint32)((uint32)s + ((uint32)s >> 31)) >> 3);
+        s = fixedsqrt(((tr + 65536)));
+        q->w = (sint16)((s + ((uint32)s >> 31)) >> 3);
         s = fixeddiv(32768, s);
-        component = fixedmult((sint32)((uint32)matrix->m[7] - matrix->m[5]), s);
+        component = fixedmult(((matrix->m[7] - matrix->m[5])), s);
         q->x = (sint16)(component >> 2);
-        component = fixedmult((sint32)((uint32)matrix->m[2] - matrix->m[6]), s);
+        component = fixedmult(((matrix->m[2] - matrix->m[6])), s);
         q->y = (sint16)(component >> 2);
-        component = fixedmult((sint32)((uint32)matrix->m[3] - matrix->m[1]), s);
+        component = fixedmult(((matrix->m[3] - matrix->m[1])), s);
         q->z = (sint16)(component >> 2);
         return;
     }
@@ -105,41 +103,41 @@ void Quatern::MatToQuat(matrixtdef *matrix, tQuat *q)
         i = 2;
     if (i == 0)
     {
-        s = fixedsqrt((sint32)((uint32)matrix->m[0] - matrix->m[4] - matrix->m[8] + 65536));
-        q->x = (sint16)((sint32)((uint32)s + ((uint32)s >> 31)) >> 3);
+        s = fixedsqrt(((((matrix->m[0] - matrix->m[4]) - matrix->m[8]) + 65536)));
+        q->x = (sint16)((s + ((uint32)s >> 31)) >> 3);
         if (s != 0)
             s = fixeddiv(32768, s);
-        component = fixedmult((sint32)((uint32)matrix->m[7] - matrix->m[5]), s);
+        component = fixedmult(((matrix->m[7] - matrix->m[5])), s);
         q->w = (sint16)(component >> 2);
-        component = fixedmult((sint32)((uint32)matrix->m[3] + matrix->m[1]), s);
+        component = fixedmult(((matrix->m[3] + matrix->m[1])), s);
         q->y = (sint16)(component >> 2);
-        component = fixedmult((sint32)((uint32)matrix->m[2] + matrix->m[6]), s);
+        component = fixedmult(((matrix->m[2] + matrix->m[6])), s);
         q->z = (sint16)(component >> 2);
     }
     else if (i == 1)
     {
-        s = fixedsqrt((sint32)((uint32)matrix->m[4] - matrix->m[8] - matrix->m[0] + 65536));
-        q->y = (sint16)((sint32)((uint32)s + ((uint32)s >> 31)) >> 3);
+        s = fixedsqrt(((((matrix->m[4] - matrix->m[8]) - matrix->m[0]) + 65536)));
+        q->y = (sint16)((s + ((uint32)s >> 31)) >> 3);
         if (s != 0)
             s = fixeddiv(32768, s);
-        component = fixedmult((sint32)((uint32)matrix->m[2] - matrix->m[6]), s);
+        component = fixedmult(((matrix->m[2] - matrix->m[6])), s);
         q->w = (sint16)(component >> 2);
-        component = fixedmult((sint32)((uint32)matrix->m[7] + matrix->m[5]), s);
+        component = fixedmult(((matrix->m[7] + matrix->m[5])), s);
         q->z = (sint16)(component >> 2);
-        component = fixedmult((sint32)((uint32)matrix->m[3] + matrix->m[1]), s);
+        component = fixedmult(((matrix->m[3] + matrix->m[1])), s);
         q->x = (sint16)(component >> 2);
     }
     else
     {
-        s = fixedsqrt((sint32)((uint32)matrix->m[8] - matrix->m[0] - matrix->m[4] + 65536));
-        q->z = (sint16)((sint32)((uint32)s + ((uint32)s >> 31)) >> 3);
+        s = fixedsqrt(((((matrix->m[8] - matrix->m[0]) - matrix->m[4]) + 65536)));
+        q->z = (sint16)((s + ((uint32)s >> 31)) >> 3);
         if (s != 0)
             s = fixeddiv(32768, s);
-        component = fixedmult((sint32)((uint32)matrix->m[3] - matrix->m[1]), s);
+        component = fixedmult(((matrix->m[3] - matrix->m[1])), s);
         q->w = (sint16)(component >> 2);
-        component = fixedmult((sint32)((uint32)matrix->m[2] + matrix->m[6]), s);
+        component = fixedmult(((matrix->m[2] + matrix->m[6])), s);
         q->x = (sint16)(component >> 2);
-        component = fixedmult((sint32)((uint32)matrix->m[5] + matrix->m[7]), s);
+        component = fixedmult(((matrix->m[5] + matrix->m[7])), s);
         q->y = (sint16)(component >> 2);
     }
 }

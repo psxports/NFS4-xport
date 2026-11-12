@@ -32,7 +32,7 @@ sint32 iSNDdetunetolinear(sint32 detune)
     }
     while (detune < -1199)
     {
-        scale = ((uint32)((sint32)scale >> 1));
+        scale = (((sint32)scale >> 1));
         detune += 1200;
     }
     sint32 index = (detune * 0x369D) >> 16;
@@ -65,5 +65,5 @@ void iSNDcalcpitch(sint32 channel)
         voice->pitchAdjustment = (uint16)iSNDdetunetolinear(detune);
     }
     uint32 product = ((uint32)(voice->pitchAdjustment)) * voice->pitchMultiplier;
-    voice->pitch = (uint16)((sint32)product >> 12);
+    voice->pitch = (uint16)(product >> 12);
 }

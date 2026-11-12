@@ -2,6 +2,7 @@
 #define NFS3_H
 
 #include "xport.h"
+#include "eaclib/psx/nfile.h"
 #include "psx.h"
 #include "frontend/common/fecars.h"
 #include "game/common/car.h"
@@ -150,7 +151,7 @@ struct tNfsSystemInfo
 sint32 Nfs4Main(void);
 
 extern tNfsSystemInfo nfs_sysInfo;
-extern sint32 gFEBigHandle;
+extern NativeFileSlot *gFEBigHandle;
 extern tfrontEnd frontEnd;
 extern sint32 gUseFrontend;
 extern char gCalculateVictory;

@@ -8,7 +8,7 @@ uint32 mb_default;
 extern "C" uint32 initmemblock(MemBlock *block, const char *name, sint32 length, sint32 tailSize, uint32 flags, MemBlock *previous, MemBlock *next)
 {
     FUNCTION_MARKER(0x800E4F2C, "NFS4.EXE");
-    uint8 *tail = reinterpret_cast<uint8 *>(block) + 16 + length;
+    uint8 *tail = reinterpret_cast<uint8 *>(block) + sizeof(MemBlock) + length;
     ::new (block) MemBlock;
     block->tag = 0x424D;
     block->length = length;
@@ -40,7 +40,7 @@ MemFreeBlock *FREE::find(MemClass *heap, sint32 length, sint32 fromEnd)
 MemFreeBlock *FREE::findlargest(MemClass *heap, sint32 length, sint32 fromEnd)
 {
     FUNCTION_MARKER(0x800E4DB0, "NFS4.EXE");
-    sint32 minimum = (sint32)((uint32)length - 1);
+    sint32 minimum = (length - 1);
     if (minimum < 0)
         minimum = 0;
     MemFreeBlock *best = 0;
@@ -65,7 +65,7 @@ void FREE::add(MemClass *heap, MemFreeBlock *block)
     uintptr_t first = reinterpret_cast<uintptr_t>(next->nextFree);
     uintptr_t last = reinterpret_cast<uintptr_t>(next->previousFree);
     uintptr_t middle = first + ((last - first) >> 1);
-    sint32 length = (sint32)((uint32)(reinterpret_cast<uintptr_t>(block->block.nextPhysical) - address) - 16);
+    sint32 length = ((uint32)(reinterpret_cast<uintptr_t>(block->block.nextPhysical) - address) - (uint32)sizeof(MemBlock));
     if (middle < address) {
         do {
             previous = previous->previousFree;
@@ -95,21 +95,27 @@ extern "C" sint32 creatememclass(uint32 classFlags, const char *name, void *memo
         flags |= 0x200;
     if (storeNames)
         flags |= 0x100;
+    if (alignment < (sint32)sizeof(void *))
+        alignment = sizeof(void *);
+    if (boundaryAlignment < (sint32)sizeof(void *))
+        boundaryAlignment = sizeof(void *);
     uint8 *arena = static_cast<uint8 *>(memory);
-    uintptr_t firstAddress = (reinterpret_cast<uintptr_t>(arena) + (uint32)tailSize + 0x50 + (uint32)boundaryAlignment + 31) & (0 - (uint32)boundaryAlignment);
-    MemFreeBlock *first = ::new (reinterpret_cast<void *>(firstAddress - 16)) MemFreeBlock;
+    uintptr_t firstAddress = (reinterpret_cast<uintptr_t>(arena) + (uint32)tailSize + sizeof(MemBlock) + sizeof(MemClass) + (uint32)boundaryAlignment + 31) & (~((uintptr_t)boundaryAlignment - 1));
+    MemFreeBlock *first = ::new (reinterpret_cast<void *>(firstAddress - sizeof(MemBlock))) MemFreeBlock;
     MemBlock *low = reinterpret_cast<MemBlock *>(arena);
-    MemBlock *high = reinterpret_cast<MemBlock *>(arena + size - ((uint32)tailSize + 32));
+    uintptr_t highAddress = reinterpret_cast<uintptr_t>(arena + size - ((uint32)tailSize + sizeof(MemBlock) + 16));
+    highAddress &= ~((uintptr_t)sizeof(void *) - 1);
+    MemBlock *high = reinterpret_cast<MemBlock *>(highAddress);
     char label[256];
     sprintf(label, "%s LOW", name);
-    initmemblock(low, label, 64, tailSize, flags | 0x8000, 0, &first->block);
-    sint32 available = reinterpret_cast<uintptr_t>(high) - reinterpret_cast<uintptr_t>(first) - 16;
+    initmemblock(low, label, sizeof(MemClass), tailSize, flags | 0x8000, 0, &first->block);
+    sint32 available = reinterpret_cast<uintptr_t>(high) - reinterpret_cast<uintptr_t>(first) - sizeof(MemBlock);
     initmemblock(&first->block, 0, available, tailSize, flags, low, high);
     sprintf(label, "%s HIGH", name);
     initmemblock(high, label, 0, tailSize, flags | 0x8010, &first->block, 0);
-    MemClass *heap = ::new (arena + 16) MemClass;
+    MemClass *heap = ::new (arena + sizeof(MemBlock)) MemClass;
     memclass[classFlags & 15] = heap;
-    blockclear(heap, 64);
+    blockclear(heap, sizeof(*heap));
     strcpy(heap->name, name);
     heap->freeList.block.tag = 0x4253;
     heap->lowBlock = low;
@@ -139,14 +145,13 @@ extern "C" sint32 largestunused(void)
 extern "C" sint32 getblocksize(const void *memory)
 {
     FUNCTION_MARKER(0x800E52D4, "NFS4.EXE");
-    const MemBlock *block = reinterpret_cast<const MemBlock *>(static_cast<const uint8 *>(memory) - 16);
+    const MemBlock *block = reinterpret_cast<const MemBlock *>(static_cast<const uint8 *>(memory) - sizeof(MemBlock));
     return block->length;
 }
 
 void FREE::remove(MemClass *heap, MemFreeBlock *block)
 {
     FUNCTION_MARKER(0x800E4F04, "NFS4.EXE");
-    (void)heap;
     MemFreeBlock *previous = block->previousFree;
     MemFreeBlock *next = block->nextFree;
     previous->nextFree = next;
@@ -165,7 +170,7 @@ sint32 MEM::infosize(uint32 flags)
 extern "C" char *getblockname(void *memory)
 {
     FUNCTION_MARKER(0x800E52E0, "NFS4.EXE");
-    MemBlock *block = reinterpret_cast<MemBlock *>(static_cast<uint8 *>(memory) - 16);
+    MemBlock *block = reinterpret_cast<MemBlock *>(static_cast<uint8 *>(memory) - sizeof(MemBlock));
     uint16 flags = block->flags;
     if ((flags & 0x100) == 0)
         return 0;
@@ -180,7 +185,7 @@ sint32 MEM::tailsize(const char *name, uint32 flags)
     uint32 nameSize = 0;
     if (name && (heap->flags & 0x100) != 0)
         nameSize = (uint32)strlen(name) + 1;
-    return (uint32)heap->tailSize + nameSize;
+    return heap->tailSize + nameSize;
 }
 
 extern "C" void *reservememadr(const char *name, sint32 length, uint32 flags)
@@ -188,15 +193,16 @@ extern "C" void *reservememadr(const char *name, sint32 length, uint32 flags)
     FUNCTION_MARKER(0x800E533C, "NFS4.EXE");
     MemClass *heap = memclass[flags & 15];
     sint32 needed = length;
-    if (length < 8) {
+    sint32 minimumPayload = (sint32)(sizeof(MemFreeBlock) - sizeof(MemBlock));
+    if (length < minimumPayload) {
         if (length < 0)
             return 0;
-        needed = 8;
+        needed = minimumPayload;
     }
     sint32 tailSize = MEM::tailsize(name, flags);
     uint32 mask = (uint32)heap->alignment - 1;
-    uint32 total = ((uint32)needed + (uint32)tailSize + (uint32)heap->alignment + 15) & ~mask;
-    needed = total - 16;
+    uint32 total = (needed + (uint32)tailSize + heap->alignment + (uint32)sizeof(MemBlock) - 1U) & ~mask;
+    needed = total - (uint32)sizeof(MemBlock);
     MemFreeBlock *freeBlock;
     if ((flags & 0x20) != 0)
         freeBlock = FREE::findlargest(heap, needed, flags & 0x10);
@@ -206,11 +212,11 @@ extern "C" void *reservememadr(const char *name, sint32 length, uint32 flags)
         return 0;
     FREE::remove(heap, freeBlock);
     MemBlock *block = &freeBlock->block;
-    sint32 remaining = (uint32)block->length - (uint32)needed;
+    sint32 remaining = block->length - needed;
     if (remaining > 64) {
         if ((flags & 0x10) != 0) {
             MemBlock *original = block;
-            uint32 offset = (uint32)remaining & ~mask;
+            uint32 offset = remaining & ~mask;
             block = ::new (reinterpret_cast<uint8 *>(original) + offset) MemBlock;
             original->nextPhysical->previousPhysical = block;
             MemBlock *next = original->nextPhysical;
@@ -229,7 +235,7 @@ extern "C" void *reservememadr(const char *name, sint32 length, uint32 flags)
     flags |= heap->flags & 0x700;
     if (!name)
         flags &= ~0x100;
-    uint8 *result = reinterpret_cast<uint8 *>(block) + 16;
+    uint8 *result = reinterpret_cast<uint8 *>(block) + sizeof(MemBlock);
     initmemblock(block, name, length, heap->tailSize, flags, block->previousPhysical, block->nextPhysical);
     return result;
 }
@@ -238,7 +244,7 @@ extern "C" uint32 purgememadr(void *memory)
 {
     FUNCTION_MARKER(0x800E5540, "NFS4.EXE");
     if (memory) {
-        MemBlock *block = reinterpret_cast<MemBlock *>(static_cast<uint8 *>(memory) - 16);
+        MemBlock *block = reinterpret_cast<MemBlock *>(static_cast<uint8 *>(memory) - sizeof(MemBlock));
         MemBlock *next = block->nextPhysical;
         MemBlock *previous = block->previousPhysical;
         MemClass *heap = memclass[block->flags & 15];

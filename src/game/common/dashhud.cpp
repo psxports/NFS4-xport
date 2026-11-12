@@ -80,7 +80,7 @@ void DashHUD::HUDCalc(sint32 player)
     FUNCTION_MARKER(0x8009B108, "NFS4.EXE");
     Car::tObj *car = Cars::gHumanRaceCarList[player];
     static sint32 resethud;
-    gInfo.lap = (sint32)((uint32)car->stats.lap + 1);
+    gInfo.lap = (car->stats.lap + 1);
     if (gInfo.lap < 1)
         gInfo.lap = 1;
     if (gInfo.lap > gInfo.maxlaps)
@@ -91,10 +91,10 @@ void DashHUD::HUDCalc(sint32 player)
         gInfo.flashtime = 0;
     } else {
         sint32 lap = car->stats.lap;
-        sint32 elapsed = (sint32)((uint32)currentTime - (uint32)car->stats.lapTime);
+        sint32 elapsed = (currentTime - car->stats.lapTime);
         if (lap == 0 || (elapsed >= 320 && car->stats.finishType != 2)) {
             gInfo.flashtime = 0;
-            gInfo.laptime = (sint32)((uint32)simGlobal.gameTicks - (uint32)car->stats.lapTime);
+            gInfo.laptime = (simGlobal.gameTicks - car->stats.lapTime);
             if (resethud != 0)
                 resethud = 0;
         } else {
@@ -102,21 +102,19 @@ void DashHUD::HUDCalc(sint32 player)
             if (lap >= 1 && lap <= 4) {
                 completedTime = car->stats.time[lap - 1];
             } else {
-                uint32 timeOffset = (uint32)(offsetof(Car::tObj, stats) + offsetof(Car::tStats, time)) +
-                    (((uint32)lap - 1) << 2);
+                uint32 timeOffset = (uint32)(offsetof(Car::tObj, stats) + offsetof(Car::tStats, time)) + (((uint32)lap - 1) << 2);
                 uint8 *carBytes = reinterpret_cast<uint8 *>(car);
                 memcpy(&completedTime, carBytes + timeOffset, sizeof(completedTime));
             }
             gInfo.laptime = completedTime;
-            if (GameSetup::gData.raceType != 4 && Replay::ReplayMode < 2 &&
-                (gInfo.record == 0 || gInfo.laptime < gInfo.record || GameSetup::gData.checkpointType == 4)) {
+            if (GameSetup::gData.raceType != 4 && Replay::ReplayMode < 2 && (gInfo.record == 0 || gInfo.laptime < gInfo.record || GameSetup::gData.checkpointType == 4)) {
                 gInfo.flashtime = 1;
                 gInfo.record = gInfo.laptime;
             } else {
                 if (gInfo.record == gInfo.laptime)
                     gInfo.flashtime = 1;
                 sint32 flashTicks = simGlobal.gameTicks;
-                if ((sint32)((uint32)car->stats.sliceTime + 192) < flashTicks)
+                if ((car->stats.sliceTime + 192) < flashTicks)
                     gInfo.flashtime = 0;
                 if (gInfo.flashtime != 0 && (flashTicks & 16) != 0) {
                     if (resethud == 0)
@@ -127,16 +125,15 @@ void DashHUD::HUDCalc(sint32 player)
             }
         }
     }
-    gInfo.flashlap = (sint32)((uint32)simGlobal.gameTicks - (uint32)car->stats.lapTime) < 320 &&
-        gInfo.lap == gInfo.maxlaps;
+    gInfo.flashlap = (simGlobal.gameTicks - car->stats.lapTime) < 320 && gInfo.lap == gInfo.maxlaps;
     gInfo.position = Stats::GetPosition(car);
     gInfo.opponents = Stats::GetNumOpponents();
     Cars::InitDashData(car, &gInfo.redline, &gInfo.topspeed);
     Cars::GetDashData(car, &gInfo.rpm, &gInfo.gear, &gInfo.speed);
     sint32 speed = gInfo.speed;
-    sint32 topSpeed = (sint16)((uint32)gInfo.topspeed >> 16);
+    sint32 topSpeed = (sint16)(gInfo.topspeed >> 16);
     if (speed < 0)
-        speed = (sint32)(0 - (uint32)speed);
+        speed = (-speed);
     gInfo.speed = speed;
     gInfo.topspeed = topSpeed;
 }

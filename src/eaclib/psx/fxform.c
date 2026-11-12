@@ -22,7 +22,7 @@ void fixedxformx(matrixtdef *matrix, sint32 angle)
     matrix->m[6] = 0;
     matrix->m[5] = sine;
     matrix->m[4] = cosine;
-    matrix->m[7] = (sint32)(0 - (uint32)sine);
+    matrix->m[7] = (-sine);
     matrix->m[8] = cosine;
 }
 
@@ -39,7 +39,7 @@ void fixedxformy(matrixtdef *matrix, sint32 angle)
     matrix->m[5] = 0;
     matrix->m[7] = 0;
     matrix->m[0] = cosine;
-    matrix->m[2] = (sint32)(0 - (uint32)sine);
+    matrix->m[2] = (-sine);
     matrix->m[6] = sine;
     matrix->m[8] = cosine;
 }
@@ -58,6 +58,6 @@ void fixedxformz(matrixtdef *matrix, sint32 angle)
     matrix->m[8] = 65536;
     matrix->m[1] = sine;
     matrix->m[0] = cosine;
-    matrix->m[3] = (sint32)(0 - (uint32)sine);
+    matrix->m[3] = (-sine);
     matrix->m[4] = cosine;
 }

@@ -73,9 +73,9 @@ void Sfx::Transform(coorddef *worldpt, SVECTOR *campt, coorddef *t)
     FUNCTION_MARKER(0x800DD050, "NFS4.EXE");
     TrsProj::SetPsxMatrix(&gWorldMat, 0);
     SVECTOR pt;
-    pt.vx = (sint16)((sint32)((uint32)worldpt->x - (uint32)t->x) >> 10);
-    pt.vy = (sint16)((sint32)((uint32)worldpt->y - (uint32)t->y) >> 10);
-    pt.vz = (sint16)((sint32)((uint32)worldpt->z - (uint32)t->z) >> 10);
+    pt.vx = (sint16)((worldpt->x - (uint32)t->x) >> 10);
+    pt.vy = (sint16)((worldpt->y - (uint32)t->y) >> 10);
+    pt.vz = (sint16)((worldpt->z - (uint32)t->z) >> 10);
     gte_ldv0(&pt);
     gte_rt();
     VECTOR campt32;
@@ -121,21 +121,21 @@ void Sfx::BuildSmokeFacet(Souffle::tISouffle *is, sfxsouffle *dSouffle, Draw::tP
 void Sfx::ThickenXZ(SVECTOR *d, coorddef *pt1, coorddef *pt2, coorddef *cp)
 {
     FUNCTION_MARKER(0x800DD370, "NFS4.EXE");
-    sint32 angle = intatan((sint32)((uint32)pt2->x - (uint32)pt1->x), (sint32)((uint32)pt2->z - (uint32)pt1->z));
-    sint32 pxp = fixedmult(0xE666, (sint32)(0 - (uint32)fastintcos(angle))) >> 1;
+    sint32 angle = intatan(((pt2->x - pt1->x)), (pt2->z - pt1->z));
+    sint32 pxp = fixedmult(0xE666, (-fastintcos(angle))) >> 1;
     sint32 pzp = fixedmult(0xE666, fastintsin(angle)) >> 1;
-    d[1].vx = (sint16)((sint32)((uint32)pt1->x + (uint32)pxp - (uint32)cp->x) >> 10);
-    d[1].vy = (sint16)((sint32)((uint32)pt1->y - (uint32)cp->y) >> 10);
-    d[1].vz = (sint16)((sint32)((uint32)pt1->z + (uint32)pzp - (uint32)cp->z) >> 10);
-    d[2].vx = (sint16)((sint32)((uint32)pt1->x - (uint32)pxp - (uint32)cp->x) >> 10);
-    d[2].vy = (sint16)((sint32)((uint32)pt1->y - (uint32)cp->y) >> 10);
-    d[2].vz = (sint16)((sint32)((uint32)pt1->z - (uint32)pzp - (uint32)cp->z) >> 10);
-    d[0].vx = (sint16)((sint32)((uint32)pt2->x + (uint32)pxp - (uint32)cp->x) >> 10);
-    d[0].vy = (sint16)((sint32)((uint32)pt2->y - (uint32)cp->y) >> 10);
-    d[0].vz = (sint16)((sint32)((uint32)pt2->z + (uint32)pzp - (uint32)cp->z) >> 10);
-    d[3].vx = (sint16)((sint32)((uint32)pt2->x - (uint32)pxp - (uint32)cp->x) >> 10);
-    d[3].vy = (sint16)((sint32)((uint32)pt2->y - (uint32)cp->y) >> 10);
-    d[3].vz = (sint16)((sint32)((uint32)pt2->z - (uint32)pzp - (uint32)cp->z) >> 10);
+    d[1].vx = (sint16)((pt1->x + (uint32)pxp - (uint32)cp->x) >> 10);
+    d[1].vy = (sint16)((pt1->y - (uint32)cp->y) >> 10);
+    d[1].vz = (sint16)((pt1->z + (uint32)pzp - (uint32)cp->z) >> 10);
+    d[2].vx = (sint16)((pt1->x - (uint32)pxp - (uint32)cp->x) >> 10);
+    d[2].vy = (sint16)((pt1->y - (uint32)cp->y) >> 10);
+    d[2].vz = (sint16)((pt1->z - (uint32)pzp - (uint32)cp->z) >> 10);
+    d[0].vx = (sint16)((pt2->x + (uint32)pxp - (uint32)cp->x) >> 10);
+    d[0].vy = (sint16)((pt2->y - (uint32)cp->y) >> 10);
+    d[0].vz = (sint16)((pt2->z + (uint32)pzp - (uint32)cp->z) >> 10);
+    d[3].vx = (sint16)((pt2->x - (uint32)pxp - (uint32)cp->x) >> 10);
+    d[3].vy = (sint16)((pt2->y - (uint32)cp->y) >> 10);
+    d[3].vz = (sint16)((pt2->z - (uint32)pzp - (uint32)cp->z) >> 10);
 }
 
 void Sfx::BuildFastDisolveFacet(Souffle::tISouffle *is, sfxsouffle *dSouffle, Draw::tPixMap *t, Draw::tPixMap *c)
@@ -171,8 +171,8 @@ void Sfx::AdditivePrim(Draw::tPixMap *pmx, SVECTOR *pt, sint32 mode, sint32 offs
     gte_stsxy3(&prim->p[1].xy, &prim->p[3].xy, &prim->p[2].xy);
     gte_avsz4();
     gte_stotz(&sd->otz);
-    sd->otz = (sint32)((uint32)(sd->otz >> 1) + (uint32)offset);
-    sint32 limit = (sint32)((uint32)Draw::gViewOtSize - 3);
+    sd->otz = (((sd->otz >> 1)) + offset);
+    sint32 limit = (Draw::gViewOtSize - 3);
     if (sd->otz < 0 || limit < sd->otz)
         return;
     setlen(prim, 9);
@@ -223,16 +223,16 @@ void Sfx::BuildSouffleFacet(DRender::tView *Vi, Souffle::tISouffle *is)
         {
             coorddef invertedm = is->motion;
             Math::NormalizeVector(&invertedm);
-            invertedm.x = (sint32)((uint32)is->source.x - ((uint32)invertedm.x << 2));
-            invertedm.y = (sint32)((uint32)is->source.y - ((uint32)invertedm.y << 2));
-            invertedm.z = (sint32)((uint32)is->source.z - ((uint32)invertedm.z << 2));
+            invertedm.x = (is->source.x - ((uint32)invertedm.x << 2));
+            invertedm.y = (is->source.y - ((uint32)invertedm.y << 2));
+            invertedm.z = (is->source.z - ((uint32)invertedm.z << 2));
             SVECTOR ptrans;
             Transform(&invertedm, &ptrans, &Vi->cview.translation);
             if (ptrans.vz < 64)
                 return;
-            sint32 dx = (sint32)ptrans.vx - is->trans.vx;
+            sint32 dx = ptrans.vx - is->trans.vx;
             if (dx <= 0)
-                dx = (sint32)is->trans.vx - ptrans.vx;
+                dx = is->trans.vx - ptrans.vx;
             if (dx < 32)
                 ptrans.vx = (sint16)(is->trans.vx + (ptrans.vx > is->trans.vx ? 32 : -32));
             dSouffle.v0.vx = is->trans.vx;
@@ -297,10 +297,10 @@ void Sfx::BuildSouffleFacet(DRender::tView *Vi, Souffle::tISouffle *is)
             coorddef invertedm = is->motion;
             Math::NormalizeVector(&invertedm);
             coorddef source = is->source;
-            sint32 scale = (sint16)((uint32)is->rndpixmap >> 16);
-            invertedm.x = (sint32)((uint32)source.x - (uint32)((sint32)((uint32)invertedm.x * (uint32)scale) >> 4));
-            invertedm.y = (sint32)((uint32)source.y - (uint32)((sint32)((uint32)invertedm.y * (uint32)scale) >> 4));
-            invertedm.z = (sint32)((uint32)source.z - (uint32)((sint32)((uint32)invertedm.z * (uint32)scale) >> 4));
+            sint32 scale = (sint16)(is->rndpixmap >> 16);
+            invertedm.x = (source.x - ((sint32)((uint32)invertedm.x * (uint32)scale) >> 4));
+            invertedm.y = (source.y - ((sint32)((uint32)invertedm.y * (uint32)scale) >> 4));
+            invertedm.z = (source.z - ((sint32)((uint32)invertedm.z * (uint32)scale) >> 4));
             SVECTOR dest[4];
             ThickenXZ(dest, &invertedm, &source, &Vi->cview.translation);
             TrsProj::SetPsxMatrix(&gWorldMat, 0);
@@ -322,7 +322,7 @@ void Sfx::BuildSouffleFacet(DRender::tView *Vi, Souffle::tISouffle *is)
             gte_avsz4();
             gte_stotz(&sd->otz);
             sd->otz = (sd->otz >> 1) + 50;
-            if (sd->otz < 0 || (sint32)((uint32)Draw::gViewOtSize - 3) < sd->otz)
+            if (sd->otz < 0 || (Draw::gViewOtSize - 3) < sd->otz)
                 return;
             setlen(prim, 9);
             Draw::tPixMap *pmx = gSparkHPixmap[6 - (uint8)is->cycle];
@@ -346,13 +346,13 @@ void Sfx::BuildSouffleFacet(DRender::tView *Vi, Souffle::tISouffle *is)
             gte_stsxy(&prim->p[0].xy);
             gte_ldv3(&dSouffle.v1, &dSouffle.v2, &dSouffle.v3);
             gte_rtpt();
-            uint32 colour = (uint32)is->colour | 0x2C000000;
+            uint32 colour = is->colour | 0x2C000000;
             memcpy(&prim->rgbc, &colour, sizeof(colour));
             gte_stsxy3(&prim->p[1].xy, &prim->p[3].xy, &prim->p[2].xy);
             gte_avsz4();
             gte_stotz(&sd->otz);
             sd->otz = (sd->otz >> 1) + 15;
-            if (sd->otz < 0 || (sint32)((uint32)Draw::gViewOtSize - 3) < sd->otz)
+            if (sd->otz < 0 || (Draw::gViewOtSize - 3) < sd->otz)
                 return;
             setlen(prim, 9);
             WriteSfxUv(prim, gLeafPixmap);
@@ -394,7 +394,7 @@ void Sfx::Add(Souffle::tISouffle *is)
             sint32 z = is->motion.z;
             sint32 x = is->motion.x;
             is->extramotion.y = 0;
-            is->extramotion.x = (sint32)(0 - (uint32)z);
+            is->extramotion.x = (-z);
             is->extramotion.z = x;
         }
         break;

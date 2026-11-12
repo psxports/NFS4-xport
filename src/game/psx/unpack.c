@@ -11,12 +11,12 @@
         uint32 signature = data[1];
         if (signature != 0xFB && signature != 0x32)
             return 0;
-        uint32 type = data[0] & 0xFEu;
+        uint32 type = data[0] & 0xFE;
         uint8 *destination = ((uint8 *)(dst));
         if (type == 0x10)
             return unrefpack(data, destination, 1);
         if (type == 0x30 || type == 0x32 || type == 0x34)
-            return (sint32)unhuff(data, destination, 1);
+            return unhuff(data, destination, 1);
         if (type == 0x46)
             return unbtree(data, destination);
         return 0;
@@ -35,7 +35,7 @@
         uint32 signature = data[1];
         if (signature != 0xFB && signature != 0x32)
             return 0;
-        uint32 type = data[0] & 0xFEu;
+        uint32 type = data[0] & 0xFE;
         if (type == 0x10 || type == 0x18 || type == 0x30 || type == 0x32 || type == 0x34 || type == 0x46 || type == 0x4A)
             return getm(data + 2, 3);
         return 0;

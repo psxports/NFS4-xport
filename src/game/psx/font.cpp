@@ -22,7 +22,7 @@ cluttbl &shpfontclut = gSystemMemoryOwner.fontPalette;
 uint16 font::currentTPage;
 sint32 font::clutx = -1;
 sint32 font::cluty = -1;
-uint32 font::tint = 1719697536U;
+uint32 font::tint = 1719697536;
 uint32 font::abr;
 
 void Font::TextColor(sint32 color)
@@ -31,20 +31,20 @@ void Font::TextColor(sint32 color)
     uint32 x = (uint16)font::clutx + ((uint32)color << 4);
     uint32 y = (uint16)shpfontclut.shapey;
     shpfontclut.shapex = (sint16)x;
-    gFontClut = (uint16)((y << 6) | ((x >> 4) & 63U));
+    gFontClut = (uint16)((y << 6) | ((x >> 4) & 63));
 }
 
 void Font::TextTint(sint32 rgb)
 {
     FUNCTION_MARKER(0x800CB244, "NFS4.EXE");
-    font::tint = ((uint32)rgb & 0xFFFFFFU) | 0x66000000U;
+    font::tint = (rgb & 0xFFFFFFU) | 0x66000000U;
 }
 
 void Font::SetABR(sint32 abr)
 {
     FUNCTION_MARKER(0x800CB264, "NFS4.EXE");
     shapetbl *shape = currentfont.shape;
-    font::abr = (uint32)abr;
+    font::abr = abr;
     if (shape)
         font::currentTPage = GetTPage(shape->type & 3U, abr, shape->shapex, shape->shapey);
 }
@@ -52,7 +52,7 @@ void Font::SetABR(sint32 abr)
 void Font::Blit(sint32 x, sint32 y, void *src, sint32 u, sint32 v, charactertbl *ch, sint32)
 {
     FUNCTION_MARKER(0x800CB2AC, "NFS4.EXE");
-    uint32 xy = ((uint32)y << 16) | (uint32)x;
+    uint32 xy = ((uint32)y << 16) | x;
     Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
     SPRT *sprt = reinterpret_cast<SPRT *>(cprim->PrimPtr);
     uint32 *ot = cprim->LastPrim;
@@ -64,15 +64,15 @@ void Font::Blit(sint32 x, sint32 y, void *src, sint32 u, sint32 v, charactertbl 
     setaddr(sprt, getaddr(ot));
     cprim->PrimPtr = reinterpret_cast<char *>(sprt + 1);
     setaddr(ot, sprt);
-    uint32 row = ((uint32)dv + (uint32)v) & 255U;
+    uint32 row = (dv + (uint32)v) & 255U;
     setlen(sprt, 4);
-    uint32 tint = (uint32)font::tint;
+    uint32 tint = font::tint;
     memcpy(&sprt->p[0].xy, &xy, sizeof(xy));
     memcpy(&sprt->rgbc, &tint, sizeof(tint));
     uint32 clut = gFontClut;
     sprt->w = (sint16)width;
     sprt->h = (sint16)height;
-    uint32 uv = (clut << 16) | (row << 8) | (uint32)u;
+    uint32 uv = (clut << 16) | (row << 8) | u;
     sprt->p[0].uv_attr = uv;
     SetSemiTrans(sprt, 1);
 }
@@ -80,13 +80,13 @@ void Font::Blit(sint32 x, sint32 y, void *src, sint32 u, sint32 v, charactertbl 
 void Font::ComputeColors(sint32 colour, sint32 forecolour, sint32 backcolour, char in_game)
 {
     FUNCTION_MARKER(0x800CB388, "NFS4.EXE");
-    sint32 fr = (uint32)forecolour & 255U;
-    sint32 fg = ((uint32)forecolour >> 8) & 255U;
-    sint32 fb = ((uint32)forecolour >> 16) & 255U;
-    sint32 br = (uint32)backcolour & 255U;
-    sint32 bg = ((uint32)backcolour >> 8) & 255U;
-    sint32 bb = ((uint32)backcolour >> 16) & 255U;
-    uint32 opaque = (uint32)forecolour & 0xFF000000U;
+    sint32 fr = forecolour & 255U;
+    sint32 fg = (forecolour >> 8) & 255U;
+    sint32 fb = (forecolour >> 16) & 255U;
+    sint32 br = backcolour & 255U;
+    sint32 bg = (backcolour >> 8) & 255U;
+    sint32 bb = (backcolour >> 16) & 255U;
+    uint32 opaque = forecolour & 0xFF000000;
     shpfontclut.type = 0x23;
     shpfontclut.width = 16;
     shpfontclut.height = 1;
@@ -127,7 +127,7 @@ void Font::ComputeColors(sint32 colour, sint32 forecolour, sint32 backcolour, ch
     }
     sint32 clutx = font::clutx;
     sint32 cluty = font::cluty;
-    sint32 destinationX = (sint32)((uint32)clutx + ((uint32)colour << 4));
+    sint32 destinationX = (clutx + ((uint32)colour << 4));
     Texture::Vramf(reinterpret_cast<shapetbl *>(&shpfontclut), clutx, cluty, destinationX, cluty);
     DrawSync(0);
 }
@@ -135,18 +135,18 @@ void Font::ComputeColors(sint32 colour, sint32 forecolour, sint32 backcolour, ch
 charactertbl * Font::textbsearch(sint32 key, char *base, uint32 nmemb, uint32 size)
 {
     FUNCTION_MARKER(0x800CB6A0, "NFS4.EXE");
-    sint32 lim = (sint32)nmemb;
+    sint32 lim = nmemb;
     while (lim != 0)
     {
         charactertbl *ch = reinterpret_cast<charactertbl *>(base + (lim >> 1) * size);
-        uint32 index = (uint32)ch->index[0] | ((uint32)ch->index[1] << 8);
-        sint32 cmp = (sint32)((uint32)key - index);
+        uint32 index = ch->index[0] | ((uint32)ch->index[1] << 8);
+        sint32 cmp = (key - index);
         if (cmp == 0)
             return ch;
         if (cmp > 0)
         {
             base = reinterpret_cast<char *>(ch) + size;
-            lim = (sint32)((uint32)lim - 1U);
+            lim = (lim - 1);
         }
         lim >>= 1;
     }
@@ -158,7 +158,7 @@ charactertbl * Font::Getcharacter(sint32 targetindex)
     FUNCTION_MARKER(0x800CB740, "NFS4.EXE");
     char *base = currentfont.characters;
     uint32 count = currentfont.characterCount;
-    uint32 index = (uint32)targetindex - 32U;
+    uint32 index = targetindex - 32U;
     if (index < count) {
         charactertbl *ch = reinterpret_cast<charactertbl *>(base + index * 11U);
         if (geti(ch, 2) == (uint32)targetindex)
@@ -198,9 +198,8 @@ void Font::DeInit(void)
     FUNCTION_MARKER(0x800CB858, "NFS4.EXE");
     if (font::clutx != -1)
     {
-        uint32 id = ((uint32)(uint16)font::cluty << 6) |
-                    (((uint32)font::clutx >> 4) & 63U);
-        Texture::MenuReleaseClutId((sint16)id);
+        uint32 id = (((uint16)font::cluty) << 6) | (((uint32)font::clutx >> 4) & 63U);
+        Texture::MenuReleaseClutId(id);
     }
     font::clutx = -1;
     font::cluty = -1;
@@ -218,7 +217,7 @@ sint32 Font::LoadFont(char *f1, sint32 x, sint32 y, char in_game)
     FUNCTION_MARKER(0x800CB8BC, "NFS4.EXE");
     setfont(f1);
     shapetbl *shp = currentfont.shape;
-    sint32 l = ((sint32)shp->width * (sint32)shp->height) / 2;
+    sint32 l = (shp->width * shp->height) / 2;
     uint8 *data = reinterpret_cast<uint8 *>(&shp->data);
     for (sint32 i = 0; i < l; ++i)
         data[i] = (uint8)((data[i] << 4) | (data[i] >> 4));
@@ -226,9 +225,7 @@ sint32 Font::LoadFont(char *f1, sint32 x, sint32 y, char in_game)
         Texture::GetClutId(1, &font::clutx, &font::cluty);
     Texture::Vramf(shp, x, y, font::clutx, font::cluty);
     waitdraw();
-    uint32 next = (uint32)(reinterpret_cast<uintptr_t>(&shpfontclut) - reinterpret_cast<uintptr_t>(shp));
-    uint32 header = (uint32)shp->type | (next << 8);
-    memcpy(shp, &header, 4);
+    shp->next = 0;
     for (sint32 i = 0; i < l; ++i)
         data[i] = (uint8)((data[i] << 4) | (data[i] >> 4));
     for (sint32 i = 0; i < 16; ++i)
@@ -239,7 +236,7 @@ sint32 Font::LoadFont(char *f1, sint32 x, sint32 y, char in_game)
     resizememadr(f1, (sint32)length);
     TextTint(0x808080);
     TextColor(2);
-    return (sint32)((uint32)y + (uint32)(sint32)shp->height);
+    return (y + shp->height);
 }
 
 void Font::TextXY(char *string, sint32 x, sint32 y)
@@ -251,7 +248,7 @@ void Font::TextXY(char *string, sint32 x, sint32 y)
     {
         code = (uint8)*str++;
         if (code < 33)
-            x = (sint32)((uint32)x + (uint32)gFontSpaceWidth);
+            x = (x + gFontSpaceWidth);
         else
         {
             charactertbl *ch = Getcharacter(code);
@@ -260,12 +257,12 @@ void Font::TextXY(char *string, sint32 x, sint32 y)
                 sint32 u = geti(ch->u, 2);
                 sint32 v = geti(ch->v, 2);
                 shapetbl *shape = currentfont.shape;
-                sint32 glyphX = (sint32)((uint32)x + (uint32)(sint8)ch->xoffset);
-                sint32 glyphY = (sint32)((uint32)y + (uint32)(sint8)ch->yoffset);
+                sint32 glyphX = (x + ((sint8)ch->xoffset));
+                sint32 glyphY = (y + ((sint8)ch->yoffset));
                 sint32 rowbytes = currentfont.rowBytes;
                 fontblit blitter = gCurrentBlitter;
                 blitter(glyphX, glyphY, shape, u, v, ch, rowbytes);
-                x = (sint32)((uint32)x + (uint32)(sint8)ch->advance);
+                x = (x + ((sint8)ch->advance));
             }
         }
     }

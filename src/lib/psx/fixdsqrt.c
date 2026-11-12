@@ -31,7 +31,7 @@ sint32 fixedsqrt(sint32 value)
         return 0;
     sint32 index = 31;
     uint32 mask = 0x80000000;
-    while (((uint32)value & mask) == 0)
+    while ((value & mask) == 0)
     {
         mask >>= 1;
         --index;
@@ -41,5 +41,5 @@ sint32 fixedsqrt(sint32 value)
     memcpy(&coefficient, original_fixdsqrt_data + index * 4, sizeof(coefficient));
     memcpy(&intercept, original_fixdsqrt_data + index * 4 + 132, sizeof(intercept));
     sint64 product = (sint64)value * coefficient;
-    return (sint32)((uint32)((uint64)product >> 16) + intercept);
+    return ((uint32)((uint64)product >> 16) + intercept);
 }

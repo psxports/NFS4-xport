@@ -280,8 +280,7 @@ void AIInit::InitAICar(Car::tObj *carObj, Udff::tInfo *handle)
         else if (carObj->topSpeeds[gearLoop] == 0)
             carObj->invTopSpeeds[gearLoop] = 0;
         else
-            carObj->invTopSpeeds[gearLoop] = fixeddiv(65536,
-                (sint32)((uint32)carObj->topSpeeds[gearLoop] - (uint32)carObj->topSpeeds[gearLoop - 1]));
+            carObj->invTopSpeeds[gearLoop] = fixeddiv(65536, ((carObj->topSpeeds[gearLoop] - carObj->topSpeeds[gearLoop - 1])));
     }
     Udff::GetBuffer(handle, (char *)carObj->accTable, sizeof(carObj->accTable));
     carObj->aiShiftDuration = Udff::GetInt(handle);
@@ -292,8 +291,7 @@ void AIInit::InitAICar(Car::tObj *carObj, Udff::tInfo *handle)
         sint32 carType = carObj->carInfo->carType;
         accelerationScale = AITune::accelerationScale[carType].scale;
     }
-    carObj->accelerationRecord = new AIDataRecord_AccTable_t((char *)carObj->accTable,
-        accelerationScale, AIDataRecord::ACCELERATION_R);
+    carObj->accelerationRecord = new AIDataRecord_AccTable_t((char *)carObj->accTable, accelerationScale, AIDataRecord::ACCELERATION_R);
     if (IsNonStandardCarFile(carObj->carInfo->carType) != 0)
         carObj->curveSpeedTable = new AIDataRecord_CurveSpeedTable_t(carObj->carName, AIDataRecord::CURVESPEED_TABLE_R);
     else
@@ -337,7 +335,6 @@ void AIInit::InitAICar2(Car::tObj *carObj)
 void AIInit::DeInitAICar2(Car::tObj *carObj)
 {
     FUNCTION_MARKER(0x800675D0, "NFS4.EXE");
-    (void)carObj;
 }
 
 sint32 AIInit::IsNonStandardCarFile(sint32 index)

@@ -37,7 +37,7 @@ void Stats::DoPlayerGlue(void)
     for (sint32 i = 0; i < Cars::gNumHumanRaceCars; ++i) {
         XASSERT(humanLeader >= 0 && humanLeader < 6);
         Car::tObj *car = Cars::gHumanRaceCarList[i];
-        sint32 dist = (sint32)((uint32)racePosition[humanLeader].slice - (uint32)car->stats.sliceTotal);
+        sint32 dist = (racePosition[humanLeader].slice - car->stats.sliceTotal);
         if (dist < 5)
             car->glue = 0x10000;
         else if (dist < 10)
@@ -106,11 +106,11 @@ void Stats::TrackStats(Car::tObj *carObj)
                 memcpy(carBytes + speedOffset, &speed, sizeof(speed));
             } else {
                 sint32 draw = randPSX();
-                sint32 limit = (sint32)((uint32)Cars::topSpeedCap[carObj->carInfo->carType] - (uint32)draw * 3);
+                sint32 limit = (Cars::topSpeedCap[carObj->carInfo->carType] - (draw * 3));
                 sint32 speed = carObj->linearVel_ch.z;
                 if (limit < speed) {
                     draw = randPSX();
-                    speed = (sint32)((uint32)Cars::topSpeedCap[carObj->carInfo->carType] - (uint32)draw * 3);
+                    speed = (Cars::topSpeedCap[carObj->carInfo->carType] - (draw * 3));
                 }
                 memcpy(carBytes + speedOffset, &speed, sizeof(speed));
             }
@@ -119,12 +119,10 @@ void Stats::TrackStats(Car::tObj *carObj)
     lap = carObj->stats.lap;
     if (lap != carObj->lap && carObj->stats.finishType == 0) {
         sint32 completedTime;
-        if ((GameSetup::gData.raceType == 1 || GameSetup::gData.raceType == 5) &&
-            ((Cars::gHumanRaceCarList[0]->carFlags & 0x200) != 0 ||
-             (Cars::gNumHumanRaceCars == 2 && (Cars::gHumanRaceCarList[1]->carFlags & 0x200) != 0))) {
+        if ((GameSetup::gData.raceType == 1 || GameSetup::gData.raceType == 5) && ((Cars::gHumanRaceCarList[0]->carFlags & 0x200) != 0 || (Cars::gNumHumanRaceCars == 2 && (Cars::gHumanRaceCarList[1]->carFlags & 0x200) != 0))) {
             completedTime = 99999;
         } else {
-            completedTime = (sint32)((uint32)currentTime - (uint32)carObj->stats.lapTime);
+            completedTime = (currentTime - carObj->stats.lapTime);
             lap = carObj->stats.lap;
         }
 
@@ -133,33 +131,28 @@ void Stats::TrackStats(Car::tObj *carObj)
         sint32 newLap = carObj->lap;
         carObj->stats.lapTime = currentTime;
         carObj->stats.lap = newLap;
-        if (newLap == GameSetup::gData.numLaps &&
-            ((GameSetup::gData.raceType != 1 && GameSetup::gData.raceType != 5) ||
-             ((Cars::gHumanRaceCarList[0]->carFlags & 0x200) == 0 &&
-              (Cars::gNumHumanRaceCars != 2 || (Cars::gHumanRaceCarList[1]->carFlags & 0x200) == 0)))) {
+        if (newLap == GameSetup::gData.numLaps && ((GameSetup::gData.raceType != 1 && GameSetup::gData.raceType != 5) || ((Cars::gHumanRaceCarList[0]->carFlags & 0x200) == 0 && (Cars::gNumHumanRaceCars != 2 || (Cars::gHumanRaceCarList[1]->carFlags & 0x200) == 0)))) {
             carObj->stats.sliceTime = currentTime;
             carObj->stats.finishType = 2;
-            carObj->stats.lapTime = (sint32)((uint32)carObj->stats.lapTime - 512);
-            carObj->stats.sliceTotal = (sint32)(((uint32)carObj->stats.lap + 1) * (uint32)trackSlices);
+            carObj->stats.lapTime = (carObj->stats.lapTime - 512);
+            carObj->stats.sliceTotal = ((carObj->stats.lap + 1) * trackSlices);
         }
     }
     sint32 roadSlice;
     if (GameSetup::gData.reverseTrack != 0)
-        roadSlice = (sint32)((uint32)trackSlices - (uint32)carObj->N.simRoadInfo.slice - 1);
+        roadSlice = ((trackSlices - carObj->N.simRoadInfo.slice) - 1);
     else
         roadSlice = carObj->N.simRoadInfo.slice;
     if (carObj->stats.slice != roadSlice) {
         carObj->stats.slice = roadSlice;
         if (carObj->stats.finishType == 0) {
             carObj->stats.sliceTime = currentTime;
-            carObj->stats.sliceTotal = (sint32)(((uint32)carObj->stats.lap - (uint32)carObj->unlap) *
-                (uint32)trackSlices + (uint32)carObj->stats.slice);
+            carObj->stats.sliceTotal = (((carObj->stats.lap - carObj->unlap) * trackSlices) + carObj->stats.slice);
         }
     }
     sint32 numCars = Cars::gNumRaceCars;
     for (sint32 i = 0; i < numCars; ++i) {
-        if (racePosition[i].slice < carObj->stats.sliceTotal ||
-            (carObj->stats.sliceTotal == racePosition[i].slice && carObj->stats.sliceTime < racePosition[i].sliceTime)) {
+        if (racePosition[i].slice < carObj->stats.sliceTotal || (carObj->stats.sliceTotal == racePosition[i].slice && carObj->stats.sliceTime < racePosition[i].sliceTime)) {
             for (sint32 j = numCars - 2; j >= i; --j) {
                 sint32 r1 = racePosition[j].car;
                 sint32 r2 = racePosition[j].slice;
@@ -194,12 +187,11 @@ void Stats::ExtrapolateOpponentTimes(sint32 type)
             sint32 sliceTotal = carObj->stats.sliceTotal;
             if (sliceTotal <= 0)
                 sliceTotal = 1;
-            sint32 startingTime = (sint32)((uint32)carObj->stats.sliceTime - 512);
+            sint32 startingTime = (carObj->stats.sliceTime - 512);
             if (sliceTotal < 100)
                 startingTime = sliceTotal * 13;
-            uint32 distance = (uint32)gNumSlices * (uint32)GameSetup::gData.numLaps +
-                (uint32)carObj->stats.extractSlice;
-            sint32 extrapolatedTime = (sint32)((uint32)startingTime * distance) / sliceTotal;
+            uint32 distance = gNumSlices * (uint32)GameSetup::gData.numLaps + carObj->stats.extractSlice;
+            sint32 extrapolatedTime = (sint32)(startingTime * distance) / sliceTotal;
             carObj->stats.lapTime = quick_finish ? extrapolatedTime : (sint32)((uint32)extrapolatedTime << 1);
             if (GameSetup::gData.raceType != 2 || GameSetup::gData.localCar == i)
                 Cars::gHumanRaceCarList[i]->stats.finishType = quick_finish ? 2 : 1;
@@ -239,7 +231,7 @@ void Stats::ExtrapolateOpponentTimes(sint32 type)
         Cars::gHumanRaceCarList[i]->stats.finalDamage = 0;
         for (sint32 j = 0; j < 10; ++j) {
             carObj = Cars::gHumanRaceCarList[i];
-            carObj->stats.finalDamage = (sint32)((uint32)carObj->stats.finalDamage + (uint32)carObj->N.damage[j]);
+            carObj->stats.finalDamage = (carObj->stats.finalDamage + carObj->N.damage[j]);
         }
         for (sint32 j = 0; j < GameSetup::gData.numLaps; ++j) {
             uint8 *carBytes = reinterpret_cast<uint8 *>(Cars::gHumanRaceCarList[i]);
@@ -260,18 +252,17 @@ void Stats::ExtrapolateOpponentTimes(sint32 type)
             sint32 sliceTotal = carObj->stats.sliceTotal;
             if (sliceTotal <= 0)
                 sliceTotal = 1;
-            sint32 startingTime = (sint32)((uint32)carObj->stats.sliceTime - 512);
+            sint32 startingTime = (carObj->stats.sliceTime - 512);
             if (sliceTotal < 100)
                 startingTime = sliceTotal * 13;
-            uint32 distance = (uint32)gNumSlices * (uint32)GameSetup::gData.numLaps +
-                (uint32)carObj->stats.extractSlice;
-            sint32 extrapolatedTime = (sint32)((uint32)startingTime * distance) / sliceTotal;
+            uint32 distance = gNumSlices * (uint32)GameSetup::gData.numLaps + carObj->stats.extractSlice;
+            sint32 extrapolatedTime = (sint32)(startingTime * distance) / sliceTotal;
             if (quick_finish || Cars::gHumanRaceCarList[0]->stats.finishType == 2) {
                 Cars::gAIRaceCarList[i]->stats.lapTime = extrapolatedTime;
             } else {
                 sint32 draw = randPSX();
-                sint32 delay = (sint32)((uint32)GameSetup::gData.numLaps * (uint32)draw) / 128;
-                Cars::gAIRaceCarList[i]->stats.lapTime = (sint32)((uint32)extrapolatedTime + (uint32)delay);
+                sint32 delay = (GameSetup::gData.numLaps * draw) / 128;
+                Cars::gAIRaceCarList[i]->stats.lapTime = (extrapolatedTime + delay);
             }
             Cars::gAIRaceCarList[i]->stats.finishType = 2;
         }
@@ -295,7 +286,7 @@ void Stats::ExtrapolateOpponentTimes(sint32 type)
         sint32 totalTime = carObj->stats.finalTotalTime;
         if (numLaps == 0 || (numLaps == -1 && totalTime == INT_MIN))
             abort();
-        sint32 averageLap = (sint32)((uint32)(totalTime / numLaps) - (uint32)(draw / 48));
+        sint32 averageLap = (((totalTime / numLaps)) - (draw / 48));
         if (averageLap < carObj->stats.finalBestLap)
             carObj->stats.finalBestLap = averageLap;
         for (sint32 j = 0; j < GameSetup::gData.numLaps; ++j) {
@@ -335,8 +326,8 @@ void Stats::TrackEndGame(void)
     sint32 Stats_PlayersFinishedRace = 0;
     if (Cars::gNumRaceCars >= 2) {
         sint32 ticks = simGlobal.gameTicks;
-        if ((ticks / 64) * 64 == (sint32)((uint32)ticks - 1)) {
-            sint32 trackSlices = (sint32)((uint32)GameSetup::gData.numLaps * (uint32)gNumSlices);
+        if ((ticks / 64) * 64 == (ticks - 1)) {
+            sint32 trackSlices = (GameSetup::gData.numLaps * gNumSlices);
             for (sint32 i = 0; i < Cars::gNumHumanRaceCars; ++i) {
                 sint32 PlayerSlice = Cars::gHumanRaceCarList[i]->stats.sliceTotal;
                 if (trackSlices < PlayerSlice)
@@ -350,7 +341,7 @@ void Stats::TrackEndGame(void)
                 else if (GameSetup::gData.checkpointType == 1)
                     DesiredComparison = 1;
                 else
-                    DesiredComparison = (sint32)((uint32)PlayerPosition - 1);
+                    DesiredComparison = (PlayerPosition - 1);
                 for (sint32 j = 0; j < Cars::gNumRaceCars; ++j) {
                     if (GetPosition(Cars::gRaceCarList[j]) == DesiredComparison) {
                         DesiredSlice = Cars::gRaceCarList[j]->stats.sliceTotal;
@@ -359,7 +350,7 @@ void Stats::TrackEndGame(void)
                         if (PlayerPosition == 1) {
                             sint32 speed = Cars::gRaceCarList[j]->linearVel_ch.z;
                             if (speed < 0)
-                                speed = (sint32)(0u - (uint32)speed);
+                                speed = (-speed);
                             DesiredSpeed = speed >> 16;
                         } else {
                             DesiredSpeed = Cars::gHumanRaceCarList[i]->linearVel_ch.z >> 16;
@@ -367,14 +358,13 @@ void Stats::TrackEndGame(void)
                         break;
                     }
                 }
-                Cars::gHumanRaceCarList[i]->stats.checkpointUpdate =
-                    (sint32)((uint32)DesiredSlice - (uint32)PlayerSlice);
+                Cars::gHumanRaceCarList[i]->stats.checkpointUpdate = (DesiredSlice - PlayerSlice);
                 if (DesiredSpeed < 16 || Cars::gHumanRaceCarList[i]->stats.finishType == 2) {
                     Cars::gHumanRaceCarList[i]->stats.checkpointDifference = 0;
                     Cars::gHumanRaceCarList[i]->stats.checkpointDisplay = 0;
                 } else {
                     Car::tObj *carObj = Cars::gHumanRaceCarList[i];
-                    sint32 difference = (sint32)((uint32)carObj->stats.checkpointUpdate * 384);
+                    sint32 difference = (carObj->stats.checkpointUpdate * 384);
                     carObj->stats.checkpointDifference = difference / DesiredSpeed;
                     Cars::gHumanRaceCarList[i]->stats.checkpointDisplay = 1;
                 }
@@ -392,9 +382,7 @@ void Stats::TrackEndGame(void)
                 if (carObj->stats.finishType >= 2) {
                     sint32 sliceTime = carObj->stats.sliceTime;
                     sint32 ticks = simGlobal.gameTicks;
-                    if ((sint32)((uint32)sliceTime + 320) < ticks &&
-                        ((queuePlay == queueHead && speechHandle == -1) ||
-                         (sint32)((uint32)sliceTime + 640) < ticks)) {
+                    if ((sliceTime + 320) < ticks && ((queuePlay == queueHead && speechHandle == -1) || (sliceTime + 640) < ticks)) {
                         ++Stats_PlayersFinishedRace;
                     }
                 }

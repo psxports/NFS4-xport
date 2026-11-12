@@ -135,9 +135,7 @@ static sint32 ReadNativeSave(NativeSaveFile *file)
         file->present = 3;
         return 1;
     }
-    if (bytes != (sint32)sizeof(*file) || file->magic != NATIVE_SAVE_MAGIC ||
-        file->version != NATIVE_SAVE_VERSION || file->profileSize != sizeof(tMemCardData) ||
-        file->present == 0 || (file->present & ~uint32(3)) != 0)
+    if (bytes != (sint32)sizeof(*file) || file->magic != NATIVE_SAVE_MAGIC || file->version != NATIVE_SAVE_VERSION || file->profileSize != sizeof(tMemCardData) || file->present == 0 || (file->present & ~uint32(3)) != 0)
         return -1;
     for (sint32 player = 0; player < 2; ++player)
         if ((file->present & (1 << player)) != 0 && !VerifySuccessfulRead(&file->profile[player]))

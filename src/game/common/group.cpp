@@ -19,19 +19,19 @@ SerializedGroup *SerializedGroup::LocateGroupType(sint32 type, sint32 index)
     SerializedGroup *group = this + 1;
     for (;;)
     {
-        numElems = (sint32)((uint32)numElems - 1U);
+        numElems = (numElems - 1);
         if (numElems == -1)
             return 0;
         if (group->m_type == type)
         {
             bool found = count == index;
-            count = (sint32)((uint32)count + 1U);
+            count = (count + 1);
             if (found)
                 return group;
         }
-        uint32 remainder = (uint32)group->m_length & 3U;
+        uint32 remainder = group->m_length & 3U;
         if (remainder != 0)
-            group->m_length = (sint32)((uint32)group->m_length + 4U - remainder);
+            group->m_length = (group->m_length + 4U - remainder);
         group = reinterpret_cast<SerializedGroup *>(reinterpret_cast<uint8 *>(group) + group->m_length);
     }
 }
@@ -60,21 +60,21 @@ Group *SerializedGroup::LocateCreateGroupType(sint32 type, SimpleMem *mem, sint3
 Group *SerializedGroup::CreateLiteGroup(SerializedGroup *source, SimpleMem *mem)
 {
     FUNCTION_MARKER(0x8009C27C, "NFS4.EXE");
-    sint32 newLen = (sint32)((uint32)source->m_length - 12U);
+    sint32 newLen = (source->m_length - 12);
     Group *ret = static_cast<Group *>(mem->Alloc(newLen, 0));
     ret->m_num_elements = source->m_num_elements;
 
-    blockmove(source + 1, ret + 1, newLen);
+    blockmove(source + 1, ret + 1, newLen - sizeof(*ret));
     return ret;
 }
 
 Group *SerializedGroup::CreateLiteGroupDataSize(SerializedGroup *source, SimpleMem *mem, sint32 dataSize)
 {
     FUNCTION_MARKER(0x8009C2E4, "NFS4.EXE");
-    sint32 newLen = (sint32)((uint32)dataSize + 4U);
+    sint32 newLen = (dataSize + 4);
     Group *ret = static_cast<Group *>(mem->Alloc(newLen, 0));
     ret->m_num_elements = 0;
 
-    blockmove(source + 1, ret + 1, newLen);
+    blockmove(source + 1, ret + 1, newLen - sizeof(*ret));
     return ret;
 }

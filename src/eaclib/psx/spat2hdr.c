@@ -51,7 +51,7 @@ sint32 iSNDpatchtohdr(uint8 *patch, SNDSAMPLEFORMAT *format, SoundAttributesPref
             attributes->unknown10 = (uint8)value;
             break;
         case 5:
-            attributes->unknown0 = (sint32)value;
+            attributes->unknown0 = value;
             break;
         case 6:
             attributes->unknown6 = (uint8)value;

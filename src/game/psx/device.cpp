@@ -130,7 +130,7 @@ sint32 Device::PSXPad(uint32 param)
 {
     FUNCTION_MARKER(0x800BD644, "NFS4.EXE");
 
-    sint32 port = (uint32)param >> 16;
+    sint32 port = param >> 16;
     if (VerifyType(port) == 0)
         return 0;
     return ((~(uint32)gPadinfo.buf[port].data.standard.state & 0xffff & param) != 0) ? 255 : 0;
@@ -197,7 +197,7 @@ sint32 Device::Analog(uint32 param)
 {
     FUNCTION_MARKER(0x800BD9B8, "NFS4.EXE");
 
-    sint32 port = (uint32)param >> 20;
+    sint32 port = param >> 20;
     if (VerifyType(port) == 0)
         return 0;
     uint8 *analogs = (uint8 *)&gPadinfo.buf[port].data.analog + 2;
@@ -225,6 +225,5 @@ sint32 Device::Null(uint32 param)
 {
     FUNCTION_MARKER(0x800BDAB8, "NFS4.EXE");
 
-    (void)param;
     return 0;
 }

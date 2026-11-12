@@ -36,14 +36,14 @@ void iSNDpacketsetirq(void)
         return;
     for (sint32 attempt = 0; attempt < 2; ++attempt)
     {
-        sndpp = (sint32)((uint32)sndpp + 1u);
+        sndpp = (sndpp + 1);
         if (sndpp > 0)
             sndpp = 0;
         SoundPlatformPacketBufferPrefix *packet = sndpd.packetBuffers[sndpp];
         if (packet != 0 && packet->channel >= 0)
         {
-            uint16 address = (uint16)((sint32)((uint32)packet->spuAddress + 8u) >> 3);
-            if (!spu_mmio_write(0, 0x1F801DA4u, 2, address, 3))
+            uint16 address = (uint16)((packet->spuAddress + 8u) >> 3);
+            if (!spu_mmio_write(0, 0x1F801DA4, 2, address, 3))
                 abort();
             InterruptCallback(9, iSNDpacketirqcallback);
             iSNDpsxenablespuirq();
@@ -84,7 +84,7 @@ void iSNDpacketpurgeframes(sint32 handle, uint32 position, uint32 frames)
         if (perPacket == 0)
             abort();
         uint32 index = position / perPacket;
-        uint32 chunk = (index + 1u) * perPacket - position;
+        uint32 chunk = (index + 1) * perPacket - position;
         if ((sint32)frames < (sint32)chunk)
             chunk = frames;
         uint16 *counts = ((uint16 *)(packet->data));
@@ -152,10 +152,10 @@ void iSNDfillspuwithpackets(sint32 handle, uint32 packetIndex)
                 packet->unknown3C = 0;
                 break;
             }
-            sint32 scaled = (sint32)(frames << 2);
-            sint64 product = (sint64)scaled * (sint32)0x92492493u;
-            uint32 sum = (uint32)(sint32)(product >> 32) + (uint32)scaled;
-            uint32 bytes = (uint32)((sint32)sum >> 2) - (uint32)(scaled >> 31);
+            sint32 scaled = (frames << 2);
+            sint64 product = (sint64)scaled * (sint32)0x92492493;
+            uint32 sum = ((sint32)(product >> 32)) + (uint32)scaled;
+            uint32 bytes = ((sint32)sum >> 2) - (uint32)(scaled >> 31);
             packet->unknown36 = 0;
             packet->unknown32 = 0;
             packet->unknown34 = (uint16)bytes;
@@ -165,11 +165,11 @@ void iSNDfillspuwithpackets(sint32 handle, uint32 packetIndex)
         if (chunk >= packet->unknown3C)
             chunk = packet->unknown3C;
         uint16 *counts = ((uint16 *)(packet->data));
-        counts[packetIndex] = (uint16)(counts[packetIndex] + (chunk * 7u >> 2));
+        counts[packetIndex] = (uint16)(counts[packetIndex] + (chunk * 7 >> 2));
         for (sint32 channel = 0; channel < voice->channelCount; ++channel)
         {
             const uint8 *source = packet->packetData[0] + packet->unknown32 + packet->unknown30 * channel;
-            blockmove(source, packet->work[channel] + packet->unknown3E, (sint32)chunk);
+            blockmove(source, packet->work[channel] + packet->unknown3E, chunk);
         }
         packet->unknown3E = (uint16)(packet->unknown3E + chunk);
         packet->unknown32 = (uint16)(packet->unknown32 + chunk);
@@ -181,17 +181,16 @@ void iSNDfillspuwithpackets(sint32 handle, uint32 packetIndex)
         for (sint32 channel = 0; channel < voice->channelCount; ++channel)
             packet->work[channel][1] |= 4;
     }
-    else if (packetIndex == (uint32)packet->packetCount - 1u)
+    else if (packetIndex == packet->packetCount - 1u)
     {
         for (sint32 channel = 0; channel < voice->channelCount; ++channel)
             packet->work[channel][packet->packetSize - 15] |= 1;
     }
     for (sint32 channel = 0; channel < voice->channelCount; ++channel)
     {
-        uint32 address = (uint32)packet->spuAddress + (packetIndex << (packet->shift & 31)) +
-            packet->rightOffset * (uint32)channel;
+        uint32 address = packet->spuAddress + (packetIndex << (packet->shift & 31)) + packet->rightOffset * channel;
         sint32 notify = packetIndex == 0 && channel == 0;
-        packet->dmaRequest = iSNDdmqueue(packet->work[channel], (sint32)address, packet->packetSize, 2, notify);
+        packet->dmaRequest = iSNDdmqueue(packet->work[channel], address, packet->packetSize, 2, notify);
     }
 advanceWritten:
     packet->packetCurrent = (uint16)packetIndex;
@@ -218,8 +217,8 @@ void iSNDpacketserve(void)
             delta = position - packet->lastPosition;
         if ((sint32)packet->playedFrames > 0x70FFFFFF)
         {
-            packet->playedFrames += 0x90000000u;
-            packet->writtenFrames += 0x90000000u;
+            packet->playedFrames += 0x90000000;
+            packet->writtenFrames += 0x90000000;
         }
         packet->playedFrames += delta;
         iSNDpacketpurgeframes(handle, packet->lastPosition, delta);
@@ -227,7 +226,7 @@ void iSNDpacketserve(void)
         packet->lastPosition = position;
         if (refill && iSNDdmcomplete(packet->dmaRequest) != 0)
         {
-            uint32 next = (uint32)packet->packetCurrent + 1u;
+            uint32 next = packet->packetCurrent + 1u;
             if (next >= packet->packetCount)
                 next -= packet->packetCount;
             iSNDfillspuwithpackets(handle, next);
@@ -239,7 +238,7 @@ sint32 iSNDplatformpacketoverhead(void)
 {
     FUNCTION_MARKER(0x801041B8, "NFS4.EXE");
     sint32 blocks = sndpsxlimits.packetbufsize / 4096;
-    return (sint32)((((uint32)blocks + 3) & ~3) * 2 + 0x1050);
+    return (sint32)((((uint32)blocks + 3) & ~3) * 2 + sizeof(SoundPlatformPacketBufferPrefix) + 4096);
 }
 
 sint32 iSNDplatformcalcdatarate(const SNDSAMPLEFORMAT *format)
@@ -255,7 +254,7 @@ sint32 iSNDplatformpacketplaycreate(sint32 handle, void *buffer)
     SoundPlatformPacketBufferPrefix *packet = ((SoundPlatformPacketBufferPrefix *)(buffer));
     sndpd.stopCallback = iSNDpsxpacketstop;
     packet->channel = -1;
-    packet->data = ((uint8 *)(buffer)) + 0x1050;
+    packet->data = ((uint8 *)(buffer)) + sizeof(*packet) + 4096;
     packet->spuAddress = iSNDpsxmalloc(sndpsxlimits.packetbufsize);
     packet->bufferSize = sndpsxlimits.packetbufsize;
     if (packet->spuAddress == 0)
@@ -271,8 +270,7 @@ void iSNDplatformpacketplaydestroy(sint32 handle)
     sndpd.packetBuffers[handle] = 0;
 }
 
-sint32 iSNDplatformpacketplay(sint32 handle, sint32 channel, sint32 pan, sint32 volume, sint32 pitch,
-    sint32 unused0, sint32 effect, SNDSAMPLEFORMAT *format, void * unused1)
+sint32 iSNDplatformpacketplay(sint32 handle, sint32 channel, sint32 pan, sint32 volume, sint32 pitch, sint32 unused0, sint32 effect, SNDSAMPLEFORMAT *format, void * unused1)
 {
     FUNCTION_MARKER(0x80104304, "NFS4.EXE");
     SoundPlatformChannel *voice = &sndpd.channels[channel];
@@ -285,16 +283,16 @@ sint32 iSNDplatformpacketplay(sint32 handle, sint32 channel, sint32 pan, sint32 
     voice->pan = (uint16)pan;
     voice->volume = (sint8)volume;
     voice->effectLevel = (sint8)effect;
-    voice->sampleAddress = (uint32)packet->spuAddress;
+    voice->sampleAddress = packet->spuAddress;
     voice->stream = (sint8)handle;
     sint32 channels = voice->channelCount;
     if (channels == 0)
         abort();
     packet->packetSize = (uint16)(4096 / channels);
-    packet->framesPerPacket = (uint16)((packet->packetSize * 28) / 16);
-    packet->work[0] = ((uint8 *)(packet)) + 0x50;
+    packet->framesPerPacket = (uint16)(((packet->packetSize * 28) >> 4));
+    packet->work[0] = ((uint8 *)(packet)) + sizeof(*packet);
     packet->shift = (uint8)(13 - voice->channelCount);
-    packet->work[1] = ((uint8 *)(packet)) + 0x50 + packet->packetSize;
+    packet->work[1] = ((uint8 *)(packet)) + sizeof(*packet) + packet->packetSize;
     packet->packetCount = (uint16)(packet->bufferSize >> (packet->shift & 31));
     channels = voice->channelCount;
     if (channels == 0)
@@ -321,18 +319,18 @@ sint32 iSNDplatformpacketplay(sint32 handle, sint32 channel, sint32 pan, sint32 
         while (iSNDdmcomplete(packet->dmaRequest) == 0)
         {
         }
-        iSNDfillspuwithpackets(handle, (uint32)i);
+        iSNDfillspuwithpackets(handle, i);
     }
     sndpd.serveCallback = iSNDpacketserve;
     sndpd.irqCallback = iSNDpacketsetirq;
     voice->unknown0C = 0;
     voice->unknown10 = 0;
     voice->unknown14 = packet->unknown0C << 12;
-    voice->basePitch = (uint16)(((uint32)format->samplerate * 0x17C7u) >> 16);
+    voice->basePitch = (uint16)((format->samplerate * 0x17C7u) >> 16);
     if (voice->channelCount >= 2)
     {
         SoundVoicePrefix *logical = ((SoundVoicePrefix *)(sndgs.voiceMemory));
-        voice->partner = (sint8)logical[channel].unknown04[0];
+        voice->partner = logical[channel].unknown04[0];
         sndpd.channels[voice->partner].unknown21 = 1;
         sndpd.channels[voice->partner].unknown0C = 0;
         sndpd.channels[voice->partner].unknown10 = 0;

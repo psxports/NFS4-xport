@@ -12,7 +12,6 @@ bool iscurrentthread(sint32 thread)
 void yieldthread(sint32 thread)
 {
     FUNCTION_MARKER(0x800FE41C, "NFS4.EXE");
-    (void)thread;
 }
 
 MemMutex *allocmutex(void)

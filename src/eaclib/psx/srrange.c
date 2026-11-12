@@ -9,6 +9,6 @@ sint32 randrange(sint32 range)
     else if (range < 0)
         range = 0;
     uint32 random = iSNDrandom();
-    sint32 centered = (sint32)(random & 32767) - 16384;
+    sint32 centered = (random & 32767) - 16384;
     return (centered * range) >> 14;
 }

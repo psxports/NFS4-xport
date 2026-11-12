@@ -39,12 +39,12 @@ static sint32 tournPointsCompare(const void *p1, const void *p2)
     FUNCTION_MARKER(0x80032A50, "FRONT.BIN");
     uint8 first = *static_cast<const uint8 *>(p1);
     uint8 second = *static_cast<const uint8 *>(p2);
-    sint32 result = (sint32)tournamentManager.fCompetitors[second].fPoints - (sint32)tournamentManager.fCompetitors[first].fPoints;
+    sint32 result = tournamentManager.fCompetitors[second].fPoints - tournamentManager.fCompetitors[first].fPoints;
     if (result == 0) {
         result = (sint8)tournamentManager.fCompetitors[second].fIsPlayerCar - (sint8)tournamentManager.fCompetitors[first].fIsPlayerCar;
         if (result == 0) {
             Car::tStats *dummyCars = Cars::gNewCarStatsList;
-            result = (sint32)((uint32)dummyCars[first].finalPosition - (uint32)dummyCars[second].finalPosition);
+            result = (dummyCars[first].finalPosition - dummyCars[second].finalPosition);
         }
     }
     return result;
@@ -195,12 +195,12 @@ void tTournamentManager::UpdateTournFinishMoney(void)
     fPrevBestPlacement = fBestPlacement[(sint8)tourn->fTournamentID];
     if (tourn->fKnockout != 0) {
         sint32 prize = GetTournamentFinishPrize(fCompetitors[0].fPosition - 1);
-        fAwards.fTournMoney = (sint32)((uint32)fAwards.fTournMoney + (uint32)prize);
+        fAwards.fTournMoney = (fAwards.fTournMoney + prize);
     } else {
         for (uint8 i = 0; i < 6; ++i) {
             if (fRanking[i] == 0) {
                 sint32 prize = GetTournamentFinishPrize(i);
-                fAwards.fTournMoney = (sint32)((uint32)fAwards.fTournMoney + (uint32)prize);
+                fAwards.fTournMoney = (fAwards.fTournMoney + prize);
                 if (i < (sint8)fBestPlacement[(sint8)tourn->fTournamentID])
                     fBestPlacement[(sint8)tourn->fTournamentID] = (char)(i + 1);
             }
@@ -214,7 +214,7 @@ void tTournamentManager::UpdateTrackFinishMoney(void)
     Car::tStats *dummyCars = Cars::gNewCarStatsList;
     if (dummyCars[0].finalFinishType == 2) {
         sint32 prize = GetTrackFinishPrize((sint16)((uint16)dummyCars[0].finalPosition - 1));
-        fAwards.fMoney = (sint32)((uint32)fAwards.fMoney + (uint32)prize);
+        fAwards.fMoney = (fAwards.fMoney + prize);
     }
 }
 
@@ -234,7 +234,7 @@ void tTournamentManager::CalcTrackFinishDamageBill(bool recalculate, sint32 &bil
         sint32 totalcarprice = carInfo.fPrices[0];
         for (sint32 i = 0; i < 2; ++i) {
             if ((carInfo.fUpgrades & (1U << i)) != 0)
-                totalcarprice = (sint32)((uint32)totalcarprice + (uint32)carInfo.fPrices[i + 1]);
+                totalcarprice = (totalcarprice + carInfo.fPrices[i + 1]);
         }
         sint32 damage = dummyCars[0].finalDamage / 65536;
         if (damage == 0 && dummyCars[0].finalPosition < 4) {
@@ -246,7 +246,7 @@ void tTournamentManager::CalcTrackFinishDamageBill(bool recalculate, sint32 &bil
                 retbonus = totalcarprice / 100;
         } else {
             retbonus = 0;
-            retbill = (sint32)((uint32)totalcarprice * (uint32)damage * 3UL) / 10000;
+            retbill = (sint32)(totalcarprice * (uint32)damage * 3UL) / 10000;
         }
     }
     bill = retbill;
@@ -263,7 +263,7 @@ void tTournamentManager::UpdateTrackFinishPoints(void)
         sint16 k = 0;
         for (sint32 i = 0; i < numCompetitors; ++i) {
             if (fCompetitors[i].fEliminated == 0) {
-                if ((uint32)dummyCars[k].finalPosition - 1U < 6 && dummyCars[k].finalFinishType == 2) {
+                if (dummyCars[k].finalPosition - 1U < 6 && dummyCars[k].finalFinishType == 2) {
                     if (dummyCars[k].finalPosition < fNumRacers)
                         fCompetitors[i].fPoints = (uint16)(fCompetitors[i].fPoints + 1);
                     else
@@ -273,10 +273,10 @@ void tTournamentManager::UpdateTrackFinishPoints(void)
                 ++k;
             }
         }
-        fNumRacers = (sint32)((uint32)fNumRacers - 1U);
+        fNumRacers = (fNumRacers - 1);
     } else {
         for (sint32 i = 0; i < numCompetitors; ++i) {
-            uint32 place = (uint32)dummyCars[i].finalPosition - 1U;
+            uint32 place = dummyCars[i].finalPosition - 1U;
             if (place < 6 && dummyCars[i].finalFinishType == 2)
                 fCompetitors[i].fPoints = (uint16)(fCompetitors[i].fPoints + fFinishPoints[place]);
         }
@@ -292,7 +292,7 @@ sint16 tTournamentManager::AdvanceToNextTrack(void)
 {
     FUNCTION_MARKER(0x80033048, "FRONT.BIN");
     tTourneyInfo *currentTourney = &fDefinition->fTournaments[fDefinition->fTiers[fTier].fTournOffset + fTournament];
-    if (fCurrentTrack > (sint32)currentTourney->fNumTracks - 1)
+    if (fCurrentTrack > currentTourney->fNumTracks - 1)
         return -1;
     fAwards.fMoney = 0;
     fAwards.fTournMoney = 0;
@@ -300,11 +300,11 @@ sint16 tTournamentManager::AdvanceToNextTrack(void)
     fAwards.fAwardCar = 0;
     UpdateTrackFinishMoney();
     UpdateTrackFinishPoints();
-    if (fCurrentTrack == (sint32)currentTourney->fNumTracks - 1) {
+    if (fCurrentTrack == currentTourney->fNumTracks - 1) {
         UpdateTournFinishMoney();
         CalcTierFinishPrize();
     }
-    fCurrentTrack = (sint32)((uint32)fCurrentTrack + 1U);
+    fCurrentTrack = (fCurrentTrack + 1);
     if (fCurrentTrack >= currentTourney->fNumTracks) {
         fAwards.fAwardCarGarageFull = 0;
         fAwards.fCompletedGarageFull = 0;
@@ -336,7 +336,7 @@ sint16 tTournamentManager::AdvanceToNextTrack(void)
                 fAwards.fAwardCarUpgrades = currentTourney->fAwardCarUpgrades;
                 if (carManager.GetNumOwnedCars(0) >= 32) {
                     fAwards.fAwardCarGarageFull = 1;
-                    fAwards.fTournMoney = (sint32)((uint32)fAwards.fTournMoney + (uint32)carInfo->fPrices[0]);
+                    fAwards.fTournMoney = (fAwards.fTournMoney + carInfo->fPrices[0]);
                     fAwards.fAwardCarBonusMoney = carInfo->fPrices[0];
                 }
             }
@@ -369,7 +369,7 @@ sint16 tTournamentManager::AdvanceToNextTrack(void)
                     } else {
                         fAwards.fCompletedGarageFull = 1;
                         fAwards.fCompletedBonusMoney = carInfo->fPrices[0];
-                        fMoney = (sint32)((uint32)fMoney + (uint32)carInfo->fPrices[0]);
+                        fMoney = (fMoney + carInfo->fPrices[0]);
                     }
                     fAwards.fCompletedText = (sint16)((uint16)fTier + 985);
                 }
@@ -446,12 +446,12 @@ sint32 tTournamentManager::GetTrackFinishPrize(sint16 position)
             sint32 carPrice = carInfo.fPrices[0];
             for (sint32 i = 0; i < 3; ++i) {
                 if ((carInfo.fUpgrades & (1U << i)) != 0)
-                    carPrice = (sint32)((uint32)carPrice + (uint32)carInfo.fPrices[i + 1]);
+                    carPrice = (carPrice + carInfo.fPrices[i + 1]);
             }
             result = fixedmult(openClassAdjust[carInfo.fCarClass][position], carPrice);
         }
     }
-    return (sint32)((uint32)result + (uint32)fDefinition->fTracks[currentTourney->fTrackOffset + fCurrentTrack].fPrize[position]);
+    return (result + fDefinition->fTracks[currentTourney->fTrackOffset + fCurrentTrack].fPrize[position]);
 }
 
 sint32 tTournamentManager::GetTournamentFinishPrize(sint16 position)
@@ -483,10 +483,10 @@ void tTournamentManager::UpdateAwardInformation(void)
     sint32 bill;
     sint32 bonus;
     CalcTrackFinishDamageBill(true, bill, bonus);
-    fMoney = (sint32)((uint32)fMoney - (uint32)bill);
-    fMoney = (sint32)((uint32)fMoney + (uint32)bonus);
-    fMoney = (sint32)((uint32)fMoney + (uint32)fAwards.fMoney);
-    fMoney = (sint32)((uint32)fMoney + (uint32)fAwards.fTournMoney);
+    fMoney = (fMoney - bill);
+    fMoney = (fMoney + bonus);
+    fMoney = (fMoney + fAwards.fMoney);
+    fMoney = (fMoney + fAwards.fTournMoney);
     if ((fAwards.fActivateFlags & 2) != 0)
         FECheat::ActivateBonus((tCheatCode)fAwards.fActivateCarClass);
     if ((fAwards.fActivateFlags & 4) != 0)
@@ -507,7 +507,7 @@ void tTournamentManager::UpdateAwardInformation(void)
 sint16 tTournamentManager::TournPointTotal(sint16 *p)
 {
     FUNCTION_MARKER(0x80033A8C, "FRONT.BIN");
-    return (sint16)fCompetitors[*p].fPoints;
+    return fCompetitors[*p].fPoints;
 }
 
 sint16 tTournamentManager::PlayerRanking(sint16 pos)
@@ -603,8 +603,7 @@ void tListIteratorTournament::Increment(tPlayer)
         char *value = fValue;
         *value = (char)((uint8)*value + 1);
         value = fValue;
-        if ((uint8)*value >= tier->fNumTournaments)
-            *value = 0;
+        if ((uint8)*value >= tier->fNumTournaments) *value = 0;
     } while (ValidTournament(*fValue) != 1);
 }
 

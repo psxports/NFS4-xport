@@ -6,7 +6,7 @@ sint32 fixedinverse(sint32 value)
     FUNCTION_MARKER(0x800ED3EC, "NFS4.EXE");
 
     uint32 sign = value < 0 ? 0xffffffff : 0;
-    uint32 magnitude = ((uint32)value ^ sign) - sign;
+    uint32 magnitude = (value ^ sign) - sign;
     uint32 quotient;
     uint32 remainder;
     if (magnitude == 0)
@@ -21,5 +21,5 @@ sint32 fixedinverse(sint32 value)
     }
     if ((uint32)((sint32)magnitude >> 1) < remainder)
         ++quotient;
-    return (sint32)((quotient ^ sign) - sign);
+    return ((quotient ^ sign) - sign);
 }

@@ -13,5 +13,5 @@ sint32 iSNDgetdata(const uint8 *data, uint32 count)
         value -= 0x10000;
     else if (count == 3 && value > 0x7FFFFF)
         value -= 0x1000000;
-    return (sint32)value;
+    return value;
 }

@@ -65,14 +65,14 @@ coorddef AIH_BTCCop::chasePositions[3][6] =
 
 static sint32 BtcOffsetSlice(sint32 slice, sint32 offset)
 {
-    sint32 result = (sint32)((uint32)slice + (uint32)offset);
+    sint32 result = (slice + offset);
     if (offset < 0)
     {
         if (result < 0)
-            result = (sint32)((uint32)result + (uint32)gNumSlices);
+            result = (result + gNumSlices);
     }
     else if (result >= gNumSlices)
-        result = (sint32)((uint32)result - (uint32)gNumSlices);
+        result = (result - gNumSlices);
     return result;
 }
 
@@ -123,7 +123,7 @@ sint32 AIHigh_BTC_Cop::CheckForNewTarget(void)
             if (thisPerpHigh->basicPerpInfo_.crime_ != CRIME_NONE) {
                 sint32 copToTargetDistanceMeters = AIWorld::ApxSplineDistance(carObj_, testPerpCarObj);
                 if (copToTargetDistanceMeters < 0)
-                    copToTargetDistanceMeters = (sint32)(0 - (uint32)copToTargetDistanceMeters);
+                    copToTargetDistanceMeters = (-copToTargetDistanceMeters);
                 if (copToTargetDistanceMeters < newTargetDistance) {
                     newTargetDistance = copToTargetDistanceMeters;
                     newTarget = thisPerpHigh;
@@ -143,7 +143,6 @@ sint32 AIHigh_BTC_Cop::CheckForNewTarget(void)
 void AIHigh_BTC_Cop::StartArrest(AIHigh_BTC_Perp *arrestMe)
 {
     FUNCTION_MARKER(0x8005CE10, "NFS4.EXE");
-    (void)arrestMe;
     if (freezeMode_ == FREEZE_NONE) {
         Car::tObj *car = carObj_;
         freezeMode_ = FREEZE_ARREST;
@@ -155,7 +154,6 @@ void AIHigh_BTC_Cop::StartArrest(AIHigh_BTC_Perp *arrestMe)
 void AIHigh_BTC_Cop::FinishArrest(AIHigh_BTC_Perp *arrestMe)
 {
     FUNCTION_MARKER(0x8005CE80, "NFS4.EXE");
-    (void)arrestMe;
     if (freezeMode_ == FREEZE_ARREST || freezeMode_ == FREEZE_NONE) {
         freezeMode_ = FREEZE_ARRESTDONE;
         FreezeAndEndChase();
@@ -214,7 +212,7 @@ AIHigh_BTC_HumanCop::AIHigh_BTC_HumanCop(Car::tObj *carObj, sint32 copIndex) : A
         FindRandomBarrierFreeArea(0, 100, 500);
         sint32 bend = AIWorld::CalcRoadBend(carObj_, 3);
         if (bend < 0)
-            bend = (sint32)(0 - (uint32)bend);
+            bend = (-bend);
         if (bend > 0x5EB8 && AIHigh::CopGameType != AIHigh::COP_GAME_BTC_1HC1HP)
             startMovement = 1;
         NewStage(carObj_->N.simRoadInfo.slice, startDirection, startMovement);
@@ -226,38 +224,38 @@ sint32 AIHigh_BTC_HumanCop::FindRandomBarrierFreeArea(sint32 startSlice, sint32 
     FUNCTION_MARKER(0x8005D150, "NFS4.EXE");
     uint32 product = fastRandom * randSeed;
     uint32 sample = (product >> 8) & 0xFFFF;
-    uint32 scaled = (uint32)randomDistance * (sample << 1);
+    uint32 scaled = randomDistance * (sample << 1);
     randtemp = product;
     fastRandom = product & 0xFFFF;
-    sint32 newOffset = (sint32)((scaled >> 16) - (uint32)randomDistance);
-    sint32 newSlice = (sint32)((uint32)startSlice + (uint32)newOffset);
+    sint32 newOffset = ((scaled >> 16) - randomDistance);
+    sint32 newSlice = (startSlice + newOffset);
     if (newOffset >= 0) {
         if (newSlice >= gNumSlices)
-            newSlice = (sint32)((uint32)newSlice - (uint32)gNumSlices);
+            newSlice = (newSlice - gNumSlices);
     } else if (newSlice < 0) {
-        newSlice = (sint32)((uint32)newSlice + (uint32)gNumSlices);
+        newSlice = (newSlice + gNumSlices);
     }
     sint32 step = safetyZone / 5;
-    sint32 width = (sint32)((uint32)safetyZone << 1);
-    sint32 negativeSafety = (sint32)(0 - (uint32)safetyZone);
+    sint32 width = ((uint32)safetyZone << 1);
+    sint32 negativeSafety = (-safetyZone);
     for (sint32 maxRuns = 0; maxRuns < 30; ++maxRuns) {
-        sint32 startCheckSlice = (sint32)((uint32)newSlice - (uint32)safetyZone);
+        sint32 startCheckSlice = (newSlice - safetyZone);
         if (negativeSafety >= 0) {
             if (startCheckSlice >= gNumSlices)
-                startCheckSlice = (sint32)((uint32)startCheckSlice - (uint32)gNumSlices);
+                startCheckSlice = (startCheckSlice - gNumSlices);
         } else if (startCheckSlice < 0) {
-            startCheckSlice = (sint32)((uint32)startCheckSlice + (uint32)gNumSlices);
+            startCheckSlice = (startCheckSlice + gNumSlices);
         }
         sint32 leftLaneFree = AIWorld::IsDriveableLaneInSliceRange(startCheckSlice, width, 1, 6);
         sint32 rightLaneFree = AIWorld::IsDriveableLaneInSliceRange(startCheckSlice, width, 1, 7);
         if (leftLaneFree && rightLaneFree)
             return newSlice;
-        newSlice = (sint32)((uint32)newSlice + (uint32)step);
+        newSlice = (newSlice + step);
         if (step >= 0) {
             if (newSlice >= gNumSlices)
-                newSlice = (sint32)((uint32)newSlice - (uint32)gNumSlices);
+                newSlice = (newSlice - gNumSlices);
         } else if (newSlice < 0) {
-            newSlice = (sint32)((uint32)newSlice + (uint32)gNumSlices);
+            newSlice = (newSlice + gNumSlices);
         }
     }
     return newSlice;
@@ -294,19 +292,18 @@ void AIHigh_BTC_HumanCop::FreezeAndEndChase(void)
     sint32 startMovement = 0;
     if (sample < 750)
         startMovement = AIHigh::CopGameType != AIHigh::COP_GAME_BTC_1HC1HP;
-    if (AIDataRecord::TrackCurve->Get(carObj_->N.simRoadInfo.slice) >= 66 &&
-        AIHigh::CopGameType != AIHigh::COP_GAME_BTC_1HC1HP)
+    if (AIDataRecord::TrackCurve->Get(carObj_->N.simRoadInfo.slice) >= 66 && AIHigh::CopGameType != AIHigh::COP_GAME_BTC_1HC1HP)
         startMovement = 1;
     sint32 startSlice = FindRandomBarrierFreeArea(carObj_->N.simRoadInfo.slice, 100, 1);
     sint32 addToSlice = startDirection * 7;
     if (((uint32)currentStage_ + 1) & 1)
         addToSlice = -addToSlice;
-    startSlice = (sint32)((uint32)startSlice + (uint32)addToSlice);
+    startSlice = (startSlice + addToSlice);
     if (addToSlice >= 0) {
         if (startSlice >= gNumSlices)
-            startSlice = (sint32)((uint32)startSlice - (uint32)gNumSlices);
+            startSlice = (startSlice - gNumSlices);
     } else if (startSlice < 0) {
-        startSlice = (sint32)((uint32)startSlice + (uint32)gNumSlices);
+        startSlice = (startSlice + gNumSlices);
     }
     carObj_->N.simRoadInfo.slice = (sint16)startSlice;
     NewStage(startSlice, startDirection, startMovement);
@@ -322,15 +319,15 @@ void AIHigh_BTC_HumanCop::CheckConditionWithCop0(void)
         sint32 startDirection = leadCop->initialDirection_;
         sint32 startMovement = leadCop->initialMovement_;
         sint32 startSlice = leadCop->carObj_->N.simRoadInfo.slice;
-        sint32 addToSlice = (sint32)((uint32)startDirection * 14);
+        sint32 addToSlice = (startDirection * 14);
         if ((((uint32)currentStage_ + 1) & 1) == 0)
-            addToSlice = (sint32)(0 - (uint32)addToSlice);
-        startSlice = (sint32)((uint32)startSlice + (uint32)addToSlice);
+            addToSlice = (-addToSlice);
+        startSlice = (startSlice + addToSlice);
         if (addToSlice >= 0) {
             if (startSlice >= gNumSlices)
-                startSlice = (sint32)((uint32)startSlice - (uint32)gNumSlices);
+                startSlice = (startSlice - gNumSlices);
         } else if (startSlice < 0) {
-            startSlice = (sint32)((uint32)startSlice + (uint32)gNumSlices);
+            startSlice = (startSlice + gNumSlices);
         }
         NewStage(startSlice, startDirection, startMovement);
     }
@@ -340,11 +337,10 @@ void AIHigh_BTC_HumanCop::CheckConditionWithCop0(void)
 void AIHigh_BTC_HumanCop::NewStage(sint32 copSlice, sint32 direction, sint32 movement)
 {
     FUNCTION_MARKER(0x8005D650, "NFS4.EXE");
-    currentStage_ = (sint32)((uint32)currentStage_ + 1);
-    GameSetup::gData.perpArrests = (sint32)((uint32)GameSetup::gData.perpArrests + 1);
+    currentStage_ = (currentStage_ + 1);
+    GameSetup::gData.perpArrests = (GameSetup::gData.perpArrests + 1);
     AIHigh::CopGameType_t mode = AIHigh::CopGameType;
-    if (((uint32)mode - 2 < 2 && currentStage_ >= GameSetup::gData.numPerps) ||
-        (mode == AIHigh::COP_GAME_BTC_1HC1HP && currentStage_ >= 3)) {
+    if (((uint32)mode - 2 < 2 && currentStage_ >= GameSetup::gData.numPerps) || (mode == AIHigh::COP_GAME_BTC_1HC1HP && currentStage_ >= 3)) {
         simVar.endSimGame = 1;
         return;
     }
@@ -364,7 +360,7 @@ void AIHigh_BTC_HumanCop::NewStage(sint32 copSlice, sint32 direction, sint32 mov
     sint32 rotation = 0;
     if (AIHigh::CopGameType != AIHigh::COP_GAME_BTC_1HC1HP) {
         if (movement) {
-            speed = (sint32)((uint32)direction * 0xD5555);
+            speed = (direction * 0xD5555);
         } else {
             Trk::NewSlice *slice = &BWorldSm::slices[copSlice];
             sint32 laneCount = slice->laneCount;
@@ -379,18 +375,18 @@ void AIHigh_BTC_HumanCop::NewStage(sint32 copSlice, sint32 direction, sint32 mov
             rightPos = rightDrive;
             leftPos = leftDrive;
             if (!AIWorld::IsDriveableLane(copSlice, 6 - (laneCount >> 4)))
-                leftPos = (sint32)((uint32)leftPos - 0x20000);
+                leftPos = (leftPos - 0x20000);
             sint32 rightLane = BWorldSm::slices[copSlice].laneCount & 15;
             if (!AIWorld::IsDriveableLane(copSlice, rightLane + 7))
-                rightPos = (sint32)((uint32)rightPos - 0x20000);
+                rightPos = (rightPos - 0x20000);
             sint32 side = AITune::driveSide;
             bool right = copIndex_ == 0 ? side == 1 : side == -1;
             if (right) {
                 newLatPos = rightPos;
-                rotation = (sint32)(((uint32)direction << 8) + 0x200);
+                rotation = (((uint32)direction << 8) + 0x200);
             } else {
-                newLatPos = (sint32)(0 - (uint32)leftPos);
-                rotation = (sint32)(0x200 - ((uint32)direction << 8));
+                newLatPos = (-leftPos);
+                rotation = (0x200 - ((uint32)direction << 8));
             }
         }
     }
@@ -400,21 +396,21 @@ void AIHigh_BTC_HumanCop::NewStage(sint32 copSlice, sint32 direction, sint32 mov
         seconds = AIH_BTC_Cop_1HC1HP_StageTimes[currentStage_];
     else
         seconds = GameSetup::gData.perpInfo[currentStage_].TimeLimit;
-    sint32 nextStageTime = (sint32)((uint32)seconds << 5);
+    sint32 nextStageTime = ((uint32)seconds << 5);
     if (nextStageTime < 0)
         nextStageTime = 0;
-    sint32 product = (sint32)((uint32)nextStageTime * (uint32)stageTimeMultiplier_);
+    sint32 product = (nextStageTime * stageTimeMultiplier_);
     if (product < 0)
-        product = (sint32)((uint32)product + 0xFFFF);
+        product = (product + 0xFFFF);
     nextStageTime = product >> 16;
     if (copIndex_ == 0)
-        Hud::BTC_BonusTime((sint32)((uint32)nextStageTime << 1));
+        Hud::BTC_BonusTime(((uint32)nextStageTime << 1));
     sint32 remaining = timeLeft_;
     needPerp_ = 1;
     chaseStartTime_ = 0;
     wingmanStatus_ = WINGMAN_NONE;
     freezeMode_ = FREEZE_NEWPERP_ROVE;
-    timeLeft_ = (sint32)((uint32)remaining + (uint32)nextStageTime);
+    timeLeft_ = (remaining + nextStageTime);
     TrgSfx::RestartTrgSfx();
 }
 
@@ -423,7 +419,7 @@ void AIHigh_BTC_HumanCop::UpdateAndCheckTimeLeft(void)
     FUNCTION_MARKER(0x8005D9C0, "NFS4.EXE");
     static sint32 sayLose = 1;
     if (freezeMode_ != FREEZE_ARREST && freezeMode_ != FREEZE_NEWPERP_ROVE)
-        timeLeft_ = (sint32)((uint32)timeLeft_ - (uint32)AI::elapsedTime);
+        timeLeft_ = (timeLeft_ - AI::elapsedTime);
     if (perpTarget_ != 0)
         Hud::BTC_Update(perpTarget_->carObj_->carInfo->driver, timeLeft_, carObj_->RSControl == 0);
     else
@@ -486,13 +482,10 @@ void AIHigh_BTC_HumanCop::RequestWingman(void)
     FUNCTION_MARKER(0x8005DBF8, "NFS4.EXE");
     if ((uint32)freezeMode_ - 3 < 2)
         return;
-    sint32 wingmanActivationTime = (sint32)(((uint32)GameSetup::gData.perpInfo[currentStage_].WingmanTime << 6) +
-        (uint32)AITune::BTC[GameSetup::gData.skill].wingmanTime);
+    sint32 wingmanActivationTime = (((uint32)GameSetup::gData.perpInfo[currentStage_].WingmanTime << 6) + AITune::BTC[GameSetup::gData.skill].wingmanTime);
     Speech::Mobile(carObj_)->Backup();
     sint32 chaseStart = chaseStartTime_;
-    if (chaseStart && wingmanActivationTime &&
-        wingmanActivationTime < (sint32)((uint32)simGlobal.gameTicks - (uint32)chaseStart) &&
-        wingmanStatus_ != WINGMAN_WINGMAN_ACTIVE) {
+    if (chaseStart && wingmanActivationTime && wingmanActivationTime < (simGlobal.gameTicks - chaseStart) && wingmanStatus_ != WINGMAN_WINGMAN_ACTIVE) {
         wingmanStatus_ = WINGMAN_WINGMAN_REQUEST;
     } else {
         Speech::Dispatch()->Deny();
@@ -507,17 +500,13 @@ void AIHigh_BTC_HumanCop::RequestBlockader(sint32 spikeBeltRequest)
     sint32 availableTime;
     if (spikeBeltRequest) {
         Speech::Mobile(carObj_)->SpikeBelt();
-        availableTime = (sint32)(((uint32)GameSetup::gData.perpInfo[currentStage_].SpikeBeltTime << 6) +
-            (uint32)AITune::BTC[GameSetup::gData.skill].spikeBeltTime);
+        availableTime = (((uint32)GameSetup::gData.perpInfo[currentStage_].SpikeBeltTime << 6) + AITune::BTC[GameSetup::gData.skill].spikeBeltTime);
     } else {
         Speech::Mobile(carObj_)->RoadBlock();
-        availableTime = (sint32)(((uint32)GameSetup::gData.perpInfo[currentStage_].BlockadeCopTime << 6) +
-            (uint32)AITune::BTC[GameSetup::gData.skill].blockaderTime);
+        availableTime = (((uint32)GameSetup::gData.perpInfo[currentStage_].BlockadeCopTime << 6) + AITune::BTC[GameSetup::gData.skill].blockaderTime);
     }
     sint32 chaseStart = chaseStartTime_;
-    if (chaseStart && availableTime > 0 &&
-        availableTime < (sint32)((uint32)simGlobal.gameTicks - (uint32)chaseStart) &&
-        wingmanStatus_ != WINGMAN_BLOCKADER_ACTIVE) {
+    if (chaseStart && availableTime > 0 && availableTime < (simGlobal.gameTicks - chaseStart) && wingmanStatus_ != WINGMAN_BLOCKADER_ACTIVE) {
         Speech::Dispatch()->Grant();
         wingmanStatus_ = spikeBeltRequest ? WINGMAN_BLOCKADER_SPIKEBELT_REQUEST : WINGMAN_BLOCKADER_REQUEST;
     } else {
@@ -541,8 +530,7 @@ sint32 AIHigh_BTC_HumanCop::CheckForBlockaderRequest(sint32 *spikeBeltRequest)
     *spikeBeltRequest = 0;
     sint32 status = wingmanStatus_;
     if ((uint32)status - 2 < 2) {
-        if (status == WINGMAN_BLOCKADER_SPIKEBELT_REQUEST)
-            *spikeBeltRequest = 1;
+        if (status == WINGMAN_BLOCKADER_SPIKEBELT_REQUEST) *spikeBeltRequest = 1;
         wingmanStatus_ = WINGMAN_BLOCKADER_ACTIVE;
         return 1;
     }
@@ -622,7 +610,7 @@ void AIHigh_BTC_HumanCop::HighExecute(void)
         GetCheckChasePosition(&notUsed);
     }
     if (AIHigh::CopGameType == AIHigh::COP_GAME_BTC_1HC) {
-        sint32 elapsed = (sint32)((uint32)simGlobal.gameTicks - (uint32)lastInputRequestTick_);
+        sint32 elapsed = (simGlobal.gameTicks - lastInputRequestTick_);
         if (elapsed >= 641) {
             if (carObj_->control.queuedEvent == 4) {
                 RequestWingman();
@@ -655,9 +643,8 @@ void AIHigh_BTC_HumanCop::HudOn(AIHigh_BTC_Perp *arrestMe, sint32 gameOver, Car:
     if ((arrestingHumanCop->carFlags & 2) != 0)
         arrestingHumanCop = Cars::gHumanRaceCarList[0];
     if (copIndex_ == 0 || gameOver) {
-        sint32 elapsed = (sint32)((uint32)simGlobal.gameTicks - (uint32)chaseStartTime_);
-        Hud::BustedOverlayOn(elapsed, arrestMe->carObj_->carInfo->driver,
-            gameOver == 0, (sint16)arrestingHumanCop->carIndex);
+        sint32 elapsed = (simGlobal.gameTicks - chaseStartTime_);
+        Hud::BustedOverlayOn(elapsed, arrestMe->carObj_->carInfo->driver, gameOver == 0, arrestingHumanCop->carIndex);
     }
 }
 
@@ -681,7 +668,7 @@ static void ReplaceWingmanState(AIHigh_BTC_Wingman &wingman, AIState_Base *newSt
 
 static sint32 WingmanAbs(sint32 value)
 {
-    return value < 0 ? (sint32)(0U - (uint32)value) : value;
+    return value < 0 ? -value : value;
 }
 
 void AIHigh_BTC_Wingman::HighExecute(void)
@@ -698,8 +685,7 @@ void AIHigh_BTC_Wingman::HighExecute(void)
 
     case STATE_NORMAL:
         carObj_->AIFlags &= ~2;
-        if (newRole_ != currentRole_ &&
-            (newRole_ == ROLE_BLOCKADER || newRole_ == ROLE_BLOCKADER_SPIKEBELT))
+        if (newRole_ != currentRole_ && (newRole_ == ROLE_BLOCKADER || newRole_ == ROLE_BLOCKADER_SPIKEBELT))
         {
             if (!AILife::IsCarInAnyVisibleArea(carObj_))
             {
@@ -716,8 +702,7 @@ void AIHigh_BTC_Wingman::HighExecute(void)
             {
                 coorddef pos;
                 GetCheckChasePosition(&pos);
-                ReplaceWingmanState(*this, new AIState_Chase(carObj_, perpTarget_->carObj_, &pos,
-                    0x200, 0x3C0000, 0x190000, 2, 0x10000), STATE_CHASE);
+                ReplaceWingmanState(*this, new AIState_Chase(carObj_, perpTarget_->carObj_, &pos, 0x200, 0x3C0000, 0x190000, 2, 0x10000), STATE_CHASE);
             }
         }
         goto checkFreeze;
@@ -743,9 +728,7 @@ void AIHigh_BTC_Wingman::HighExecute(void)
             if (!leavingChase)
                 chaseState->SetTarget(perpTarget_->carObj_, &pos);
         }
-        if (!leavingChase && chaseState->inTargetRegion_ > 8 &&
-            WingmanAbs(chaseState->latMetersBetween_) < 0xE0000 &&
-            WingmanAbs(chaseState->longMetersBetween_) < 0xF0000)
+        if (!leavingChase && chaseState->inTargetRegion_ > 8 && WingmanAbs(chaseState->latMetersBetween_) < 0xE0000 && WingmanAbs(chaseState->longMetersBetween_) < 0xF0000)
             chaseState->SetMurderMode(1, 0x300);
 
         if (!perpTarget_)
@@ -753,10 +736,9 @@ void AIHigh_BTC_Wingman::HighExecute(void)
             AssignToPlayer(0);
             ReplaceWingmanState(*this, new AIState_Normal(carObj_), STATE_NORMAL);
         }
-        if (newRole_ != currentRole_ &&
-            (newRole_ == ROLE_BLOCKADER || newRole_ == ROLE_BLOCKADER_SPIKEBELT))
+        if (newRole_ != currentRole_ && (newRole_ == ROLE_BLOCKADER || newRole_ == ROLE_BLOCKADER_SPIKEBELT))
         {
-            carObj_->desiredDirection = (sint32)(0U - (uint32)carObj_->desiredDirection);
+            carObj_->desiredDirection = (-carObj_->desiredDirection);
             AssignToPlayer(0);
             ReplaceWingmanState(*this, new AIState_Normal(carObj_), STATE_NORMAL);
             Speech::Mobile(carObj_)->Lose();
@@ -797,8 +779,7 @@ void AIHigh_BTC_Wingman::HighExecute(void)
             spikeBeltPlaced_ = 0;
             newRole_ = ROLE_WINGMAN;
             currentRole_ = ROLE_WINGMAN;
-            ReplaceWingmanState(*this, new AIState_Chase(carObj_, perpTarget_->carObj_, &newPos,
-                0x200, 0x3C0000, 0x190000, 2, 0x10000), STATE_CHASE);
+            ReplaceWingmanState(*this, new AIState_Chase(carObj_, perpTarget_->carObj_, &newPos, 0x200, 0x3C0000, 0x190000, 2, 0x10000), STATE_CHASE);
         }
         if (newRole_ != currentRole_ && newRole_ == ROLE_WINGMAN)
         {
@@ -895,12 +876,12 @@ void AIHigh_BTC_Wingman::SetupWingman(AIHigh_BTC_HumanCop *humanCop)
     sint32 sample = (((product >> 8) & 0xFFFF) * 1000) >> 16;
     sint32 perpSide = sample < 500 ? 1 : -1;
     sint32 offset = perpSide * side * 28;
-    sint32 slice = (sint32)((uint32)otherCarObj->N.simRoadInfo.slice + (uint32)offset);
+    sint32 slice = (otherCarObj->N.simRoadInfo.slice + offset);
     if (offset >= 0) {
         if (slice >= gNumSlices)
-            slice = (sint32)((uint32)slice - (uint32)gNumSlices);
+            slice = (slice - gNumSlices);
     } else if (slice < 0) {
-        slice = (sint32)((uint32)slice + (uint32)gNumSlices);
+        slice = (slice + gNumSlices);
     }
     AILife::PlaceCarAtLocation(carObj_, slice, 0, side, otherCarObj->currentSpeed, 0);
     Speech::Dispatch()->Ready(carObj_);
@@ -918,12 +899,12 @@ void AIHigh_BTC_Wingman::SetupBlockader(AIHigh_BTC_HumanCop *humanCop, sint32 sp
         sint32 perpToHumanDistance = AIWorld::ApxSplineDistance(perpObj, copObj);
         sint32 distance = perpToHumanDistance;
         if (distance < 0)
-            distance = (sint32)(0u - (uint32)distance);
+            distance = (-distance);
         sint32 initializationDistance = distance > 0x1F40000 ? distance : 0x1F40000;
         if (initializationDistance >= 0x5DC0000)
             initializationDistance = 0x5DC0000;
-        sint32 offset = (sint32)((uint32)(initializationDistance / 0x60000) * (uint32)side);
-        if ((sint32)((uint32)perpToHumanDistance * (uint32)side) < 0)
+        sint32 offset = (((initializationDistance / 0x60000)) * side);
+        if ((perpToHumanDistance * side) < 0)
             initSlice = BtcOffsetSlice(copObj->N.simRoadInfo.slice, offset);
         else
             initSlice = BtcOffsetSlice(perpObj->N.simRoadInfo.slice, offset);
@@ -939,12 +920,12 @@ void AIHigh_BTC_Wingman::SetupBlockader(AIHigh_BTC_HumanCop *humanCop, sint32 sp
     }
     sint32 direction = copObj->direction;
     blockade_.direction = direction;
-    sint32 slice = BtcOffsetSlice(initSlice, (sint32)(0u - (uint32)direction));
+    sint32 slice = BtcOffsetSlice(initSlice, (-direction));
     uint32 product = fastRandom * randSeed;
     blockade_.slice = slice;
     AICop::gRoadBlockState = AICop::kAICop_RoadBlockState_WaitingForPerp;
     randtemp = product;
-    fastRandom = product & 0xFFFFu;
+    fastRandom = product & 0xFFFF;
     sint32 blockadeType = (uint8)gBlockadeTypes[((product >> 8) & 0xFFFFu) % 5u];
     blockade_.flags = blockadeType;
     if (blockadeType != 0)
@@ -966,22 +947,20 @@ void AIHigh_BTC_Wingman::SetupBlockader(AIHigh_BTC_HumanCop *humanCop, sint32 sp
         spikeBeltSlice_ = BtcOffsetSlice(carObj_->N.simRoadInfo.slice, spikeBeltSide * 6);
         product = fastRandom * randSeed;
         randtemp = product;
-        fastRandom = product & 0xFFFFu;
-        spikeBeltInterceptReleaseTime_ = (sint32)(((((product >> 8) & 0xFFFFu) * 0x14CCDu) >> 16) + 0xD999u);
+        fastRandom = product & 0xFFFF;
+        spikeBeltInterceptReleaseTime_ = (((((product >> 8) & 0xFFFFu) * 0x14CCDu) >> 16) + 0xD999u);
         Trk::NewSlice *roadSlice = &BWorldSm::slices[spikeBeltSlice_];
-        sint32 left = fixedmult((sint32)(((uint32)(uint8)roadSlice->avgPavedWidthLf << 15) *
-            ((uint8)roadSlice->laneCount >> 4)), 0xCCCC);
+        sint32 left = fixedmult((((uint32)roadSlice->avgPavedWidthLf << 15) * (roadSlice->laneCount >> 4)), 0xCCCC);
         roadSlice = &BWorldSm::slices[spikeBeltSlice_];
-        sint32 right = fixedmult((sint32)(((uint32)(uint8)roadSlice->avgPavedWidthRt << 15) *
-            ((uint8)roadSlice->laneCount & 15u)), 0xCCCC);
-        AICop::spikeBelt.leftLatPos_ = (sint32)(0u - (uint32)left);
+        sint32 right = fixedmult((((uint32)roadSlice->avgPavedWidthRt << 15) * (roadSlice->laneCount & 15u)), 0xCCCC);
+        AICop::spikeBelt.leftLatPos_ = (-left);
         AICop::spikeBelt.rightLatPos_ = right;
         sint32 slice = spikeBeltSlice_;
         sint32 timeNow = simGlobal.gameTicks;
         AICop::spikeBelt.active_ = 1;
         AICop::spikeBelt.slice_ = slice;
         AICop::spikeBelt.freshenTime_ = timeNow;
-        BWorld::SetSpikeBelt(spikeBeltSlice_, (sint32)(0u - (uint32)left), (sint32)((uint32)left + (uint32)right));
+        BWorld::SetSpikeBelt(spikeBeltSlice_, -left, (left + right));
         spikeBeltPlaced_ = 1;
     }
     Speech::Dispatch()->Ready(carObj_);

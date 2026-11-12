@@ -79,17 +79,16 @@ void tScreenPinkSlips::DrawBackground(void)
         sint32 selected = (sint16)fMenu->fCurrentItem;
         if (i == selected - 1 || (i == 0 && selected == 0))
         {
-            flareextra = (sint32)((uint32)flareextra + 1);
+            flareextra = (flareextra + 1);
             if (flareextra > 60)
                 flareextra = 0;
-            sint32 phase = flareextra > 30 ? (sint32)(60 - (uint32)flareextra) : flareextra;
-            sint32 intensity = (sint32)((uint32)(phase / 2 + 20) * (uint32)(128 - fScreenFadeVal));
+            sint32 phase = flareextra > 30 ? (60 - flareextra) : flareextra;
+            sint32 intensity = (((phase / 2) + 20) * (128 - fScreenFadeVal));
             if (intensity > 0)
             {
                 sint32 x = r.x;
                 sint32 y = r.y;
-                Flare::_2DHalo(x - 15, y + 6, intensity / 2,
-                    (sint32)((uint32)intensity * 2) / 3, 23);
+                Flare::_2DHalo(x - 15, y + 6, intensity / 2, (intensity * 2) / 3, 23);
                 DrawShapeExtended(56, 0, x - 18, y, fScreenFadeVal, 1, 0);
             }
             textState = textState_Hilighted;
@@ -97,8 +96,7 @@ void tScreenPinkSlips::DrawBackground(void)
         trackManager.GetTrack(frontBytes[offsetof(tfrontEnd, track) + i], trackInfo);
         frontEnd.pinkSlipsTrackIndex = (char)i;
         sint16 tv = menuDefs->iteratorTrack.TextValue(kPlayerBoth);
-        FETextRender::MenuTextPositionedJustify(tv, (sint16)(r.x + 10),
-            (sint16)(r.y + 3), 0, textState, textType_FlybyHelp);
+        FETextRender::MenuTextPositionedJustify(tv, (r.x + 10), (r.y + 3), 0, textState, textType_FlybyHelp);
         DrawShape::NFS4RoundRectangle(-1, r, 1);
         r.y = (sint16)(r.y + 14);
     }
@@ -106,8 +104,7 @@ void tScreenPinkSlips::DrawBackground(void)
     frontEnd.pinkSlipsTrackIndex = (char)selected;
     if ((selected & 255) != 0)
         frontEnd.pinkSlipsTrackIndex = (char)(selected - 1);
-    trackManager.GetTrack(frontBytes[offsetof(tfrontEnd, track) +
-        (uint8)frontEnd.pinkSlipsTrackIndex], trackInfo);
+    trackManager.GetTrack(frontBytes[offsetof(tfrontEnd, track) + (uint8)frontEnd.pinkSlipsTrackIndex], trackInfo);
     UpdateVideoWall(trackInfo);
     IsShapeFileLoaded(fSwapShapes);
     if (fSwapShapes.fFile != 0 && fTransitionDirection >= 0)
@@ -138,7 +135,7 @@ void tScreenPinkSlips::DrawBackground(void)
         if (result == 1)
         {
             hVideo = 2;
-            fFrame = (sint32)((uint32)fFrame + 1);
+            fFrame = (fFrame + 1);
             shapeY = (fFrame & 1) == 0 ? 128 : 0;
         }
         else if (result < 0)

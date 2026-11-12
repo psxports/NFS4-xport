@@ -95,7 +95,7 @@ void tScreenAudio::PlaySound(void)
     if (audioTest == 0)
         audioTest = (uint8)frontEnd.audioMode == 1 ? 2 : 1;
     else
-        sndover = (sint32)SNDover(audioTestHandle);
+        sndover = SNDover(audioTestHandle);
     if (sndover != 0 && ginfo.areLoading == 0 && ginfo.soundIsPlaying == 0 && RepresentativeSound != 0)
     {
         sint32 azimuth = 0;
@@ -142,7 +142,7 @@ void tScreenAudio::DrawForeground(void)
     {
         FETextRender::MenuTextPositionedJustify(0x27D, 480, 220, 1, textState_Selected, textType_ScreenInfo);
         char *text = TextSys::Word(0x27D);
-        sint32 width = (sint32)(0 - (uint32)textpixels(text) - 5);
+        sint32 width = ((~(((uint32)textpixels(text))) + 1) - 5);
         PSXDrawSquare(0, 480, 220, width, 7);
     }
 }
@@ -174,7 +174,7 @@ void tScreenAudio::DrawBackground(void)
     if (percent >= 0 || lastpercentage >= 0)
     {
         sint32 change = percent == -1 || !menuDefs->menuAudio.tOptionsMenu::TransitionIsFinished() ? 4 : -4;
-        perfade = (sint32)((uint32)perfade + (uint32)change);
+        perfade = (perfade + change);
         if (perfade > 128)
             perfade = 128;
         if (perfade < 0)

@@ -25,7 +25,7 @@ void *iSPCH::BankMemAlloc(sint32 count)
     {
         static char label[] = "spch banks";
         gNumBanks = count;
-        uint8 **banks = reinterpret_cast<uint8 **>(MemAlloc((sint32)(uint32(count) << 2), label));
+        uint8 **banks = reinterpret_cast<uint8 **>(MemAlloc((sint32)(uint32(count) * sizeof(*banks)), label));
         gVoxBanks = banks;
         if (banks != 0)
         {

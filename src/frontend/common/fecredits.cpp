@@ -71,9 +71,9 @@ void tCreditManager::Init(sint32)
     sprintf(filename, "%szcred%d.dat", Paths_Paths[37], (uint8)frontEnd.language);
     CreditBuffer = static_cast<tCredit *>(reservememadr("records", filesize(filename), 0));
     loadfileatadrz(filename, CreditBuffer);
-    uint32 size = (uint32)filesize(filename);
+    uint32 size = filesize(filename);
     fCreditsInitialized = 1;
-    fNumCredits = (sint32)(size / 324U);
+    fNumCredits = (size / 324U);
 }
 
 void tCreditManager::DeInit(void)
@@ -97,7 +97,7 @@ void tCreditManager::RealDeInit(void)
 void tCreditManager::Draw(bool selected)
 {
     FUNCTION_MARKER(0x80035C24, "FRONT.BIN");
-    fTVFade = (sint32)((uint32)fTVFade + (selected ? 4U : 0xFFFFFFFCU));
+    fTVFade = (fTVFade + (selected ? 4U : 0xFFFFFFFCU));
     if (fTVFade < 0)
         fTVFade = 0;
     if (fTVFade > 92)
@@ -108,7 +108,7 @@ void tCreditManager::Draw(bool selected)
     for (sint32 i = 0; i < 16; ++i)
     {
         main->tvConfigs[i].flags |= 2;
-        uint32 bright = 128U - (uint32)fTVFade;
+        uint32 bright = 128 - (uint32)fTVFade;
         main->tvConfigs[i].tint = (bright << 16) | (bright << 8) | bright;
     }
     if (fTVFade == 0)
@@ -133,27 +133,27 @@ void Front::ResetOverlayCredits(void)
 void tCreditManager::SetupCurrCredit(void)
 {
     FUNCTION_MARKER(0x80035D68, "FRONT.BIN");
-    if ((sint32)((uint32)ticks - (uint32)lasttick) > 12 && fTextFade == 0 && fCurrCredit == fShowCreditNum)
+    if ((sint32)((uint32)ticks - lasttick) > 12 && fTextFade == 0 && fCurrCredit == fShowCreditNum)
     {
         if (FEInput::GetNoDebounceKey(0x20, 0) != 0 || FEInput::GetNoDebounceKey(0x20, 1) != 0)
         {
             AudioCmn::PlayFESFX(6);
             fStartTicks = 0;
-            fCurrCredit = (sint32)((uint32)fShowCreditNum + 1U);
+            fCurrCredit = (fShowCreditNum + 1);
             lasttick = ticks;
         }
         if (fCurrCredit >= fNumCredits)
             fCurrCredit = 0;
         if (fCurrCredit < 0)
-            fCurrCredit = (sint32)((uint32)fNumCredits - 1U);
+            fCurrCredit = (fNumCredits - 1);
     }
-    if (fStartTicks != 0 && (sint32)((uint32)ticks - (uint32)fStartTicks) > CREDFADETICKS)
+    if (fStartTicks != 0 && (sint32)((uint32)ticks - fStartTicks) > CREDFADETICKS)
     {
-        fCurrCredit = (sint32)((uint32)fCurrCredit + 1U);
+        fCurrCredit = (fCurrCredit + 1);
         if (fCurrCredit >= fNumCredits)
             fCurrCredit = 0;
         if (fCurrCredit < 0)
-            fCurrCredit = (sint32)((uint32)fNumCredits - 1U);
+            fCurrCredit = (fNumCredits - 1);
         fStartTicks = 0;
     }
     if (fShowCreditNum != fCurrCredit)
@@ -163,7 +163,7 @@ void tCreditManager::SetupCurrCredit(void)
         StartedLines = 0;
         StartedTextFade = 0;
     }
-    fTextFade = (sint32)((uint32)fTextFade + (uint32)fTextFadeDir);
+    fTextFade = (fTextFade + fTextFadeDir);
     if (fTextFade <= 0)
         fTextFade = 0;
     if (fTextFade >= 128)
@@ -175,7 +175,7 @@ void tCreditManager::SetupCurrCredit(void)
         fShowCreditNum = current;
         if (current % 3 == 0 || CreditBuffer[current].bgNumber != -1)
         {
-            sint32 NNNNN = (sint32)((uint32)current + 1U);
+            sint32 NNNNN = (current + 1);
             if (fNumCredits < NNNNN)
                 NNNNN = 0;
             screenMain->SwapBackground(CreditBuffer[NNNNN].bgNumber);
@@ -187,7 +187,7 @@ void tCreditManager::SetupCurrCredit(void)
         StartedLines = 1;
         fLineTicks = now;
     }
-    if (StartedTextFade == 0 && StartedLines != 0 && (sint32)((uint32)ticks - (uint32)fLineTicks) > 30)
+    if (StartedTextFade == 0 && StartedLines != 0 && (sint32)((uint32)ticks - fLineTicks) > 30)
     {
         sint32 now = ticks;
         StartedTextFade = 1;
@@ -240,14 +240,14 @@ void tCreditManager::DrawCurrCredit(void)
     {
         FETextRender::SetFont(0);
         width = textpixels(TextSys::Word(fShowCred->subTitleTextID + 1300));
-        width = (sint32)((uint32)width - (uint32)strlen(TextSys::Word(fShowCred->subTitleTextID + 1300)));
+        width = (width - (uint32)strlen(TextSys::Word(fShowCred->subTitleTextID + 1300)));
     }
     if (x == 0)
     {
         if (fShowCred->subTitleJustify == 0)
-            x = (sint16)((uint32)(uint16)fShowCred->subTitleX + (uint32)width + 2U);
+            x = (sint16)(((uint16)fShowCred->subTitleX) + (uint32)width + 2U);
         else
-            x = (sint16)((uint32)(uint16)fShowCred->subTitleX - (uint32)width - 2U);
+            x = (sint16)(((uint16)fShowCred->subTitleX) - (uint32)width - 2U);
     }
     char buffer[292];
     strcpy(buffer, fShowCred->text);
@@ -258,8 +258,7 @@ void tCreditManager::DrawCurrCredit(void)
         bool jaguar = false;
         bool rollthedice = false;
         char *p2 = strchr(p, '\n');
-        if (p2 != 0)
-            *p2 = 0;
+        if (p2 != 0) *p2 = 0;
         while (*p == '\n')
             ++p;
         if (*p == '\t')
@@ -301,9 +300,9 @@ void tCreditManager::DrawCurrCredit(void)
         else
         {
             if (!hidden)
-                FETextRender::FullTextRGB(p, x, (sint16)y, ColText, 0, fShowCred->textJustify);
+                FETextRender::FullTextRGB(p, x, y, ColText, 0, fShowCred->textJustify);
             else if (FECheat::IsCheatEnabled(cheat_MyMomSaysImCool))
-                FETextRender::FullTextRGB(p, x, (sint16)y, CalcFadeVal(0x505050, fTextFade), 0, fShowCred->textJustify);
+                FETextRender::FullTextRGB(p, x, y, CalcFadeVal(0x505050, fTextFade), 0, fShowCred->textJustify);
             y += 8;
         }
         p = p2 != 0 ? p2 + 1 : 0;
@@ -311,7 +310,7 @@ void tCreditManager::DrawCurrCredit(void)
     FETextRender::SetABR(0, false);
     if (StartedLines == 0)
         return;
-    sint32 dist = (sint32)(((uint32)ticks - (uint32)fLineTicks) * 520U) / 80;
+    sint32 dist = (sint32)(((uint32)ticks - fLineTicks) * 520U) / 80;
     sint32 lineX = dist;
     width = 200;
     if (dist < 200)
@@ -328,7 +327,7 @@ void tCreditManager::DrawCurrCredit(void)
     }
     if (width > 0)
         PSXTransDrawBrightEndLine(CalcFadeVal(0x505050, 64), lineX - 37, fShowCred->subTitleY - 2, width, 4, 3, 1, 0, 1);
-    dist = (sint32)(((uint32)ticks - (uint32)fLineTicks) * 268U) / 80;
+    dist = (sint32)(((uint32)ticks - fLineTicks) * 268U) / 80;
     sint32 lineY = dist;
     sint32 height = 100;
     if (dist < 100)

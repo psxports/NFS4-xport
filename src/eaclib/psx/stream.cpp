@@ -30,7 +30,7 @@ extern "C" void decbufferusage(NativeStreamControl *control, uint32 length)
     FUNCTION_MARKER(0x800FC374, "NFS4.EXE");
     sint32 interruptsEnabled = xport_bios_enter_critical();
     sint32 oldUsage = control->bufferUsage;
-    sint32 usage = (sint32)((uint32)oldUsage - length);
+    sint32 usage = (oldUsage - length);
     control->bufferUsage = usage;
     if (interruptsEnabled != 0)
         xport_bios_exit_critical();
@@ -168,7 +168,7 @@ extern "C" sint32 parsechunks(NativeStreamControl *control)
             {
                 sint32 oldUsage = control->bufferUsage;
                 sint32 threshold = control->greedyLevel;
-                sint32 usage = (sint32)((uint32)oldUsage + length);
+                sint32 usage = (oldUsage + length);
                 control->bufferUsage = usage;
                 if (oldUsage < threshold && usage >= threshold)
                     control->greedyEnabled = 0;
@@ -186,10 +186,8 @@ extern "C" sint32 parsechunks(NativeStreamControl *control)
 extern "C" void opencallback(uint32 operation, uint32 result, void *userData)
 {
     FUNCTION_MARKER(0x800FC810, "NFS4.EXE");
-    (void)operation;
-    (void)result;
     NativeStreamControl *control = static_cast<NativeStreamControl *>(userData);
-    sint32 file = XPORT_UNPLACED::FILE::completeop(control->fileOperation);
+    NativeFileSlot *file = reinterpret_cast<NativeFileSlot *>(XPORT_UNPLACED::FILE::completeop(control->fileOperation));
     control->unknown9C = file;
     if (file != 0)
         restartstream(control, control->priority);
@@ -198,8 +196,6 @@ extern "C" void opencallback(uint32 operation, uint32 result, void *userData)
 extern "C" void closecallback(uint32 operation, uint32 result, void *userData)
 {
     FUNCTION_MARKER(0x800FC850, "NFS4.EXE");
-    (void)operation;
-    (void)result;
     NativeStreamControl *control = static_cast<NativeStreamControl *>(userData);
     XPORT_UNPLACED::FILE::completeop(control->fileOperation);
     uint32 next = XPORT_UNPLACED::FILE::open(reinterpret_cast<char *>(control->unknown5C), 1, control->priority, control);
@@ -211,8 +207,6 @@ extern "C" void closecallback(uint32 operation, uint32 result, void *userData)
 extern "C" void readcallback(uint32 operation, uint32 result, void *userData)
 {
     FUNCTION_MARKER(0x800FC8A8, "NFS4.EXE");
-    (void)operation;
-    (void)result;
     NativeStreamControl *control = static_cast<NativeStreamControl *>(userData);
     NativeStreamRequest *request = control->unknown50;
     sint32 count;
@@ -220,15 +214,15 @@ extern "C" void readcallback(uint32 operation, uint32 result, void *userData)
     if (request->memoryBacked == 1)
     {
         count = control->readLength;
-        sint32 end = (sint32)((uint32)control->offset + (uint32)count);
+        sint32 end = (control->offset + count);
         finished = request->sizeOrOffset <= end;
     }
     else
     {
-        count = XPORT_UNPLACED::FILE::completeop(control->fileOperation);
+        count = static_cast<sint32>(XPORT_UNPLACED::FILE::completeop(control->fileOperation));
         finished = count < control->readLength;
     }
-    control->offset = (sint32)((uint32)control->offset + (uint32)count);
+    control->offset = (control->offset + count);
     control->cursor48 = reinterpret_cast<uint8 *>(reinterpret_cast<uintptr_t>(control->cursor48) + (uint32)count);
     sint32 endMarker = parsechunks(control);
     if (request->state != 4)
@@ -318,9 +312,7 @@ extern "C" void restartstream(NativeStreamControl *control, sint32 priority)
     }
     sint32 interruptsEnabled = xport_bios_enter_critical();
     NativeStreamRequest *head = control->unknown4C;
-    while (head->next != 0 && head->next->state != 1 &&
-        !inbetween(reinterpret_cast<uintptr_t>(control->cursor40), reinterpret_cast<uintptr_t>(control->cursor48),
-            reinterpret_cast<uintptr_t>(head->next->firstChunk) - 1))
+    while (head->next != 0 && head->next->state != 1 && !inbetween(reinterpret_cast<uintptr_t>(control->cursor40), reinterpret_cast<uintptr_t>(control->cursor48), reinterpret_cast<uintptr_t>(head->next->firstChunk) - 1))
     {
         freerequest(control, head);
         head = control->unknown4C;
@@ -339,7 +331,7 @@ extern "C" void restartstream(NativeStreamControl *control, sint32 priority)
         {
             sint32 partial = (sint32)(written - reinterpret_cast<uintptr_t>(control->cursor44));
             sint32 freeStart = (sint32)(first - reinterpret_cast<uintptr_t>(control->bufferStart));
-            if (freeStart < (sint32)((uint32)partial + 1))
+            if (freeStart < (partial + 1))
             {
                 control->state = 2;
                 return;
@@ -364,16 +356,15 @@ extern "C" void restartstream(NativeStreamControl *control, sint32 priority)
     {
         sint32 offset = control->offset;
         sint32 size = request->sizeOrOffset;
-        sint32 end = (sint32)((uint32)offset + (uint32)capacity);
-        control->readLength = size < end ? (sint32)((uint32)size - (uint32)offset) : capacity;
+        sint32 end = (offset + capacity);
+        control->readLength = size < end ? (size - offset) : capacity;
         memcpy(control->cursor48, request->data, control->readLength);
         request->data += control->readLength;
         readcallback(0, 0, control);
         return;
     }
     control->readLength = 0x2000;
-    uint32 operation = XPORT_UNPLACED::FILE::read(control->unknown9C, control->offset,
-        control->cursor48, control->readLength, priority, control);
+    uint32 operation = XPORT_UNPLACED::FILE::read(control->unknown9C, control->offset, control->cursor48, control->readLength, priority, control);
     control->fileOperation = operation;
     if (operation != 0)
         XPORT_UNPLACED::FILE::callbackop(operation, readcallback);
@@ -382,14 +373,16 @@ extern "C" void restartstream(NativeStreamControl *control, sint32 priority)
 sint32 STREAM::overhead(sint32 requests, sint32 files, sint32 filters)
 {
     FUNCTION_MARKER(0x800FCDE0, "NFS4.EXE");
-    return (sint32)((uint32)requests * 100 + (uint32)files * 12 + 172 + (uint32)filters * 16);
+    uint32 bytes = (uint32)sizeof(NativeStreamControl) + requests * (uint32)sizeof(NativeStreamRequest) + files * (uint32)sizeof(NativeStreamRule);
+    bytes = (bytes + (uint32)sizeof(void *) - 1U) & (~(((uint32)sizeof(void *))) + 1);
+    return (bytes + filters * (uint32)sizeof(NativeStreamHandle));
 }
 
 NativeStreamHandle *STREAM::create(sint32 requests, sint32 files, sint32 filters, void *buffer, sint32 size)
 {
     FUNCTION_MARKER(0x800FCE14, "NFS4.EXE");
     sint32 headerBytes = overhead(requests, files, filters);
-    if ((sint32)((uint32)size - (uint32)headerBytes) < 0x6000)
+    if ((size - headerBytes) < 0x6000)
         return 0;
     if (requests < 2 || requests > 256 || (uint32)files - 1 >= 16)
         return 0;
@@ -399,7 +392,7 @@ NativeStreamHandle *STREAM::create(sint32 requests, sint32 files, sint32 filters
     NativeStreamControl *control = static_cast<NativeStreamControl *>(buffer);
     control->magic = 0x4D525453;
     control->mutex = allocmutex();
-    control->requests = reinterpret_cast<NativeStreamRequest *>(bytes + 172);
+    control->requests = reinterpret_cast<NativeStreamRequest *>(bytes + sizeof(NativeStreamControl));
     control->bufferEnd = bytes + size;
     control->priorityMask = 150;
     control->requestCount = requests;
@@ -413,7 +406,9 @@ NativeStreamHandle *STREAM::create(sint32 requests, sint32 files, sint32 filters
     control->unknown50 = 0;
     control->unknown54 = 0;
     control->rules = reinterpret_cast<NativeStreamRule *>(control->requests + requests);
-    control->handles = reinterpret_cast<NativeStreamHandle *>(control->rules + files);
+    uintptr_t handles = reinterpret_cast<uintptr_t>(control->rules + files);
+    handles = (handles + sizeof(void *) - 1U) & (~((uintptr_t)sizeof(void *) - 1));
+    control->handles = reinterpret_cast<NativeStreamHandle *>(handles);
     control->bufferStart = reinterpret_cast<uint8 *>(control->handles + filters);
     control->priority = 50;
     control->cursor40 = control->bufferStart;
@@ -559,12 +554,12 @@ uint32 STREAM::queuemem(NativeStreamHandle *handle, const void *data, sint32 siz
             uint32 length;
             memcpy(&length, cursor + 4, sizeof(length));
             cursor += length;
-            size = (sint32)((uint32)size + length);
+            size = (size + length);
             memcpy(&tag, cursor, sizeof(tag));
         }
         uint32 length;
         memcpy(&length, cursor + 4, sizeof(length));
-        size = (sint32)((uint32)size + length);
+        size = (size + length);
     }
     request->memoryBacked = 1;
     request->data = static_cast<const uint8 *>(data);
@@ -618,8 +613,7 @@ void STREAM::cancelrequest(NativeStreamHandle *handle, uint32 key)
         filter = &control->handles[index];
         if ((sint32)filter->available <= 0)
             continue;
-        if (inbetween(reinterpret_cast<uintptr_t>(oldest), reinterpret_cast<uintptr_t>(first),
-            reinterpret_cast<uintptr_t>(filter->chunk)))
+        if (inbetween(reinterpret_cast<uintptr_t>(oldest), reinterpret_cast<uintptr_t>(first), reinterpret_cast<uintptr_t>(filter->chunk)))
         {
             uint32 tag = filter->index << 24;
             uint8 *cursor = first;
@@ -647,8 +641,7 @@ void STREAM::cancelrequest(NativeStreamHandle *handle, uint32 key)
         }
         else
         {
-            while (inbetween(reinterpret_cast<uintptr_t>(first), reinterpret_cast<uintptr_t>(last),
-                reinterpret_cast<uintptr_t>(filter->chunk)))
+            while (inbetween(reinterpret_cast<uintptr_t>(first), reinterpret_cast<uintptr_t>(last), reinterpret_cast<uintptr_t>(filter->chunk)))
             {
                 uint32 *chunk = get(filter);
                 release(filter, chunk);
@@ -709,8 +702,8 @@ uint32 *STREAM::get(NativeStreamHandle *handle)
     uint32 length = chunk[1] & 0xFFFFFF;
     chunk[1] = length;
     sint32 interruptsEnabled = xport_bios_enter_critical();
-    sint32 remaining = (sint32)(filter->available - length);
-    filter->available = (uint32)remaining;
+    sint32 remaining = (filter->available - length);
+    filter->available = remaining;
     if (interruptsEnabled != 0)
         xport_bios_exit_critical();
     if (remaining > 0)
@@ -737,8 +730,7 @@ void STREAM::release(NativeStreamHandle *handle, void *chunk)
     if (validatehandle(handle, &control, &filter) != 0)
         return;
     uintptr_t address = reinterpret_cast<uintptr_t>(chunk);
-    if (address < reinterpret_cast<uintptr_t>(control->bufferStart) ||
-        address > reinterpret_cast<uintptr_t>(control->bufferEnd) - 8)
+    if (address < reinterpret_cast<uintptr_t>(control->bufferStart) || address > reinterpret_cast<uintptr_t>(control->bufferEnd) - 8)
         return;
     uint32 *header = static_cast<uint32 *>(chunk);
     if (header[0] == 0xFFFFFFFE)

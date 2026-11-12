@@ -43,7 +43,7 @@ void iSPCH::InitInGame(void)
 sint32 SPCH::GetSampleDataRate(sint32 frequency, sint32 bits, sint32 format)
 {
     FUNCTION_MARKER(0x800EB66C, "NFS4.EXE");
-    sint32 rate = (sint32)((uint32)frequency * (uint32)bits);
+    sint32 rate = (frequency * bits);
     rate /= 8;
     if (format == 1)
         rate /= 10;
@@ -66,7 +66,7 @@ sint32 SPCH::Init(SpeechSampleRequestFuncPtr request, uint32 gameNum, sint32 dat
 {
     FUNCTION_MARKER(0x800EB748, "NFS4.EXE");
     gSampleRequest = request;
-    gGameNum = (sint32)gameNum;
+    gGameNum = gameNum;
     gDataRate = dataRate;
     gMemAlloc = 0;
     gMemFree = 0;

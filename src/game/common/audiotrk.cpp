@@ -78,7 +78,7 @@ void AudioTrk::AddCustomObject(AudioElem *se, sint32 tck, coorddef *vel, sint32 
     sint32 dst = Math::Dist3D(&se->cp, &AudioClc::gRenderView.translation);
     sint32 n = (sint8)se->chan;
     sint32 patch = (uint8)se->patchID;
-    sint32 range = (sint32)((uint32)se->range << 16);
+    sint32 range = ((uint32)se->range << 16);
     if (dst >= (sint32)((uint32)(se->range + 100) << 16) || patch >= CopSpeak::gNumTrackSfx)
     {
         if (n >= 0)
@@ -163,7 +163,7 @@ void AudioTrk::AddCustomObject(AudioElem *se, sint32 tck, coorddef *vel, sint32 
         {
             repeatnow = true;
             c.handle = -1;
-            c.repeat = (sint16)((uint16)c.repeat - 1U);
+            c.repeat = (sint16)((uint16)c.repeat - 1);
         }
         else if (type != 1 || range < dst)
         {
@@ -212,10 +212,10 @@ void AudioTrk::AddCustomObject(AudioElem *se, sint32 tck, coorddef *vel, sint32 
         {
             sint32 rangesq = se->range * se->range;
             sint32 dist = dst >> 2;
-            sint32 numerator = (sint32)(((uint32)(rangesq >> 4) << 16) - (uint32)fixedmult(dist, dist));
+            sint32 numerator = (((uint32)(rangesq >> 4) << 16) - fixedmult(dist, dist));
             if (rangesq == 0)
                 abort();
-            uint32 level = (uint32)(numerator / rangesq) * (uint32)fade * 127U;
+            uint32 level = (numerator / rangesq) * (uint32)fade * 127U;
             if ((sint32)level < 0)
                 level += 0xFFFFU;
             vol = level >> 19;
@@ -227,11 +227,11 @@ void AudioTrk::AddCustomObject(AudioElem *se, sint32 tck, coorddef *vel, sint32 
             {
                 sint32 ambdist = se->range - (uint8)se->fadeIn;
                 sint32 rangesq = ambdist * ambdist;
-                sint32 dist = (sint32)((uint32)dst - (uint32)fadeIn) >> 2;
-                sint32 numerator = (sint32)(((uint32)(rangesq >> 4) << 16) - (uint32)fixedmult(dist, dist));
+                sint32 dist = (dst - fadeIn) >> 2;
+                sint32 numerator = (((uint32)(rangesq >> 4) << 16) - fixedmult(dist, dist));
                 if (rangesq == 0)
                     abort();
-                uint32 level = (uint32)(numerator / rangesq) * 0x7F0U;
+                uint32 level = (numerator / rangesq) * 0x7F0U;
                 if ((sint32)level < 0)
                     level += 0xFFFFU;
                 vol = level >> 16;
@@ -258,8 +258,8 @@ void AudioTrk::SoundTrack(Car::tObj *car, sint32 trkazi)
     sint32 gtck = ticks >> 3;
     sint32 vx = AudioClc::gRenderView.translation.x;
     sint32 vz = AudioClc::gRenderView.translation.z;
-    sint32 start = (sint32)((uint32)((ticks >> 1) % 4) * (uint32)quater);
-    sint32 end = (sint32)((uint32)start + (uint32)quater);
+    sint32 start = ((((ticks >> 1) % 4)) * quater);
+    sint32 end = (start + quater);
     if (numelems < end)
         end = numelems;
     AudioElem *se = reinterpret_cast<AudioElem *>(gGameAudioList + 1) + start;
@@ -281,8 +281,7 @@ void AudioTrk::SoundTrack(Car::tObj *car, sint32 trkazi)
                 tck = DrawW::GetAnimationTime(anim);
                 Anim::GetPos(anim, 1, tck, &se->cp, &cur, &max);
             }
-        } else if (((uint8)se->minDelay != 0 || (uint8)se->randomDelay != 0) &&
-                   se->nextDelay < tck && (sint8)se->chan == -1) {
+        } else if (((uint8)se->minDelay != 0 || (uint8)se->randomDelay != 0) && se->nextDelay < tck && (sint8)se->chan == -1) {
             uint32 randtick = 0;
             if ((uint8)se->randomDelay >= 2) {
                 uint32 draw = random();
@@ -291,17 +290,17 @@ void AudioTrk::SoundTrack(Car::tObj *car, sint32 trkazi)
                     abort();
                 randtick = draw % divisor;
             }
-            se->nextDelay = (uint16)((uint32)(uint8)se->minDelay + (uint32)tck + randtick);
+            se->nextDelay = (uint16)(((uint8)se->minDelay) + (uint32)tck + randtick);
         }
-        sint32 x = (sint32)((uint32)se->cp.x - (uint32)vx);
+        sint32 x = (se->cp.x - vx);
         if (x <= 0)
-            x = (sint32)((uint32)vx - (uint32)se->cp.x);
-        sint32 z = (sint32)((uint32)se->cp.z - (uint32)vz);
+            x = (vx - se->cp.x);
+        sint32 z = (se->cp.z - vz);
         if (z <= 0)
-            z = (sint32)((uint32)vz - (uint32)se->cp.z);
-        sint32 d = z < x ? (sint32)((uint32)x + (uint32)(z >> 2)) : (sint32)((uint32)z + (uint32)(x >> 2));
+            z = (vz - se->cp.z);
+        sint32 d = z < x ? (x + (z >> 2)) : (z + (x >> 2));
         coorddef *vel = 0;
-        sint32 range = (sint32)((uint32)(se->range + 100) << 16);
+        sint32 range = ((uint32)(se->range + 100) << 16);
         if (d < range || (sint8)se->chan >= 0) {
             sint32 fade = 128;
             if ((uint32)(uint8)se->type - 4 < 32) {
@@ -311,37 +310,37 @@ void AudioTrk::SoundTrack(Car::tObj *car, sint32 trkazi)
                     if (cur < fadeIn)
                         fade = 0;
                     else if (cur < fadeIn + 128)
-                        fade = (sint32)((uint32)cur - (uint32)fadeIn);
+                        fade = (cur - fadeIn);
                     sint32 fadeOut = (uint8)se->randomDelay * 8;
                     if (fadeOut != 0) {
                         if (fadeOut + 128 < cur)
                             fade = 0;
                         else if (fadeOut < cur)
-                            fade = (sint32)((uint32)fadeOut - ((uint32)cur - 128));
+                            fade = (fadeOut - (cur - 128));
                     }
                     if (fade > 0) {
-                        sint32 next = (sint32)((uint32)max - 1);
-                        sint32 ahead = (sint32)((uint32)tck + 32);
+                        sint32 next = (max - 1);
+                        sint32 ahead = (tck + 32);
                         if (ahead < next)
                             next = ahead;
                         coorddef nextcp;
                         Anim::GetPos(anim, 1, next, &nextcp, 0, 0);
-                        sint32 time = (sint32)((uint32)next - (uint32)tck);
+                        sint32 time = (next - tck);
                         if (time == 32) {
-                            v.x = (sint32)(((uint32)nextcp.x - (uint32)se->cp.x) << 1);
-                            v.y = (sint32)(((uint32)nextcp.y - (uint32)se->cp.y) << 1);
-                            v.z = (sint32)(((uint32)nextcp.z - (uint32)se->cp.z) << 1);
+                            v.x = ((nextcp.x - (uint32)se->cp.x) << 1);
+                            v.y = ((nextcp.y - (uint32)se->cp.y) << 1);
+                            v.z = ((nextcp.z - (uint32)se->cp.z) << 1);
                             vel = &v;
                         } else if (time != 0) {
-                            sint32 dividend = (sint32)(((uint32)nextcp.x - (uint32)se->cp.x) << 6);
+                            sint32 dividend = ((nextcp.x - (uint32)se->cp.x) << 6);
                             if (time == -1 && dividend == INT_MIN)
                                 abort();
                             v.x = dividend / time;
-                            dividend = (sint32)(((uint32)nextcp.y - (uint32)se->cp.y) << 6);
+                            dividend = ((nextcp.y - (uint32)se->cp.y) << 6);
                             if (time == -1 && dividend == INT_MIN)
                                 abort();
                             v.y = dividend / time;
-                            dividend = (sint32)(((uint32)nextcp.z - (uint32)se->cp.z) << 6);
+                            dividend = ((nextcp.z - (uint32)se->cp.z) << 6);
                             if (time == -1 && dividend == INT_MIN)
                                 abort();
                             v.z = dividend / time;
@@ -368,7 +367,7 @@ sint32 AudioTrk::PreLoad(void)
     sint32 vx = BWorldSm::slices->center[0];
     sint32 vz = BWorldSm::slices->center[2];
     sint32 loaded = 0;
-    sint32 tick = (sint32)((uint32)gettick() + 640);
+    sint32 tick = (gettick() + 640);
     sint32 numelems = gGameAudioList->numElements_;
     for (;;) {
         sint32 again = 0;
@@ -381,20 +380,19 @@ sint32 AudioTrk::PreLoad(void)
             break;
         AudioElem *se = reinterpret_cast<AudioElem *>(gGameAudioList + 1);
         for (sint32 i = 0; i < numelems; ++i) {
-            sint32 x = (sint32)((uint32)se[i].cp.x - (uint32)vx);
+            sint32 x = (se[i].cp.x - vx);
             if (x <= 0)
-                x = (sint32)((uint32)vx - (uint32)se[i].cp.x);
-            sint32 z = (sint32)((uint32)se[i].cp.z - (uint32)vz);
+                x = (vx - se[i].cp.x);
+            sint32 z = (se[i].cp.z - vz);
             if (z <= 0)
-                z = (sint32)((uint32)vz - (uint32)se[i].cp.z);
+                z = (vz - se[i].cp.z);
             sint32 d;
             if (z < x)
-                d = (sint32)((uint32)x + (uint32)(z >> 2));
+                d = (x + (z >> 2));
             else
-                d = (sint32)((uint32)z + (uint32)(x >> 2));
-            sint32 range = (sint32)((uint32)(se[i].range + 100) << 16);
-            if (d < range && (uint8)se[i].patchID < CopSpeak::gNumTrackSfx &&
-                AudioCmn::GetAsyncSfx(0, (uint8)se[i].patchID, 0) == -1)
+                d = (z + (x >> 2));
+            sint32 range = ((uint32)(se[i].range + 100) << 16);
+            if (d < range && (uint8)se[i].patchID < CopSpeak::gNumTrackSfx && AudioCmn::GetAsyncSfx(0, (uint8)se[i].patchID, 0) == -1)
                 loaded = 0;
         }
         CopSpeak::Server();

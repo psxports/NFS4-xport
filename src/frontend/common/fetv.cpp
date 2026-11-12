@@ -74,7 +74,7 @@ void DrawTVLines(tTVConfig &tv)
     FeDraw_SetABRMode(1);
     if ((tv.flags & 0x20) != 0)
     {
-        sint16 x = (sint16)(((uint16)tv.x + 4u) & ~3u);
+        sint16 x = (sint16)(((uint16)tv.x + 4) & ~3u);
         for (; x < tv.x + tv.w; x = (sint16)((uint16)x + 4))
             PSXDrawTransSquare(0xA0A0A, x, tv.y, 1, tv.h, 1);
         FeDraw_SetABRMode(2);
@@ -113,7 +113,7 @@ void DrawTV(tTVConfig &tv)
 {
     FUNCTION_MARKER(0x8002234C, "FRONT.BIN");
     sint32 noiseIndex = randPSX() & 3;
-    sint16 bright = (sint16)tv.destBrightness;
+    sint16 bright = tv.destBrightness;
     uint32 tint = uint32(tv.tint);
     sint16 videoX = tv.x;
     sint16 videoY = tv.y;
@@ -129,17 +129,17 @@ void DrawTV(tTVConfig &tv)
         {
             tv.transition = (sint16)((uint16)tv.transition + 4);
             if (sint32(tv.destBrightness) < sint32(tv.transition))
-                tv.transition = (sint16)tv.destBrightness;
+                tv.transition = tv.destBrightness;
         }
         else if (tv.state == tv_TransitionOff || tv.state == tv_StateOn)
         {
             tv.transition = (sint16)((uint16)tv.transition - 8);
             if (sint32(tv.transition) < sint32(tv.destBrightness))
-                tv.transition = (sint16)tv.destBrightness;
+                tv.transition = tv.destBrightness;
         }
     }
     if (tv.state == tv_StateOn || tv.state == tv_StateOff)
-        bright = (sint16)tv.destBrightness;
+        bright = tv.destBrightness;
     else if (tv.state == tv_TransitionOn)
     {
         if (sint32(tv.transition) == sint32(tv.destBrightness))
@@ -271,11 +271,11 @@ void DrawTV(tTVConfig &tv)
             cprim->PrimPtr = reinterpret_cast<char *>(reflection + 1);
             setaddr(ot, reflection);
             setlen(reflection, 12);
-            uint32 color = TVScaledTint(tint, 128 - sint32(fadeTop));
+            uint32 color = TVScaledTint(tint, (128 - fadeTop));
             reflection->p[0].xy.x = videoX;
             memcpy(&reflection->p[1].rgbc, &color, sizeof(color));
             memcpy(&reflection->p[0].rgbc, &color, sizeof(color));
-            color = TVScaledTint(tint, 128 - sint32(fadeBottom));
+            color = TVScaledTint(tint, (128 - fadeBottom));
             memcpy(&reflection->p[3].rgbc, &color, sizeof(color));
             memcpy(&reflection->p[2].rgbc, &color, sizeof(color));
             setcode(reflection, 0x3C);
@@ -306,8 +306,8 @@ void InitTV(tTVConfig &tv, tTexture::ShapeInfo *textures, sint16 index)
     tTexture::ShapeInfo *shape = &textures[index];
     tv.state = tv_StateOff;
     tv.flags = 0;
-    tv.x = (sint16)(0u - (uint16)shape->centerx);
-    tv.y = (sint16)(0u - (uint16)shape->centery);
+    tv.x = (sint16)-((uint16)shape->centerx);
+    tv.y = (sint16)-((uint16)shape->centery);
     tv.w = shape->width;
     tv.h = shape->height;
     sint32 offset = (shape->shapex - (sint16)((uint16)shape->shapex & 0xFFC0)) * 16;
@@ -318,15 +318,12 @@ void InitTV(tTVConfig &tv, tTexture::ShapeInfo *textures, sint16 index)
     tv.vh = (uint8)tv.h;
     tv.uw = (uint8)tv.w;
     tv.v = (uint8)shape->shapey;
-    tv.shapex = (uint16)shape->shapex;
-    tv.shapey = (uint16)shape->shapey;
+    tv.shapex = shape->shapex;
+    tv.shapey = shape->shapey;
     tv.clutID = (uint16)shape->clutID;
     tv.shapeType = (uint8)(shape->type & 3);
     tv.clut = GetClut((tv.clutID & 63) << 4, tv.clutID >> 6);
-    tv.tpage = (uint16)(((shape->type & 3) << 7) |
-        (((uint16)shape->shapey & 0x100) >> 4) |
-        (((uint16)shape->shapex & 0x3C0) >> 6) |
-        (((uint16)shape->shapey & 0x200) << 2));
+    tv.tpage = (uint16)(((shape->type & 3) << 7) | (((uint16)shape->shapey & 0x100) >> 4) | (((uint16)shape->shapex & 0x3C0) >> 6) | (((uint16)shape->shapey & 0x200) << 2));
     sint32 random = randPSX();
     sint32 span = tv.h * 48;
     if (span == 0)

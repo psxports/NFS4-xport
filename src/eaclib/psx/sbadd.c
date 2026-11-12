@@ -8,9 +8,9 @@ sint32 SNDbankadd(sint32 *handle, void *bank)
         return -10;
     sint32 index = iSNDbankalloc();
     *handle = index;
-    uint8 *record = ((uint8 *)(sndgs.bankMemory)) + index * 12;
-    memcpy(record, &bank, sizeof(bank));
-    memcpy(record + 4, &bank, sizeof(bank));
+    NativeSoundBank *record = &sndgs.bankMemory[index];
+    record->header = (uint8 *)bank;
+    record->storage.sampleData = (uint8 *)bank;
     sndgs.removeBanks = cSNDbankremove;
     return iSNDdownloadbank(((uint8 *)(bank)), ((uint8 *)(bank)));
 }

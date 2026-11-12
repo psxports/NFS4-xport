@@ -6,7 +6,7 @@ sint32 asyncChunkSize;
 uint32 asyncGeneration;
 NativeAsyncQueue asyncFreeQueue;
 NativeAsyncQueue asyncCompletionQueue;
-sint32 asyncFile;
+NativeFileSlot *asyncFile;
 sint32 asyncFileOffset;
 MemMutex *asyncMutex;
 
@@ -108,10 +108,10 @@ extern "C" void loadfilereadcallback(uint32, uint32, void *userData)
 {
     FUNCTION_MARKER(0x800F0D80, "NFS4.EXE");
     NativeAsyncRequest *request = static_cast<NativeAsyncRequest *>(userData);
-    sint32 bytes = XPORT_UNPLACED::FILE::completeop(request->pending);
+    sint32 bytes = static_cast<sint32>(XPORT_UNPLACED::FILE::completeop(request->pending));
     sint32 total = request->result;
     sint32 chunkSize = asyncChunkSize;
-    request->result = (sint32)((uint32)total + (uint32)bytes);
+    request->result = (total + bytes);
     uint32 operation;
     NativeFileCompletion callback;
     if (bytes < chunkSize || request->state != 0)
@@ -123,7 +123,7 @@ extern "C" void loadfilereadcallback(uint32, uint32, void *userData)
     {
         sint32 offset = request->offset;
         char *cursor = request->cursor;
-        request->offset = (sint32)((uint32)offset + (uint32)bytes);
+        request->offset = (offset + bytes);
         request->cursor = cursor + bytes;
         operation = XPORT_UNPLACED::FILE::read(request->fileHandle, request->offset, request->cursor, chunkSize, 99, request);
         callback = loadfilereadcallback;
@@ -137,7 +137,7 @@ extern "C" void loadfilesizecallback(uint32, uint32, void *userData)
 {
     FUNCTION_MARKER(0x800F0E54, "NFS4.EXE");
     NativeAsyncRequest *request = static_cast<NativeAsyncRequest *>(userData);
-    sint32 length = XPORT_UNPLACED::FILE::completeop(request->pending);
+    sint32 length = static_cast<sint32>(XPORT_UNPLACED::FILE::completeop(request->pending));
     uint32 operation;
     NativeFileCompletion callback;
     if (request->state != 0)
@@ -162,7 +162,7 @@ extern "C" void loadfileopencallback(uint32, uint32, void *userData)
 {
     FUNCTION_MARKER(0x800F0F18, "NFS4.EXE");
     NativeAsyncRequest *request = static_cast<NativeAsyncRequest *>(userData);
-    sint32 file = XPORT_UNPLACED::FILE::completeop(request->pending);
+    NativeFileSlot *file = reinterpret_cast<NativeFileSlot *>(XPORT_UNPLACED::FILE::completeop(request->pending));
     request->fileHandle = file;
     if (file == 0)
     {
@@ -198,12 +198,12 @@ extern "C" void loadsegreadcallback(uint32, uint32, void *userData)
 {
     FUNCTION_MARKER(0x800F1024, "NFS4.EXE");
     NativeAsyncRequest *request = static_cast<NativeAsyncRequest *>(userData);
-    sint32 bytes = XPORT_UNPLACED::FILE::completeop(request->pending);
+    sint32 bytes = static_cast<sint32>(XPORT_UNPLACED::FILE::completeop(request->pending));
     sint32 total = request->result;
     sint32 offset = request->offset;
-    request->result = (sint32)((uint32)total + (uint32)bytes);
+    request->result = (total + bytes);
     sint32 state = request->state;
-    offset = (sint32)((uint32)offset + (uint32)bytes);
+    offset = (offset + bytes);
     request->offset = offset;
     asyncFileOffset = offset;
     if (state != 0)
@@ -217,7 +217,7 @@ extern "C" void loadsegreadcallback(uint32, uint32, void *userData)
         finishrequest(request);
         return;
     }
-    request->remaining = (sint32)((uint32)request->remaining - (uint32)bytes);
+    request->remaining = (request->remaining - bytes);
     char *cursor = request->cursor;
     sint32 length = request->remaining;
     request->cursor = cursor + bytes;
@@ -254,7 +254,7 @@ extern "C" void initasync(sint32 count, sint32 chunkSize, uint32 flags)
         return;
     asyncChunkSize = chunkSize;
     asyncRequestCount = count;
-    asyncRequests = static_cast<NativeAsyncRequest *>(reservememadr("ASYNCREQ", (sint32)((uint32)count * 44), flags));
+    asyncRequests = static_cast<NativeAsyncRequest *>(reservememadr("ASYNCREQ", (sint32)((uint32)count * sizeof(NativeAsyncRequest)), flags));
     asyncFreeQueue.head = asyncRequests;
     asyncFreeQueue.tail = asyncRequests + (count - 1);
     asyncCompletionQueue.head = 0;
@@ -347,7 +347,7 @@ extern "C" uint32 asyncloadsegmentcallback(sint32 offset, void *destination, sin
     if (request == 0)
         return 0;
     newrequestid(request);
-    sint32 file = asyncFile;
+    NativeFileSlot *file = asyncFile;
     request->result = 0;
     request->state = 0;
     request->storage = 0;

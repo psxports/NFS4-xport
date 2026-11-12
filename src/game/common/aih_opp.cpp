@@ -20,37 +20,34 @@ void AIHigh_Opponent::CheckForWipeOut(void)
     sint32 oppFines = carObj_->stats.numFines;
     if (Cars::gNumCopCars == 0 || carObj_->wipeOutEndTick > simGlobal.gameTicks)
         return;
-    if (basicPerpInfo_.crime_ == CRIME_NONE ||
-        (uint32)basicPerpInfo_.copsAssigned_[0] + (uint32)basicPerpInfo_.copsAssigned_[1] == 0)
+    if (basicPerpInfo_.crime_ == CRIME_NONE || basicPerpInfo_.copsAssigned_[0] + (uint32)basicPerpInfo_.copsAssigned_[1] == 0)
         return;
     sint32 timeNow = simGlobal.gameTicks;
-    sint32 elapsed = (sint32)((uint32)timeNow - (uint32)carObj_->wipeOutEndTick);
+    sint32 elapsed = (timeNow - carObj_->wipeOutEndTick);
     if (elapsed < 640)
         return;
     uint32 product = fastRandom * randSeed;
-    sint32 perTickProb = (sint32)((uint32)AI::elapsedTime * 3);
+    sint32 perTickProb = (AI::elapsedTime * 3);
     randtemp = product;
     sint32 randVal = (product >> 8) & 0xFFFF;
     fastRandom = product & 0xFFFF;
     if (randVal < perTickProb)
-        carObj_->wipeOutEndTick = (uint32)timeNow + 192;
-    sint32 lastLevel = (sint32)((uint32)perpChaseInfo_.copGameInfo_->numLevels - 1);
+        carObj_->wipeOutEndTick = timeNow + 192;
+    sint32 lastLevel = (perpChaseInfo_.copGameInfo_->numLevels - 1);
     if (perpChaseInfo_.bestChaseLevelIndex_ == lastLevel)
         return;
     sint32 numHumans = Cars::gNumHumanRaceCars;
-    perTickProb = (sint32)((uint32)AI::elapsedTime * 116);
+    perTickProb = (AI::elapsedTime * 116);
     for (sint32 hLoop = 0; hLoop < numHumans; ++hLoop) {
         Car::tObj *thisPlayerObj = Cars::gHumanRaceCarList[hLoop];
         sint32 speed = thisPlayerObj->currentSpeed;
         if (speed < 0)
-            speed = (sint32)(0 - (uint32)speed);
+            speed = (-speed);
         AIHigh_Player *thisPlayer = static_cast<AIHigh_Player *>(highLevelAIObjs[thisPlayerObj->carIndex]);
         sint32 playFines = thisPlayerObj->stats.numFines;
-        sint32 fineDifference = (sint32)((uint32)playFines - (uint32)oppFines);
-        if (speed > 0xD5554 &&
-            ((thisPlayer->perpChaseInfo_.chaseLevelIndex_ < 2 && oppLevel >= 3) || fineDifference >= 2) &&
-            randVal < perTickProb)
-            carObj_->wipeOutEndTick = (uint32)simGlobal.gameTicks + 192;
+        sint32 fineDifference = (playFines - oppFines);
+        if (speed > 0xD5554 && ((thisPlayer->perpChaseInfo_.chaseLevelIndex_ < 2 && oppLevel >= 3) || fineDifference >= 2) && randVal < perTickProb)
+            carObj_->wipeOutEndTick = simGlobal.gameTicks + 192;
     }
 }
 
@@ -62,14 +59,14 @@ sint32 AIHigh_Opponent::DoRearEnder(void)
         Car::tObj *otherCarObj = Cars::gList[attackIndex];
         sint32 distance = AIWorld::SplineDistance(otherCarObj, carObj_);
         Car::tObj *car = carObj_;
-        sint32 longDistance = (sint32)((uint32)distance * (uint32)car->direction);
-        sint32 latDistance = (sint32)((uint32)car->roadPosition - (uint32)otherCarObj->roadPosition);
+        sint32 longDistance = (distance * car->direction);
+        sint32 latDistance = (car->roadPosition - otherCarObj->roadPosition);
         if (latDistance < 0)
-            latDistance = (sint32)(0 - (uint32)latDistance);
+            latDistance = (-latDistance);
         if ((uint32)longDistance - 0x10001 <= 0x26FFFE && latDistance < longDistance * 2) {
             sint32 speed = otherCarObj->currentSpeed;
             if (speed < 0)
-                speed = (sint32)(0 - (uint32)speed);
+                speed = (-speed);
             if (speed > 0xB1C71)
                 return attackIndex;
         }
@@ -79,7 +76,7 @@ sint32 AIHigh_Opponent::DoRearEnder(void)
         return -1;
     sint32 speed = car->currentSpeed;
     if (speed < 0)
-        speed = (sint32)(0 - (uint32)speed);
+        speed = (-speed);
     if (speed <= 0x140000)
         return -1;
     for (sint32 racerLoop = 0; racerLoop < Cars::gNumHumanRaceCars; ++racerLoop) {
@@ -92,20 +89,20 @@ sint32 AIHigh_Opponent::DoRearEnder(void)
             continue;
         sint32 distance = AIWorld::SplineDistance(otherCarObj, carObj_);
         car = carObj_;
-        sint32 longDistance = (sint32)((uint32)distance * (uint32)car->direction);
-        sint32 latDistance = (sint32)((uint32)car->roadPosition - (uint32)otherCarObj->roadPosition);
+        sint32 longDistance = (distance * car->direction);
+        sint32 latDistance = (car->roadPosition - otherCarObj->roadPosition);
         if (latDistance < 0)
-            latDistance = (sint32)(0 - (uint32)latDistance);
+            latDistance = (-latDistance);
         if ((uint32)longDistance - 0x10001 <= 0x26FFFE && latDistance < longDistance * 2) {
             uint32 mask = car->personality->rearBumpProbMask;
-            uint32 phase = (uint32)simGlobal.gameTicks + (uint32)car->carIndex * 123;
+            uint32 phase = simGlobal.gameTicks + (uint32)car->carIndex * 123;
             if ((phase & mask) == mask)
                 return otherCarObj->carIndex;
         }
         if ((uint32)longDistance + 0x3FFFF <= 0x7FFFE) {
             car = carObj_;
             uint32 mask = car->personality->smackProbMask;
-            uint32 phase = (uint32)simGlobal.gameTicks + (uint32)car->carIndex * 123;
+            uint32 phase = simGlobal.gameTicks + (uint32)car->carIndex * 123;
             if ((phase & mask) == mask)
                 return otherCarObj->carIndex;
         }
@@ -145,12 +142,11 @@ void AIHigh_Opponent::HighExecute(void)
         }
         if (attackMode_ != AIHigh::NO_ATTACK) {
             coorddef pos = { 0, 0, 0 };
-            sint32 aggression = (sint32)((uint32)attackMode_ - 1);
+            sint32 aggression = ((uint32)attackMode_ - 1);
             if (aggression < 2)
                 aggression = 2;
             void *storage = AIState_Base::operator new(sizeof(AIState_Chase));
-            AIState_Base *newState = ::new (storage) AIState_Chase(carObj_, Cars::gList[attackIndex], &pos,
-                32, 0x960000, 0x960000, aggression, 0x10000);
+            AIState_Base *newState = ::new (storage) AIState_Chase(carObj_, Cars::gList[attackIndex], &pos, 32, 0x960000, 0x960000, aggression, 0x10000);
             AIState_Base *oldState = state_;
             if (oldState)
                 delete oldState;
@@ -174,7 +170,7 @@ void AIHigh_Opponent::HighExecute(void)
                 attackMode_ = AIHigh::NO_ATTACK;
             break;
         case AIHigh::PROVOKED_ATTACK:
-            attackTicksLeft_ = (sint32)((uint32)attackTicksLeft_ - (uint32)AI::elapsedTime);
+            attackTicksLeft_ = (attackTicksLeft_ - AI::elapsedTime);
             if (attackTicksLeft_ <= 0)
                 attackMode_ = AIHigh::NO_ATTACK;
             break;
@@ -213,7 +209,7 @@ sint32 AIHigh_Opponent::DoProvokedAttack(void)
 {
     FUNCTION_MARKER(0x80063B2C, "NFS4.EXE");
     Car::tObj *carObj = carObj_;
-    sint32 elapsed = (sint32)((uint32)simGlobal.gameTicks - (uint32)carObj->N.collision.lastTime);
+    sint32 elapsed = (simGlobal.gameTicks - carObj->N.collision.lastTime);
     if (elapsed >= 15)
         return -1;
     BO::tNewtonObj *other = carObj->N.collision.lastOtherObj;
@@ -226,7 +222,7 @@ sint32 AIHigh_Opponent::DoProvokedAttack(void)
         hitCount_ = 0;
     }
     carObj = carObj_;
-    sint32 hits = (sint32)((uint32)hitCount_ + 1U);
+    sint32 hits = (hitCount_ + 1);
     hitCount_ = hits;
     AIPerson::AIPerson_t *personality = carObj->personality;
     if (personality->attackActivationHits < hits)

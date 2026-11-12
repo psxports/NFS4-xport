@@ -35,7 +35,7 @@ void tScreen::DisplayLoadingText(void)
         Draw::StartFrameRender();
         Draw::StartRenderingView(Draw::gPlayer1View);
         FETextRender::MenuTextPositionedJustify(637, 480, 220, 1, textState_Selected, textType_ScreenInfo);
-        sint32 width = (sint32)(0U - (uint32)textpixels(TextSys::Word(637)) - 5);
+        sint32 width = ((~((uint32)textpixels(TextSys::Word(637))) + 1) - 5);
         PSXDrawSquare(0, 480, 220, width, 7);
         Draw::StopRenderingView(Draw::gPlayer1View);
         Draw::StopFrameRender();
@@ -82,7 +82,7 @@ void tScreen::DrawBackgroundImage(sint32 startShape, sint32 numShapes, tTexture:
     tDrawShapeExtended drawFlags;
     drawFlags.flip_axis = (sint16)flip_axis;
     drawFlags.custom_shapes = shapes;
-    sint32 endShape = (sint32)((uint32)startShape + (uint32)numShapes);
+    sint32 endShape = (startShape + numShapes);
     for (sint32 i = startShape; i < endShape; ++i)
     {
         DrawShapeExtended(i, 0x200, 0, 0, fScreenFadeVal, 0, &drawFlags);
@@ -353,7 +353,7 @@ void tScreen::FreeShapes(tShapeInformation &data)
     {
         for (sint16 i = 0; i < data.fNumShapes; ++i)
             if (data.fShapes[i].clutID != 0)
-                Texture::MenuReleaseClutId((sint16)data.fShapes[i].clutID);
+                Texture::MenuReleaseClutId(data.fShapes[i].clutID);
         purgememadr(data.fShapes);
         data.fShapes = 0;
     }
@@ -366,11 +366,11 @@ void tScreen::UploadShapes(tShapeInformation &data, sint16 x, sint16 y, sint16 n
     if (data.fFile != 0)
     {
         if (numShapes == 0)
-            numShapes = (sint16)data.fNumShapes;
+            numShapes = data.fNumShapes;
         for (sint32 i = 0; i < numShapes; ++i)
             if (data.fShapes[i + index].clutID != 0)
             {
-                Texture::MenuReleaseClutId((sint16)data.fShapes[i + index].clutID);
+                Texture::MenuReleaseClutId(data.fShapes[i + index].clutID);
                 data.fShapes[i + index].clutID = 0;
             }
         data.fFlags &= 0xfffe;
@@ -420,7 +420,7 @@ void tScreen::TransitionOn(tScreen::TransitionType type, tMenu *)
 void tScreen::UpdateTransition(void)
 {
     FUNCTION_MARKER(0x80026848, "FRONT.BIN");
-    fInternalScreenFadeVal = (sint32)((uint32)fInternalScreenFadeVal + (fTransitionOff ? 12U : (uint32)-12));
+    fInternalScreenFadeVal = (fInternalScreenFadeVal + (fTransitionOff ? 12U : (uint32)-12));
     if (fInternalScreenFadeVal < -50)
         fInternalScreenFadeVal = -50;
     if (fInternalScreenFadeVal > 150)
@@ -435,7 +435,7 @@ void tScreen::UpdateTransition(void)
 bool tScreen::TransitionIsFinished(void)
 {
     FUNCTION_MARKER(0x800268C0, "FRONT.BIN");
-    return (uint32)fInternalScreenFadeVal + 24U >= 167U;
+    return fInternalScreenFadeVal + 24U >= 167U;
 }
 
 void tScreen::ProcessInput(tPlayer fromPlayer, tInputKeyType &keyval, tMenuCommand &command)

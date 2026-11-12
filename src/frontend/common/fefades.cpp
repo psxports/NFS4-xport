@@ -7,13 +7,13 @@ extern sint32 kRGBVals[28];
 sint32 CalcFadeVal(sint32 col1, sint32 col2, sint32 amount)
 {
     FUNCTION_MARKER(0x8004B7F8, "FRONT.BIN");
-    uint32 complement = 128U - (uint32)amount;
-    uint32 first = (uint32)col1;
-    uint32 second = (uint32)col2;
-    sint32 r = (sint32)(complement * (first & 255U) + (uint32)amount * (second & 255U)) >> 7;
-    sint32 g = (sint32)(complement * ((first >> 8) & 255U) + (uint32)amount * ((second >> 8) & 255U)) >> 7;
-    sint32 b = (sint32)(complement * ((first >> 16) & 255U) + (uint32)amount * ((second >> 16) & 255U)) >> 7;
-    return (sint32)(((uint32)b << 16) | ((uint32)g << 8) | (uint32)r);
+    uint32 complement = 128 - (uint32)amount;
+    uint32 first = col1;
+    uint32 second = col2;
+    sint32 r = (sint32)(complement * (first & 255U) + amount * (second & 255U)) >> 7;
+    sint32 g = (sint32)(complement * ((first >> 8) & 255U) + amount * ((second >> 8) & 255U)) >> 7;
+    sint32 b = (sint32)(complement * ((first >> 16) & 255U) + amount * ((second >> 16) & 255U)) >> 7;
+    return (((uint32)b << 16) | ((uint32)g << 8) | r);
 }
 
 sint32 CalcFadeVal(sint32 col1, sint32 amount)

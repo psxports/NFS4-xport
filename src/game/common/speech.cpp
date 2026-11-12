@@ -298,7 +298,6 @@ void Speech::PurgeRAM(char *memPtr)
 sint32 Speech::HandleRequest(sint32 bank, sint32 localoffset, sint32 size, sint32 event)
 {
     FUNCTION_MARKER(0x80094334, "NFS4.EXE");
-    (void)event;
     return SubmitRequest(bank, localoffset, size);
 }
 
@@ -353,7 +352,7 @@ bool Speech::CheckCarBank(Speech::CarBank *carbank, char *name, sint32 id, Speec
 void Speech::Speaker::SetCar(Car::tObj *car)
 {
     FUNCTION_MARKER(0x800945D8, "NFS4.EXE");
-    uint32 carcolour = 1u << ((uint32)car->carInfo->SpeechColour & 31);
+    uint32 carcolour = 1u << (car->carInfo->SpeechColour & 31);
     if (GetCarBank(car->carIndex)->fFull == -1)
     {
         fCar = 0;
@@ -424,18 +423,18 @@ sint32 Speech::LocationBank::Distance(sint32 slice)
     {
         if (slice >= start || slice <= end)
             return 0;
-        first = (sint32)((uint32)start - (uint32)slice);
-        second = (sint32)((uint32)slice - (uint32)end);
+        first = (start - slice);
+        second = (slice - end);
     }
     else if (slice < start)
     {
-        first = (sint32)((uint32)start - (uint32)slice);
-        second = (sint32)((uint32)slice + (uint32)gNumSlices - (uint32)end);
+        first = (start - slice);
+        second = ((slice + gNumSlices) - end);
     }
     else if (slice > end)
     {
-        first = (sint32)((uint32)slice - (uint32)end);
-        second = (sint32)((uint32)start + (uint32)gNumSlices - (uint32)slice);
+        first = (slice - end);
+        second = ((start + gNumSlices) - slice);
     }
     else
         return 0;
@@ -467,7 +466,7 @@ void Speech::Speaker::FindLocation(Car::tObj *car)
 {
     FUNCTION_MARKER(0x800949D8, "NFS4.EXE");
     sint32 delta = fixedmult(car->currentSpeed, 0x50000) / 0x60000;
-    sint32 slice = (sint32)(sint16)car->N.simRoadInfo.slice + delta;
+    sint32 slice = (car->N.simRoadInfo.slice) + delta;
     if (delta < 0)
     {
         if (slice < 0)
@@ -478,7 +477,7 @@ void Speech::Speaker::FindLocation(Car::tObj *car)
     LocationBank *location = FindClosestLocationTo(slice);
 
     XASSERT(location != 0);
-    sint32 actual = location->Distance((sint32)(sint16)car->N.simRoadInfo.slice);
+    sint32 actual = location->Distance((sint32)car->N.simRoadInfo.slice);
     sint32 distance = location->Distance(slice);
     if (distance == 0)
     {
@@ -565,26 +564,25 @@ sint32 Speech::CalculateBankSize(char *header, Speech::CarBankName *bn, sint32 *
     {
         bsize = size;
         const uint8 *p = (const uint8 *)header + 8;
-        sint32 filecount = (sint32)((uint32)p[0] << 24 | (uint32)p[1] << 16 | (uint32)p[2] << 8 | p[3]);
+        sint32 filecount = ((uint32)p[0] << 24 | (uint32)p[1] << 16 | (uint32)p[2] << 8 | p[3]);
         char *c = header + 16;
         for (sint32 i = 0; i < filecount; ++i)
         {
             p = (const uint8 *)c;
-            offset = (sint32)((uint32)p[0] << 24 | (uint32)p[1] << 16 | (uint32)p[2] << 8 | p[3]);
-            size = (sint32)((uint32)p[4] << 24 | (uint32)p[5] << 16 | (uint32)p[6] << 8 | p[7]);
+            offset = ((uint32)p[0] << 24 | (uint32)p[1] << 16 | (uint32)p[2] << 8 | p[3]);
+            size = ((uint32)p[4] << 24 | (uint32)p[5] << 16 | (uint32)p[6] << 8 | p[7]);
             c += 8;
             char *name = c;
             while (*c != 0)
                 ++c;
             if (c[-4] == '.' && c[-3] == 'h' && c[-2] == 'd' && c[-1] == 'r')
             {
-                if (*hoffset == 0)
-                    *hoffset = offset;
-                *hsize = (sint32)((uint32)offset + (uint32)size - (uint32)*hoffset);
+                if (*hoffset == 0) *hoffset = offset;
+                *hsize = ((offset + size) - (*hoffset));
                 if (CheckMultiBank(name, bcount, bn))
                 {
                     ++bcount;
-                    bsize = (sint32)((uint32)bsize + (uint32)size);
+                    bsize = (bsize + size);
                 }
             }
             ++c;
@@ -606,11 +604,11 @@ void Speech::LoadBankHeaders(char *header, Speech::CarBankName *bn, sint32 hoffs
     XPORT_UNPLACED::FILE::readsync(fFileHandle, offset, data, size, 100);
     iSPCH::BindData(reinterpret_cast<uint8 *>(data));
     const uint8 *p = (const uint8 *)header + 8;
-    sint32 filecount = (sint32)((uint32)p[0] << 24 | (uint32)p[1] << 16 | (uint32)p[2] << 8 | p[3]);
+    sint32 filecount = ((uint32)p[0] << 24 | (uint32)p[1] << 16 | (uint32)p[2] << 8 | p[3]);
     data += size;
     char *hdata = (char *)reservememadr("spch temp", hsize, 16);
     XPORT_UNPLACED::FILE::readsync(fFileHandle, hoffset, hdata, hsize, 100);
-    char **banknames = (char **)reservememadr("spch temp", (sint32)((uint32)fBankCount * 4), 16);
+    char **banknames = (char **)reservememadr("spch temp", (sint32)((uint32)fBankCount * sizeof(char *)), 16);
     for (sint32 j = 0; j < fBankCount; ++j)
     {
         banknames[j] = 0;
@@ -621,8 +619,8 @@ void Speech::LoadBankHeaders(char *header, Speech::CarBankName *bn, sint32 hoffs
     {
         systemtask(0);
         p = (const uint8 *)c;
-        offset = (sint32)((uint32)p[0] << 24 | (uint32)p[1] << 16 | (uint32)p[2] << 8 | p[3]);
-        size = (sint32)((uint32)p[4] << 24 | (uint32)p[5] << 16 | (uint32)p[6] << 8 | p[7]);
+        offset = ((uint32)p[0] << 24 | (uint32)p[1] << 16 | (uint32)p[2] << 8 | p[3]);
+        size = ((uint32)p[4] << 24 | (uint32)p[5] << 16 | (uint32)p[6] << 8 | p[7]);
         c += 8;
         char *name = c;
         sint32 namelen = 0;
@@ -633,11 +631,10 @@ void Speech::LoadBankHeaders(char *header, Speech::CarBankName *bn, sint32 hoffs
         }
         if (namelen > 4)
         {
-            if (c[-4] == '.' && c[-3] == 'h' && c[-2] == 'd' && c[-1] == 'r' &&
-                CheckMultiBank(name, id, bn))
+            if (c[-4] == '.' && c[-3] == 'h' && c[-2] == 'd' && c[-1] == 'r' && CheckMultiBank(name, id, bn))
             {
                 ++id;
-                memcpy(data, hdata + (sint32)((uint32)offset - (uint32)hoffset), size);
+                memcpy(data, hdata + (offset - hoffset), size);
                 sint32 bank = SPCH::AddBank(data);
                 data += size;
                 banknames[bank] = name;
@@ -736,7 +733,7 @@ Speech::Speech(void)
     if (header != 0)
         banksize = CalculateBankSize(header, bn, &hoffset, &hsize);
     if (banksize > 0)
-        fBankOffset = (sint32 *)reservememadr("spch index", (sint32)((uint32)fBankCount * 4 + (uint32)banksize), 0);
+        fBankOffset = (sint32 *)reservememadr("spch index", (((fBankCount * 4) + banksize)), 0);
     if (fBankOffset != 0)
     {
         sint32 dataRate = SPCH::GetSampleDataRate(0x2B11, 16, 2);
@@ -816,7 +813,7 @@ sint32 Speech::SubmitRequest(sint32 bank, sint32 localoffset, sint32 size)
     sint32 offset = 0;
     if (bank >= 0 && bank < speech->fBankCount)
         offset = speech->fBankOffset[bank];
-    sint32 requestoffset = (sint32)((uint32)offset + (uint32)localoffset);
+    sint32 requestoffset = (offset + localoffset);
     if (patch >= 0)
         CopSpeak::GenericBankRequest(patch, car);
     else if (offset != 0)
@@ -1063,7 +1060,7 @@ void Speech::DispatchSpeaker::StatusReply(void)
         Speaker *next = fSub->fSub;
         sint32 update = fUpdateCount;
         fStatusCount = 0x140;
-        fUpdateCount = (sint32)((uint32)update + 1U);
+        fUpdateCount = (update + 1);
         fStatusSub = next;
     }
     Speaker *current = fSub;
@@ -1098,7 +1095,7 @@ void Speech::DispatchSpeaker::Status(void)
     }
     if (fStatusSub != 0)
     {
-        fStatusCount = (sint32)((uint32)fStatusCount - 1U);
+        fStatusCount = (fStatusCount - 1);
         if (fStatusCount != 0)
             return;
         Speaker *status = fStatusSub;
@@ -1117,7 +1114,7 @@ void Speech::DispatchSpeaker::Status(void)
     }
     if (fStatusCount > 0)
     {
-        fStatusCount = (sint32)((uint32)fStatusCount - 1U);
+        fStatusCount = (fStatusCount - 1);
         return;
     }
     if (fSub->fBlockade.flags != 0 || fSub->fArrest.flags != 0)
@@ -1130,7 +1127,7 @@ void Speech::DispatchSpeaker::Status(void)
         if (nextPerp != currentPerp)
             fSub->fSub->Promote();
     }
-    switch ((uint32)fUpdateCount & 3U)
+    switch (fUpdateCount & 3U)
     {
     case 0:
         fSub->fUpdate.flags = 0x26;
@@ -1158,13 +1155,13 @@ void Speech::DispatchSpeaker::Status(void)
         {
             fSub->fUpdate.flags = 0;
             fSub->Status();
-            fUpdateCount = (sint32)((uint32)fUpdateCount + 1U);
+            fUpdateCount = (fUpdateCount + 1);
             return;
         }
         if (fSub->DistToPerp() < 0x140000)
         {
             fSub->Bullhorn();
-            fUpdateCount = (sint32)((uint32)fUpdateCount + 1U);
+            fUpdateCount = (fUpdateCount + 1);
             return;
         }
         fSub->fUpdate.flags = 1;
@@ -1183,7 +1180,7 @@ void Speech::DispatchSpeaker::Status(void)
     sint32 update = fUpdateCount;
     fStatusCount = 0x60;
     fStatusSub = current;
-    fUpdateCount = (sint32)((uint32)update + 1U);
+    fUpdateCount = (update + 1);
 }
 
 void Speech::MobileSpeaker::Status(void)
@@ -1346,7 +1343,6 @@ void Speech::DispatchSpeaker::Report(Car::tObj *perp)
 void Speech::DispatchSpeaker::Accident(sint32 slice)
 {
     FUNCTION_MARKER(0x80097350, "NFS4.EXE");
-    (void)slice;
 }
 
 void Speech::DispatchSpeaker::Deny(void)
@@ -1405,13 +1401,13 @@ sint32 Speech::PickVoice(Car::tObj *carObj)
     if ((carObj->carFlags & 0x40) != 0)
     {
         sint32 count = fSuperCount;
-        fSuperCount = (sint32)((uint32)count + 1);
+        fSuperCount = (count + 1);
         return count % 6;
     }
     if ((carObj->carFlags & 0x80) == 0)
     {
         sint32 count = fCopCount;
-        fCopCount = (sint32)((uint32)count + 1);
+        fCopCount = (count + 1);
         return count % 9;
     }
     return 0;
@@ -1497,7 +1493,7 @@ sint32 Speech::Speaker::CalcMph(Car::tObj *perp)
     FUNCTION_MARKER(0x800978A4, "NFS4.EXE");
     sint32 speed = perp->linearVel_ch.z;
     if (speed < 0)
-        speed = (sint32)(0u - (uint32)speed);
+        speed = (-speed);
     return fixedmult(0x23CA5, speed) / 65536;
 }
 
@@ -1517,7 +1513,7 @@ void Speech::MobileSpeaker::SetSpeed(Car::tObj *perp)
     }
     sint32 speed = perp->linearVel_ch.z;
     if (speed < 0)
-        speed = (sint32)(0u - (uint32)speed);
+        speed = (-speed);
     sint32 step = fixedmult(factor, speed) / 0xA0000 - 3;
     fSpeed = step < 0 ? 0 : step;
 }
@@ -1527,7 +1523,7 @@ sint32 Speech::MobileSpeaker::DistToPerp(void)
     FUNCTION_MARKER(0x80097A18, "NFS4.EXE");
     Car::tObj *first = CarObj();
     Car::tObj *second = Perp();
-    sint32 difference = (sint32)((uint32)first->N.position.x - (uint32)second->N.position.x);
+    sint32 difference = (first->N.position.x - second->N.position.x);
     if (difference > 0)
     {
         first = CarObj();
@@ -1538,10 +1534,10 @@ sint32 Speech::MobileSpeaker::DistToPerp(void)
         first = Perp();
         second = CarObj();
     }
-    sint32 x = (sint32)((uint32)first->N.position.x - (uint32)second->N.position.x);
+    sint32 x = (first->N.position.x - second->N.position.x);
     first = CarObj();
     second = Perp();
-    difference = (sint32)((uint32)first->N.position.z - (uint32)second->N.position.z);
+    difference = (first->N.position.z - second->N.position.z);
     if (difference > 0)
     {
         first = CarObj();
@@ -1552,12 +1548,12 @@ sint32 Speech::MobileSpeaker::DistToPerp(void)
         first = Perp();
         second = CarObj();
     }
-    sint32 z = (sint32)((uint32)first->N.position.z - (uint32)second->N.position.z);
+    sint32 z = (first->N.position.z - second->N.position.z);
     sint32 d;
     if (z < x)
-        d = (sint32)((uint32)x + (uint32)(z >> 2));
+        d = (x + (z >> 2));
     else
-        d = (sint32)((uint32)z + (uint32)(x >> 2));
+        d = (z + (x >> 2));
     return d;
 }
 
@@ -1648,8 +1644,7 @@ void Speech::MobileSpeaker::Engage(Car::tObj *perp)
     }
     Speaker *SubChain = Dispatch();
     bool promote = false;
-    if (Dispatch()->fSub != 0 && Dispatch()->fSub->Perp() != 0 &&
-        (Dispatch()->fSub->Perp()->carFlags & 4) == 0)
+    if (Dispatch()->fSub != 0 && Dispatch()->fSub->Perp() != 0 && (Dispatch()->fSub->Perp()->carFlags & 4) == 0)
         promote = (Perp()->carFlags & 4) != 0;
     if (promote)
     {
@@ -1695,8 +1690,7 @@ void Speech::MobileSpeaker::Lose(void)
         return;
     fgSpeech->fSpeakerCar = fCarObj;
     Speaker *Leader;
-    if (Dispatch()->fSub != 0 && Dispatch()->fSub->fSub == this &&
-        fBlockade.flags == 0 && fArrest.flags == 0)
+    if (Dispatch()->fSub != 0 && Dispatch()->fSub->fSub == this && fBlockade.flags == 0 && fArrest.flags == 0)
     {
         Leader = Dispatch()->fSub;
         CallSignBank *bank = CallSign();
@@ -1747,7 +1741,6 @@ void Speech::MobileSpeaker::Lose(void)
 void Speech::MobileSpeaker::Accident(sint32 slice)
 {
     FUNCTION_MARKER(0x80098788, "NFS4.EXE");
-    (void)slice;
 }
 
 void Speech::MobileSpeaker::Catch(sint32 ticket)

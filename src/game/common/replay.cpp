@@ -99,8 +99,7 @@ char * Replay::Decompress(char *compressed_data)
         uint8 current_byte = (uint8)compressed_data[c_pointer];
         if (current_byte == 0xFF) {
             sint32 count = (uint8)compressed_data[c_pointer + 1];
-            for (sint32 i = 0; i < count; ++i)
-                *output++ = compressed_data[c_pointer + 2];
+            for (sint32 i = 0; i < count; ++i) *output++ = compressed_data[c_pointer + 2];
             c_pointer += 3;
         } else {
             *output++ = (char)current_byte;
@@ -180,7 +179,7 @@ void Replay::StoringReplay(void)
 void Replay::StoringControllerData(tControllerData controllerdata)
 {
     FUNCTION_MARKER(0x800B40BC, "NFS4.EXE");
-    if ((sint32)((uint32)ReplayStorePtr + 128U) >= 24576)
+    if ((ReplayStorePtr + 128) >= 24576)
     {
         sint32 size = simGlobal.gameTicks;
         ReplayMode = 1;
@@ -208,7 +207,7 @@ void Replay::StoringControllerData(tControllerData controllerdata)
             memcpy(&ReplayBuffer.buffer[ReplayStorePtr], packeddata, tail);
             memcpy(compressed_data, packeddata + tail, length - tail);
         }
-        ReplayStorePtr = (sint32)((uint32)ReplayStorePtr + (uint8)packeddata[0]);
+        ReplayStorePtr = (ReplayStorePtr + ((uint8)packeddata[0]));
     }
 }
 
@@ -236,7 +235,7 @@ tControllerData Replay::RetreivingControllerData(void)
         }
         char *decoded = Decompress(packeddata);
         memcpy(channels[i], decoded, 32);
-        ReplayGetPtr = (sint32)((uint32)ReplayGetPtr + (uint8)packeddata[0]);
+        ReplayGetPtr = (ReplayGetPtr + ((uint8)packeddata[0]));
     }
     return controllerdata;
 }
@@ -245,19 +244,17 @@ void Replay::SaveInput(sint32 car)
 {
     FUNCTION_MARKER(0x800B4824, "NFS4.EXE");
     Input::Fetch(car);
-    controlData[car].steering[ReplayCounter[car]] =
-        (char)((sint32)(sint8)Input::gSim.steering / 4 + 64);
+    controlData[car].steering[ReplayCounter[car]] = (char)(((sint8)Input::gSim.steering) / 4 + 64);
     controlData[car].gas[ReplayCounter[car]] = Input::gSim.gas >> 3;
     controlData[car].brake[ReplayCounter[car]] = Input::gSim.brake >> 3;
     controlData[car].states[ReplayCounter[car]] = Input::gSim.flags;
     if (Cars::gHumanRaceCarList[car]->carInfo->RampSteering != 0)
-        controlData[car].steering[ReplayCounter[car]] =
-            (char)((uint8)controlData[car].steering[ReplayCounter[car]] | 0x80U);
+        controlData[car].steering[ReplayCounter[car]] = (char)((uint8)controlData[car].steering[ReplayCounter[car]] | 0x80U);
     if (Cars::gHumanRaceCarList[car]->carInfo->RampGas != 0)
         controlData[car].gas[ReplayCounter[car]] |= 0x80;
     if (Cars::gHumanRaceCarList[car]->carInfo->RampBrake != 0)
         controlData[car].brake[ReplayCounter[car]] |= 0x80;
-    sint32 count = (sint32)((uint32)ReplayCounter[car] + 1U);
+    sint32 count = (ReplayCounter[car] + 1);
     ReplayCounter[car] = count;
     if (count == 32)
     {
@@ -272,9 +269,7 @@ void Replay::GetInput(sint32 car)
     Input::Fetch(car);
     if (ReplayCounter[car] == 0)
     {
-        if (ReplayGetPtr >= ReplayStorePtr ||
-            (uint8)(ReplayGetPtr < 24576 ?
-                ReplayBuffer.buffer[ReplayGetPtr] : compressed_data[ReplayGetPtr - 24576]) == 0)
+        if (ReplayGetPtr >= ReplayStorePtr || (uint8)(ReplayGetPtr < 24576 ? ReplayBuffer.buffer[ReplayGetPtr] : compressed_data[ReplayGetPtr - 24576]) == 0)
             ReplayMode = 3;
         else
         {
@@ -284,18 +279,13 @@ void Replay::GetInput(sint32 car)
     }
     if (ReplayMode == 2)
     {
-        Cars::gHumanRaceCarList[car]->carInfo->RampSteering =
-            ((uint8)controlData[car].steering[ReplayCounter[car]] & 0x80U) != 0;
-        Cars::gHumanRaceCarList[car]->carInfo->RampGas =
-            (controlData[car].gas[ReplayCounter[car]] & 0x80U) != 0;
-        Cars::gHumanRaceCarList[car]->carInfo->RampBrake =
-            (controlData[car].brake[ReplayCounter[car]] & 0x80U) != 0;
-        controlData[car].steering[ReplayCounter[car]] =
-            (char)((uint8)controlData[car].steering[ReplayCounter[car]] & 0x7FU);
+        Cars::gHumanRaceCarList[car]->carInfo->RampSteering = ((uint8)controlData[car].steering[ReplayCounter[car]] & 0x80U) != 0;
+        Cars::gHumanRaceCarList[car]->carInfo->RampGas = (controlData[car].gas[ReplayCounter[car]] & 0x80U) != 0;
+        Cars::gHumanRaceCarList[car]->carInfo->RampBrake = (controlData[car].brake[ReplayCounter[car]] & 0x80U) != 0;
+        controlData[car].steering[ReplayCounter[car]] = (char)((uint8)controlData[car].steering[ReplayCounter[car]] & 0x7FU);
         controlData[car].gas[ReplayCounter[car]] &= 0x7F;
         controlData[car].brake[ReplayCounter[car]] &= 0x7F;
-        Input::gSim.steering = (char)(((sint32)(uint8)
-            controlData[car].steering[ReplayCounter[car]] - 64) * 4);
+        Input::gSim.steering = (char)((((uint8) controlData[car].steering[ReplayCounter[car]]) - 64) * 4);
         Input::gSim.gas = (uint8)(controlData[car].gas[ReplayCounter[car]] << 3);
         Input::gSim.brake = (uint8)(controlData[car].brake[ReplayCounter[car]] << 3);
         Input::gSim.flags = controlData[car].states[ReplayCounter[car]];
@@ -307,7 +297,7 @@ void Replay::GetInput(sint32 car)
         Input::gSim.brake = 0;
         Input::gSim.flags = 0;
     }
-    sint32 count = (sint32)((uint32)ReplayCounter[car] + 1U);
+    sint32 count = (ReplayCounter[car] + 1);
     sint32 validCams = numValidCams;
     ReplayCounter[car] = count;
     if (validCams != 0 && ReplayCamera[car].cameraMode == 19 && simGlobal.gameStarted != 0)
@@ -347,7 +337,7 @@ void Replay::GetInterfaceKey(void)
     sint32 Cameras = GameSetup::gData.commMode == 1 ? 2 : 1;
     ReplayInterface.changeCamera = 0;
     if (ReplayInterface.depressed > 0)
-        ReplayInterface.depressed = (sint32)((uint32)ReplayInterface.depressed - 1U);
+        ReplayInterface.depressed = (ReplayInterface.depressed - 1);
     else if (ReplayInterface.statsScreen != 0)
     {
         if (Input::Interface(5, 1) != 0 || Input::Interface(6, 1) != 0)
@@ -365,12 +355,12 @@ void Replay::GetInterfaceKey(void)
     {
         AudioCmn::PlayPauseSound(3);
         sint32 selection = ReplayInterface.selection;
-        ReplayInterface.selection = selection == 0 ? 4 : (sint32)((uint32)selection - 1U);
+        ReplayInterface.selection = selection == 0 ? 4 : (selection - 1);
     }
     else if (Input::Interface(4, 1) != 0)
     {
         AudioCmn::PlayPauseSound(3);
-        ReplayInterface.selection = (sint32)((uint32)ReplayInterface.selection + 1U) % 5;
+        ReplayInterface.selection = (ReplayInterface.selection + 1) % 5;
     }
     else if (Input::Interface(5, 1) != 0)
     {
@@ -390,13 +380,13 @@ void Replay::GetInterfaceKey(void)
             break;
         case 3:
             if (GameSetup::gData.commMode == 1)
-                ReplayInterface.speed = (sint32)((uint32)ReplayInterface.speed + 1U) % 3;
+                ReplayInterface.speed = (ReplayInterface.speed + 1) % 3;
             else
-                ReplayInterface.speed = (sint32)((uint32)ReplayInterface.speed + 1U) % 4;
+                ReplayInterface.speed = (ReplayInterface.speed + 1) % 4;
             break;
         case 4:
             ReplayInterface.changeCamera = 1;
-            ReplayInterface.camera = (sint32)((uint32)ReplayInterface.camera + 1U) % 9;
+            ReplayInterface.camera = (ReplayInterface.camera + 1) % 9;
             if (ReplayCameraList[ReplayInterface.camera] == 19)
             {
                 for (sint32 i = 0; i < Cameras; ++i)
@@ -449,7 +439,7 @@ void Replay::LoadCameraFile(void)
     if (numValidCams != 0)
         return;
     char fname[80];
-    sint32 bigFile = 0;
+    NativeFileSlot *bigFile = 0;
     sprintf(fname, "%scamera.viv", Paths_Paths[8]);
     XPORT_UNPLACED::FILE::addbigsync(fname, 16, 100, &bigFile);
     if (GameSetup::gData.reverseTrack != 0)
@@ -510,9 +500,9 @@ void Replay::LoadCameraFile(void)
     sint32 count = numValidCams;
     for (sint32 i = 0; i < count; ++i)
     {
-        gReplayCameraSlots[i].pos.x = (sint32)((uint32)gReplayCameraSlots[i].pos.x << 6);
-        gReplayCameraSlots[i].pos.z = (sint32)((uint32)gReplayCameraSlots[i].pos.z << 6);
-        gReplayCameraSlots[i].pos.y = (sint32)((uint32)gReplayCameraSlots[i].pos.y << 6);
+        gReplayCameraSlots[i].pos.x = ((uint32)gReplayCameraSlots[i].pos.x << 6);
+        gReplayCameraSlots[i].pos.z = ((uint32)gReplayCameraSlots[i].pos.z << 6);
+        gReplayCameraSlots[i].pos.y = ((uint32)gReplayCameraSlots[i].pos.y << 6);
     }
 }
 
@@ -520,10 +510,10 @@ void Replay::ReplayChooseCamera(sint32 player, sint32 slice)
 {
     FUNCTION_MARKER(0x800B586C, "NFS4.EXE");
     sint32 currIndex = ReplayCamera[player].cutToNextCamera;
-    sint32 prevIndex = (sint32)((uint32)currIndex - 1U);
+    sint32 prevIndex = (currIndex - 1);
     if (prevIndex < 0)
-        prevIndex = (sint32)((uint32)numValidCams - 1U);
-    sint32 nextIndex = (sint32)((uint32)currIndex + 1U);
+        prevIndex = (numValidCams - 1);
+    sint32 nextIndex = (currIndex + 1);
     if (nextIndex >= numValidCams)
         nextIndex = 0;
     sint32 currDist = gReplayCameraSlots[currIndex].slice;
@@ -531,9 +521,9 @@ void Replay::ReplayChooseCamera(sint32 player, sint32 slice)
     bool movedBack = false;
     if (slice < currDist)
     {
-        sint32 distance = (sint32)((uint32)slice - (uint32)currDist);
+        sint32 distance = (slice - currDist);
         if (distance <= 0)
-            distance = (sint32)((uint32)currDist - (uint32)slice);
+            distance = (currDist - slice);
         if (distance < 200)
         {
             ReplayCamera[player].cutToNextCamera = prevIndex;
@@ -542,26 +532,20 @@ void Replay::ReplayChooseCamera(sint32 player, sint32 slice)
     }
     if (!movedBack && nextDist <= slice)
     {
-        sint32 distance = (sint32)((uint32)slice - (uint32)nextDist);
+        sint32 distance = (slice - nextDist);
         if (distance <= 0)
-            distance = (sint32)((uint32)nextDist - (uint32)slice);
+            distance = (nextDist - slice);
         if (distance < 200)
             ReplayCamera[player].cutToNextCamera = nextIndex;
     }
     if (ReplayCamera[player].cutToNextCamera == currIndex)
         return;
-    if ((((GameSetup::gData.raceType == 1 || GameSetup::gData.raceType == 5) &&
-          ((Cars::gHumanRaceCarList[0]->carFlags & 0x200) != 0 ||
-           (Cars::gNumHumanRaceCars == 2 &&
-            (Cars::gHumanRaceCarList[1]->carFlags & 0x200) != 0))) ||
-         Cars::gHumanRaceCarList[player]->wrongway != 0) &&
-        (uint8)gReplayCameraSlots[ReplayCamera[player].cutToNextCamera].mode == 11)
+    if ((((GameSetup::gData.raceType == 1 || GameSetup::gData.raceType == 5) && ((Cars::gHumanRaceCarList[0]->carFlags & 0x200) != 0 || (Cars::gNumHumanRaceCars == 2 && (Cars::gHumanRaceCarList[1]->carFlags & 0x200) != 0))) || Cars::gHumanRaceCarList[player]->wrongway != 0) && (uint8)gReplayCameraSlots[ReplayCamera[player].cutToNextCamera].mode == 11)
     {
         sint32 index = ReplayCamera[player].cutToNextCamera;
         ReplayCamera[player].defaultCamera = 0;
         Camera::gInfo[player].zooming = gReplayCameraSlots[index].zoom;
-        Camera::gInfo[player].splineMode =
-            gReplayCameraSlots[ReplayCamera[player].cutToNextCamera].splineMode;
+        Camera::gInfo[player].splineMode = gReplayCameraSlots[ReplayCamera[player].cutToNextCamera].splineMode;
         Camera::SetMode(player, 11);
     }
     else
@@ -584,22 +568,22 @@ void Replay::ReplayFindClosestCamera(sint32 player, sint32 slice)
         sint32 next = i + 1 < count ? i + 1 : 0;
         sint32 currSlice = gReplayCameraSlots[i].slice;
         sint32 nextSlice = gReplayCameraSlots[next].slice;
-        sint32 currDist = (sint32)((uint32)slice - (uint32)currSlice);
+        sint32 currDist = (slice - currSlice);
         if (currDist > half)
-            currDist = (sint32)((uint32)numSlices - (uint32)currDist);
+            currDist = (numSlices - currDist);
         if (currDist <= 0)
-            currDist = (sint32)(0U - (uint32)currDist);
-        sint32 nextDist = (sint32)((uint32)slice - (uint32)nextSlice);
+            currDist = (-currDist);
+        sint32 nextDist = (slice - nextSlice);
         if (nextDist > half)
-            nextDist = (sint32)((uint32)numSlices - (uint32)nextDist);
+            nextDist = (numSlices - nextDist);
         if (nextDist <= 0)
-            nextDist = (sint32)(0U - (uint32)nextDist);
-        sint32 actualDist = (sint32)((uint32)currSlice - (uint32)nextSlice);
+            nextDist = (-nextDist);
+        sint32 actualDist = (currSlice - nextSlice);
         if (actualDist > half)
-            actualDist = (sint32)((uint32)numSlices - (uint32)actualDist);
+            actualDist = (numSlices - actualDist);
         if (actualDist <= 0)
-            actualDist = (sint32)(0U - (uint32)actualDist);
-        if ((sint32)((uint32)currDist + (uint32)nextDist) <= actualDist)
+            actualDist = (-actualDist);
+        if ((currDist + nextDist) <= actualDist)
         {
             cameraIndex = i;
             break;
@@ -610,8 +594,7 @@ void Replay::ReplayFindClosestCamera(sint32 player, sint32 slice)
     {
         ReplayCamera[player].defaultCamera = 0;
         Camera::gInfo[player].zooming = gReplayCameraSlots[cameraIndex].zoom;
-        Camera::gInfo[player].splineMode =
-            gReplayCameraSlots[ReplayCamera[player].cutToNextCamera].splineMode;
+        Camera::gInfo[player].splineMode = gReplayCameraSlots[ReplayCamera[player].cutToNextCamera].splineMode;
         Camera::SetMode(player, 11);
     }
     else

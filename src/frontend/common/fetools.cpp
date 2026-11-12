@@ -68,20 +68,20 @@ void FeTools::DrawPSXButton(uint8 padType, uint16 button, sint32 x, sint32 y)
     tDrawShapeExtended drawFlags;
     drawFlags.tint[0] = 0xBEBE;
     sint32 type = 0;
-    y = (sint32)((uint32)y + 1U);
+    y = (y + 1);
     if (button == 0x50)
     {
-        DrawShapeExtended(26, 0x18, (sint32)((uint32)x + 3U), (sint32)((uint32)y - 2U), 0, 0, &drawFlags);
+        DrawShapeExtended(26, 0x18, ((x + 3)), (y - 2), 0, 0, &drawFlags);
         type = 27;
-        x = (sint32)((uint32)x + 4U);
-        y = (sint32)((uint32)y + 4U);
+        x = (x + 4);
+        y = (y + 4);
     }
     else if (button == 0xA0)
     {
-        y = (sint32)((uint32)y - 1U);
+        y = (y - 1);
         DrawShapeExtended(28, 0x18, x, y, 0, 0, &drawFlags);
         type = 29;
-        x = (sint32)((uint32)x + 10U);
+        x = (x + 10);
     }
     else if (padType == 0x23)
     {
@@ -89,19 +89,19 @@ void FeTools::DrawPSXButton(uint8 padType, uint16 button, sint32 x, sint32 y)
         {
         case 0x1000:
             type = 18;
-            y = (sint32)((uint32)y - 3U);
+            y = (y - 3);
             break;
         case 0x4000:
             type = 19;
-            y = (sint32)((uint32)y - 4U);
+            y = (y - 4);
             break;
         case 0x8000:
             type = 20;
-            y = (sint32)((uint32)y - 2U);
+            y = (y - 2);
             break;
         case 8:
             type = 21;
-            y = (sint32)((uint32)y - 1U);
+            y = (y - 1);
             break;
         }
     }
@@ -111,19 +111,19 @@ void FeTools::DrawPSXButton(uint8 padType, uint16 button, sint32 x, sint32 y)
         {
         case 0x1000:
             type = 15;
-            y = (sint32)((uint32)y - 3U);
+            y = (y - 3);
             break;
         case 0x4000:
             type = 12;
-            y = (sint32)((uint32)y - 3U);
+            y = (y - 3);
             break;
         case 0x8000:
             type = 14;
-            y = (sint32)((uint32)y - 3U);
+            y = (y - 3);
             break;
         case 8:
             type = 16;
-            x = (sint32)((uint32)x + 2U);
+            x = (x + 2);
             break;
         }
     }
@@ -163,7 +163,7 @@ void FeTools::FormatMoney(char *string, sint32 amount)
     char neg = ' ';
     if (amount < 0)
     {
-        absnum = (sint32)(0U - (uint32)amount);
+        absnum = (-amount);
         neg = '-';
     }
     if (absnum < 1000)
@@ -179,7 +179,6 @@ void FeTools::FormatMoney(char *string, sint32 amount)
     else
     {
         char *format = TextSys::Word(133);
-        sprintf(string, format, neg, (sint32)(absnum / 1000000),
-                (sint32)((absnum % 1000000) / 1000), (sint32)(absnum % 1000));
+        sprintf(string, format, neg, (sint32)(absnum / 1000000), (sint32)((absnum % 1000000) / 1000), (sint32)(absnum % 1000));
     }
 }

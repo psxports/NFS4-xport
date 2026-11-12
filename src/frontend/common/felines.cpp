@@ -20,7 +20,7 @@ void PSXTransDrawBrightEndLine(sint32 col, sint32 x, sint32 y, sint32 w, sint32 
     {
         if ((uint32)side < 2)
         {
-            sint32 scaled = (sint32)((uint32)h * (128U - (uint32)fade));
+            sint32 scaled = (h * (128 - fade));
             if (scaled < 0)
                 scaled += 127;
             hh = scaled >> 7;
@@ -28,16 +28,16 @@ void PSXTransDrawBrightEndLine(sint32 col, sint32 x, sint32 y, sint32 w, sint32 
             if (endbit > 8)
                 endbit = 8;
             if (side == 1)
-                PSXDrawGouraudSquare(x, (sint32)((uint32)y + (uint32)hh - (uint32)endbit), ww, endbit, col, col, BrightCol, BrightCol);
+                PSXDrawGouraudSquare(x, (((y + hh) - endbit)), ww, endbit, col, col, BrightCol, BrightCol);
             else
             {
-                y = (sint32)((uint32)y + (uint32)h - (uint32)hh);
+                y = ((y + h) - hh);
                 PSXDrawGouraudSquare(x, y, ww, endbit, BrightCol, BrightCol, col, col);
             }
         }
         else
         {
-            sint32 scaled = (sint32)((uint32)w * (128U - (uint32)fade));
+            sint32 scaled = (w * (128 - fade));
             if (scaled < 0)
                 scaled += 127;
             ww = scaled >> 7;
@@ -46,17 +46,17 @@ void PSXTransDrawBrightEndLine(sint32 col, sint32 x, sint32 y, sint32 w, sint32 
                 endbit = 8;
             if (side == 2)
             {
-                x = (sint32)((uint32)x + (uint32)w - (uint32)ww);
+                x = ((x + w) - ww);
                 PSXDrawGouraudSquare(x, y, endbit, hh, BrightCol, col, BrightCol, col);
             }
             else
-                PSXDrawGouraudSquare((sint32)((uint32)x + (uint32)ww - (uint32)endbit), y, endbit, hh, col, BrightCol, col, BrightCol);
+                PSXDrawGouraudSquare((((x + ww) - endbit)), y, endbit, hh, col, BrightCol, col, BrightCol);
         }
     }
     if (darksides != 0)
     {
         if (side == 2 || fade == 0)
-            PSXDrawGouraudSquare((sint32)((uint32)x + (uint32)ww - (uint32)darksides), y, darksides, hh, col, 0, col, 0);
+            PSXDrawGouraudSquare((((x + ww) - darksides)), y, darksides, hh, col, 0, col, 0);
         if (side == 3 || fade == 0)
             PSXDrawGouraudSquare(x, y, darksides, hh, 0, col, 0, col);
     }

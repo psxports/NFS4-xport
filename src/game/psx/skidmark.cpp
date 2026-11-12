@@ -29,24 +29,23 @@ void CalcStartSegment(Skidmark::Segment *r1, Skidmark::Segment *r2, coorddef *cp
     sint32 pxp;
     sint32 pzp;
     {
-        sint32 angle = intatan((sint32)((uint32)pt2->x - (uint32)pt1->x),
-            (sint32)((uint32)pt2->z - (uint32)pt1->z));
+        sint32 angle = intatan(((pt2->x - pt1->x)), (pt2->z - pt1->z));
         sint32 cosine = fastintcos(angle);
-        pxp = fixedmult(tireWidth, (sint32)(0u - (uint32)cosine)) >> 1;
+        pxp = fixedmult(tireWidth, (-cosine)) >> 1;
         pzp = fixedmult(tireWidth, fastintsin(angle)) >> 1;
     }
-    r1->svx[0].vx = (sint16)((sint32)((uint32)pt1->x + (uint32)pxp - (uint32)cp->x) >> 6);
-    r1->svx[0].vy = (sint16)((sint32)((uint32)pt1->y - (uint32)cp->y) >> 6);
-    r1->svx[0].vz = (sint16)((sint32)((uint32)pt1->z + (uint32)pzp - (uint32)cp->z) >> 6);
-    r1->svx[1].vx = (sint16)((sint32)((uint32)pt1->x - (uint32)pxp - (uint32)cp->x) >> 6);
-    r1->svx[1].vy = (sint16)((sint32)((uint32)pt1->y - (uint32)cp->y) >> 6);
-    r1->svx[1].vz = (sint16)((sint32)((uint32)pt1->z - (uint32)pzp - (uint32)cp->z) >> 6);
-    r2->svx[1].vx = (sint16)((sint32)((uint32)pt2->x - (uint32)pxp - (uint32)cp->x) >> 6);
-    r2->svx[1].vy = (sint16)((sint32)((uint32)pt2->y - (uint32)cp->y) >> 6);
-    r2->svx[1].vz = (sint16)((sint32)((uint32)pt2->z - (uint32)pzp - (uint32)cp->z) >> 6);
-    r2->svx[0].vx = (sint16)((sint32)((uint32)pt2->x + (uint32)pxp - (uint32)cp->x) >> 6);
-    r2->svx[0].vy = (sint16)((sint32)((uint32)pt2->y - (uint32)cp->y) >> 6);
-    r2->svx[0].vz = (sint16)((sint32)((uint32)pt2->z + (uint32)pzp - (uint32)cp->z) >> 6);
+    r1->svx[0].vx = (sint16)((pt1->x + (uint32)pxp - (uint32)cp->x) >> 6);
+    r1->svx[0].vy = (sint16)((pt1->y - (uint32)cp->y) >> 6);
+    r1->svx[0].vz = (sint16)((pt1->z + (uint32)pzp - (uint32)cp->z) >> 6);
+    r1->svx[1].vx = (sint16)((pt1->x - (uint32)pxp - (uint32)cp->x) >> 6);
+    r1->svx[1].vy = (sint16)((pt1->y - (uint32)cp->y) >> 6);
+    r1->svx[1].vz = (sint16)((pt1->z - (uint32)pzp - (uint32)cp->z) >> 6);
+    r2->svx[1].vx = (sint16)((pt2->x - (uint32)pxp - (uint32)cp->x) >> 6);
+    r2->svx[1].vy = (sint16)((pt2->y - (uint32)cp->y) >> 6);
+    r2->svx[1].vz = (sint16)((pt2->z - (uint32)pzp - (uint32)cp->z) >> 6);
+    r2->svx[0].vx = (sint16)((pt2->x + (uint32)pxp - (uint32)cp->x) >> 6);
+    r2->svx[0].vy = (sint16)((pt2->y - (uint32)cp->y) >> 6);
+    r2->svx[0].vz = (sint16)((pt2->z + (uint32)pzp - (uint32)cp->z) >> 6);
 }
 
 void CalcOneSegment(Skidmark::Segment *r1, coorddef *cp, coorddef *pt1, coorddef *pt2, sint32 tireWidth)
@@ -55,25 +54,24 @@ void CalcOneSegment(Skidmark::Segment *r1, coorddef *cp, coorddef *pt1, coorddef
     sint32 pxp;
     sint32 pzp;
     {
-        sint32 angle = intatan((sint32)((uint32)pt2->x - (uint32)pt1->x),
-            (sint32)((uint32)pt2->z - (uint32)pt1->z));
+        sint32 angle = intatan(((pt2->x - pt1->x)), (pt2->z - pt1->z));
         sint32 cosine = fastintcos(angle);
-        pxp = fixedmult(tireWidth, (sint32)(0u - (uint32)cosine)) >> 1;
+        pxp = fixedmult(tireWidth, (-cosine)) >> 1;
         pzp = fixedmult(tireWidth, fastintsin(angle)) >> 1;
     }
-    r1->svx[0].vx = (sint16)((sint32)((uint32)pt2->x + (uint32)pxp - (uint32)cp->x) >> 6);
-    r1->svx[0].vy = (sint16)((sint32)((uint32)pt2->y - (uint32)cp->y) >> 6);
-    r1->svx[0].vz = (sint16)((sint32)((uint32)pt2->z + (uint32)pzp - (uint32)cp->z) >> 6);
-    r1->svx[1].vx = (sint16)((sint32)((uint32)pt2->x - (uint32)pxp - (uint32)cp->x) >> 6);
-    r1->svx[1].vy = (sint16)((sint32)((uint32)pt2->y - (uint32)cp->y) >> 6);
-    r1->svx[1].vz = (sint16)((sint32)((uint32)pt2->z - (uint32)pzp - (uint32)cp->z) >> 6);
+    r1->svx[0].vx = (sint16)((pt2->x + (uint32)pxp - (uint32)cp->x) >> 6);
+    r1->svx[0].vy = (sint16)((pt2->y - (uint32)cp->y) >> 6);
+    r1->svx[0].vz = (sint16)((pt2->z + (uint32)pzp - (uint32)cp->z) >> 6);
+    r1->svx[1].vx = (sint16)((pt2->x - (uint32)pxp - (uint32)cp->x) >> 6);
+    r1->svx[1].vy = (sint16)((pt2->y - (uint32)cp->y) >> 6);
+    r1->svx[1].vz = (sint16)((pt2->z - (uint32)pzp - (uint32)cp->z) >> 6);
 }
 
 Skidmark::Chunk * Skidmark::CheckChunk(coorddef *skidpt, sint32 newsegs, sint32 slice)
 {
     FUNCTION_MARKER(0x800DE9EC, "NFS4.EXE");
     Skidmark::Chunk *returnsm = gSm + gUseSm;
-    sint32 NewChunk = (sint32)((uint32)returnsm->n + (uint32)newsegs) > 24;
+    sint32 NewChunk = (returnsm->n + newsegs) > 24;
     for (sint32 axis = 0; axis < 3; ++axis) {
         sint32 center;
         sint32 point;
@@ -87,9 +85,9 @@ Skidmark::Chunk * Skidmark::CheckChunk(coorddef *skidpt, sint32 newsegs, sint32 
             center = returnsm->cp.z;
             point = skidpt->z;
         }
-        sint32 delta = (sint32)((uint32)center - (uint32)point);
+        sint32 delta = (center - point);
         if (delta <= 0)
-            delta = (sint32)((uint32)point - (uint32)center);
+            delta = (point - center);
         if (delta > 0xFFFFF) {
             NewChunk = 1;
             break;
@@ -100,11 +98,11 @@ Skidmark::Chunk * Skidmark::CheckChunk(coorddef *skidpt, sint32 newsegs, sint32 
         sint32 maximum = gMaxSChunk;
         if (count < maximum) {
             gUseSm = count;
-            gCountSm = (sint32)((uint32)count + 1);
+            gCountSm = (count + 1);
         } else {
             sint32 use = gUseSm;
-            if (use < (sint32)((uint32)maximum - 1))
-                gUseSm = (sint32)((uint32)use + 1);
+            if (use < (maximum - 1))
+                gUseSm = (use + 1);
             else
                 gUseSm = 0;
         }
@@ -266,7 +264,7 @@ void Skidmark::OnyxBuildFacets(DRender::tView *Vi)
         sint32 t2 = Vi->cview.mrotationInv.m[row * 3 + 1];
         sint32 t3 = Vi->cview.mrotationInv.m[row * 3 + 2];
         fskid->m.m[row * 3] = t1;
-        fskid->m.m[row * 3 + 1] = (sint32)(0u - (uint32)t2);
+        fskid->m.m[row * 3 + 1] = (-t2);
         fskid->m.m[row * 3 + 2] = t3;
     }
     Draw::kCtrlSkidmark(fskid);
@@ -278,8 +276,7 @@ void Skidmark::InitSkidmark(void)
     gMaxSChunk = 16;
     if (GameSetup::gData.commMode == 1)
         gMaxSChunk = 8;
-    Skidmark::Chunk *chunks = (Skidmark::Chunk *)reservememadr(
-        "SkidMark", (sint32)((uint32)gMaxSChunk * 688u), 0);
+    Skidmark::Chunk *chunks = (Skidmark::Chunk *)reservememadr( "SkidMark", ((gMaxSChunk * 688)), 0);
     chunks->n = 0;
     gSm = chunks;
     gCountSm = 0;

@@ -14,7 +14,7 @@ sint32 AITrigger_Compare(const void *op1, const void *op2)
     FUNCTION_MARKER(0x80072E18, "NFS4.EXE");
     trigger::trigger_t *ta = *(trigger::trigger_t *const *)op1;
     trigger::trigger_t *tb = *(trigger::trigger_t *const *)op2;
-    return (sint32)((uint32)ta->any.slice - (uint32)tb->any.slice);
+    return (ta->any.slice - tb->any.slice);
 }
 
 void AITrigger_TriggerManager::Init(char *rawTriggers)
@@ -39,7 +39,7 @@ void AITrigger_TriggerManager::Init(char *rawTriggers)
     }
     Sort();
     if (numTriggers_ != 0)
-        invNumTriggers_ = fixeddiv(65536, (sint32)((uint32)numTriggers_ << 16));
+        invNumTriggers_ = fixeddiv(65536, ((uint32)numTriggers_ << 16));
 }
 
 sint32 AITrigger_TriggerManager::InsertTrigger(trigger::trigger_t *trigger, bool fromFile)
@@ -52,7 +52,7 @@ sint32 AITrigger_TriggerManager::InsertTrigger(trigger::trigger_t *trigger, bool
         if (fromFile)
             trigger->trafficPath.path = (::trigger::pathPosition_t *)((char *)trigger + 0x40);
         triggers_[numTriggers_] = trigger;
-        size = (sint32)((uint32)trigger->trafficPath.numPoints * 0x14U + 0x40U);
+        size = ((trigger->trafficPath.numPoints * 0x14) + 0x40);
     }
     else
     {
@@ -62,7 +62,7 @@ sint32 AITrigger_TriggerManager::InsertTrigger(trigger::trigger_t *trigger, bool
             size = 0x48;
         triggers_[numTriggers_] = trigger;
     }
-    numTriggers_ = (sint32)((uint32)numTriggers_ + 1U);
+    numTriggers_ = (numTriggers_ + 1);
     return size;
 }
 
@@ -71,7 +71,7 @@ trigger::trigger_t *AITrigger_TriggerManager::GetNextTrigger(sint32 car)
     FUNCTION_MARKER(0x80072A44, "NFS4.EXE");
     if (numTriggers_ == 0)
         return 0;
-    sint32 triggerNum = (sint32)((uint32)lastTriggerChecked_[car] + 1U);
+    sint32 triggerNum = (lastTriggerChecked_[car] + 1);
     lastTriggerChecked_[car] = triggerNum;
     if (triggerNum == numTriggers_)
         lastTriggerChecked_[car] = 0;
@@ -84,10 +84,10 @@ trigger::trigger_t *AITrigger_TriggerManager::GetPrevTrigger(sint32 car)
     FUNCTION_MARKER(0x80072AB4, "NFS4.EXE");
     if (numTriggers_ == 0)
         return 0;
-    sint32 triggerNum = (sint32)((uint32)lastTriggerChecked_[car] - 1U);
+    sint32 triggerNum = (lastTriggerChecked_[car] - 1);
     lastTriggerChecked_[car] = triggerNum;
     if (triggerNum == -1)
-        lastTriggerChecked_[car] = (sint32)((uint32)numTriggers_ - 1U);
+        lastTriggerChecked_[car] = (numTriggers_ - 1);
     triggerNum = lastTriggerChecked_[car];
     return triggerNum < numTriggers_ ? triggers_[triggerNum] : 0;
 }
@@ -102,7 +102,7 @@ sint32 AITrigger_TriggerManager::CheckForTriggerAtSlice(sint32 car, sint32 slice
     {
         do
         {
-            if (*lastTrigger == (sint32)((uint32)numTriggers_ - 1U))
+            if (*lastTrigger == (numTriggers_ - 1))
                 break;
             GetNextTrigger(car);
         } while (triggers_[*lastTrigger]->any.slice < slice);
@@ -119,7 +119,7 @@ sint32 AITrigger_TriggerManager::CheckForTriggerAtSlice(sint32 car, sint32 slice
     sint32 triggerNum = *lastTrigger;
     if (triggers_[triggerNum]->any.slice != slice)
         return -1;
-    sint32 elapsed = (sint32)((uint32)simGlobal.gameTicks - (uint32)checkTime_[triggerNum]);
+    sint32 elapsed = (simGlobal.gameTicks - checkTime_[triggerNum]);
     if (elapsed <= 0xa00 || triggers_[triggerNum]->any.type == TRIGGER_COP_ROADBLOCK)
         return -1;
     return triggerNum;
@@ -128,7 +128,7 @@ sint32 AITrigger_TriggerManager::CheckForTriggerAtSlice(sint32 car, sint32 slice
 trigger::trigger_t *AITrigger_TriggerManager::GetTrigger(sint32 trigger, sint32 *used)
 {
     FUNCTION_MARKER(0x80072CD8, "NFS4.EXE");
-    sint32 elapsed = (sint32)((uint32)simGlobal.gameTicks - (uint32)checkTime_[trigger]);
+    sint32 elapsed = (simGlobal.gameTicks - checkTime_[trigger]);
     *used = elapsed < 0xa01 ? 1 : 0;
     checkTime_[trigger] = simGlobal.gameTicks;
     return trigger < numTriggers_ ? triggers_[trigger] : 0;

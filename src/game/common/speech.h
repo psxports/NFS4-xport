@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include "xport.h"
+#include "eaclib/psx/nfile.h"
 #include "game/common/car.h"
 
 class SPCHNFSType
@@ -380,7 +381,7 @@ public:
 
     sint32 fLocationCount;
     bool fFileOpen;
-    sint32 fFileHandle;
+    NativeFileSlot *fFileHandle;
     sint32 *fBankOffset;
     sint32 fBankCount;
     sint32 fBlpClpBank;

@@ -146,12 +146,12 @@ void Physics::CalculateDerivedCarSpecs(Car::tObj *carObj)
     carObj->specs->redlineInv = 65536 / redline;
     if (carObj->carInfo->WeightTransfer == 1)
     {
-        carObj->specs->steeringRamp = (sint32)((uint32)carObj->specs->steeringRamp + 1);
+        carObj->specs->steeringRamp = (carObj->specs->steeringRamp + 1);
         carObj->specs->maxSteeringAcc = fixedmult(carObj->specs->maxSteeringAcc, 0x1147a);
     }
     if (carObj->carInfo->GroundEffects == 1)
     {
-        carObj->specs->steeringRamp = (sint32)((uint32)carObj->specs->steeringRamp + 1);
+        carObj->specs->steeringRamp = (carObj->specs->steeringRamp + 1);
         carObj->specs->frontAeroDownForce = fixedmult(carObj->specs->frontAeroDownForce, 0x13333);
         carObj->specs->rearAeroDownForce = fixedmult(carObj->specs->rearAeroDownForce, 0x13333);
         carObj->specs->mass = fixedmult(carObj->specs->mass, 0xcccc);
@@ -172,23 +172,23 @@ void Physics::CalculateDerivedCarSpecs(Car::tObj *carObj)
         carObj->specs->gearAccCoeff[i] = fixeddiv(carObj->specs->velToRpmRatio[i], carObj->specs->mass);
         carObj->specs->gearAccCoeff[i] = fixeddiv(carObj->specs->gearAccCoeff[i], 0xa0000);
         carObj->specs->gearAccCoeff[i] = fixedmult(carObj->specs->gearAccCoeff[i], carObj->specs->gearEfficiency[i]);
-        sint32 maximumVelocity = fixedmult(carObj->specs->velToRpmRatioInv[i], (sint32)((uint32)carObj->specs->redline << 16));
+        sint32 maximumVelocity = fixedmult(carObj->specs->velToRpmRatioInv[i], ((uint32)carObj->specs->redline << 16));
         carObj->specs->gearVelInv[i] = fixeddiv(65536, maximumVelocity);
     }
     sint32 rpm = fixedmult(carObj->specs->maxSpeed, carObj->specs->velToRpmRatio[carObj->specs->numGears - 1]) / 65536;
     sint32 accAtMaxSpeedInHighestGear = fixedmult(carObj->specs->torqueCurve[rpm / 256], carObj->specs->gearAccCoeff[carObj->specs->numGears - 1]);
     sint32 velocity = carObj->specs->maxSpeed / 65536;
-    uint32 cube = (uint32)velocity * (uint32)velocity * (uint32)velocity;
-    carObj->specs->dragCoeff = fixeddiv(accAtMaxSpeedInHighestGear, (sint32)cube);
+    uint32 cube = velocity * (uint32)velocity * velocity;
+    carObj->specs->dragCoeff = fixeddiv(accAtMaxSpeedInHighestGear, cube);
     if (GameSetup::gData.track >= 8)
     {
-        carObj->specs->gasOffFactor = (sint32)((uint32)carObj->specs->gasOffFactor + 0x2666);
-        carObj->specs->frontBrakeRatio = (sint32)((uint32)carObj->specs->frontBrakeRatio - 0x2666);
-        carObj->specs->frontGripBias = (sint32)((uint32)carObj->specs->frontGripBias + 0x147);
+        carObj->specs->gasOffFactor = (carObj->specs->gasOffFactor + 0x2666);
+        carObj->specs->frontBrakeRatio = (carObj->specs->frontBrakeRatio - 0x2666);
+        carObj->specs->frontGripBias = (carObj->specs->frontGripBias + 0x147);
     }
     carObj->specs->alphaToAccRotInertia = fixedmult(65536, carObj->specs->wheelBase / 2);
     carObj->specs->alphaToAccRotInertia = fixedmult(carObj->specs->alphaToAccRotInertia, 0x648);
-    carObj->specs->alphaToAccRotInertia = (sint32)((uint32)carObj->specs->alphaToAccRotInertia << 8);
+    carObj->specs->alphaToAccRotInertia = ((uint32)carObj->specs->alphaToAccRotInertia << 8);
     carObj->specs->accToAlphaRotInertia = fixeddiv(65536, carObj->specs->alphaToAccRotInertia);
     carObj->specs->lateralGripMultInv = fixeddiv(65536, carObj->specs->lateralGripMult);
 }
@@ -203,34 +203,34 @@ sint32 Physics::AttenuateVelocity(Car::tObj *carObj, sint32 force, matrixtdef *r
     FUNCTION_MARKER(0x800A8E7C, "NFS4.EXE");
 
     sint32 forceScaled = force / 256;
-    uint32 offsetX = (uint32)forceScaled * (uint32)(roadMat->m[0] / 256);
-    uint32 offsetY = (uint32)forceScaled * (uint32)(roadMat->m[3] / 256);
-    uint32 offsetZ = (uint32)forceScaled * (uint32)(roadMat->m[6] / 256);
-    carObj->N.position.x = (sint32)((uint32)carObj->N.position.x - offsetX);
-    carObj->N.position.z = (sint32)((uint32)carObj->N.position.z + offsetZ);
-    carObj->N.position.y = (sint32)((uint32)carObj->N.position.y + offsetY);
-    uint32 dotX = (uint32)(carObj->N.linearVel.x / 256) * (uint32)(roadMat->m[0] / 256);
-    dotX += (uint32)(carObj->N.linearVel.y / 256) * (uint32)(roadMat->m[1] / 256);
-    dotX += (uint32)(carObj->N.linearVel.z / 256) * (uint32)(roadMat->m[2] / 256);
-    sint32 vx = (sint32)(0U - dotX);
-    sint32 absvelbx = (vx < 0 ? (sint32)(0U - (uint32)vx) : vx) >> 1;
+    uint32 offsetX = forceScaled * (uint32)(roadMat->m[0] / 256);
+    uint32 offsetY = forceScaled * (uint32)(roadMat->m[3] / 256);
+    uint32 offsetZ = forceScaled * (uint32)(roadMat->m[6] / 256);
+    carObj->N.position.x = (carObj->N.position.x - offsetX);
+    carObj->N.position.z = (carObj->N.position.z + offsetZ);
+    carObj->N.position.y = (carObj->N.position.y + offsetY);
+    uint32 dotX = (carObj->N.linearVel.x / 256) * (uint32)(roadMat->m[0] / 256);
+    dotX += (carObj->N.linearVel.y / 256) * (uint32)(roadMat->m[1] / 256);
+    dotX += (carObj->N.linearVel.z / 256) * (uint32)(roadMat->m[2] / 256);
+    sint32 vx = (-(sint32)dotX);
+    sint32 absvelbx = (vx < 0 ? -vx : vx) >> 1;
     coorddef vel_b;
     vel_b.x = 0;
     vel_b.y = 0;
-    uint32 dotZ = (uint32)(carObj->N.linearVel.x / 256) * (uint32)(roadMat->m[6] / 256);
-    dotZ += (uint32)(carObj->N.linearVel.y / 256) * (uint32)(roadMat->m[7] / 256);
-    dotZ += (uint32)(carObj->N.linearVel.z / 256) * (uint32)(roadMat->m[8] / 256);
-    vel_b.z = (sint32)dotZ;
-    uint32 attenuation = (uint32)(absvelbx / 256) * 192U;
+    uint32 dotZ = (carObj->N.linearVel.x / 256) * (uint32)(roadMat->m[6] / 256);
+    dotZ += (carObj->N.linearVel.y / 256) * (uint32)(roadMat->m[7] / 256);
+    dotZ += (carObj->N.linearVel.z / 256) * (uint32)(roadMat->m[8] / 256);
+    vel_b.z = dotZ;
+    uint32 attenuation = (absvelbx / 256) * 192U;
     if (vel_b.z > 0x50000)
     {
-        vel_b.z = (sint32)((uint32)vel_b.z - attenuation);
+        vel_b.z = (vel_b.z - attenuation);
         if (vel_b.z < 0)
             vel_b.z = 0;
     }
     else if (vel_b.z < -0x50000)
     {
-        vel_b.z = (sint32)((uint32)vel_b.z + attenuation);
+        vel_b.z = (vel_b.z + attenuation);
         if (vel_b.z > 0)
             vel_b.z = 0;
     }
@@ -239,32 +239,32 @@ sint32 Physics::AttenuateVelocity(Car::tObj *carObj, sint32 force, matrixtdef *r
     sint32 a = fixedmult(vel_b.x, transposeMat.m[0]);
     sint32 b = fixedmult(vel_b.y, transposeMat.m[1]);
     sint32 c = fixedmult(vel_b.z, transposeMat.m[2]);
-    carObj->N.linearVel.x = (sint32)((uint32)a + (uint32)b + (uint32)c);
+    carObj->N.linearVel.x = ((a + b) + c);
     a = fixedmult(vel_b.x, transposeMat.m[6]);
     b = fixedmult(vel_b.y, transposeMat.m[7]);
     c = fixedmult(vel_b.z, transposeMat.m[8]);
-    carObj->N.linearVel.z = (sint32)((uint32)a + (uint32)b + (uint32)c);
+    carObj->N.linearVel.z = ((a + b) + c);
     if (carObj->N.linearVel.y > 0)
         carObj->N.linearVel.y = 0;
     a = fixedmult(carObj->N.linearVel.x, carObj->N.orientMat.m[0]);
     b = fixedmult(carObj->N.linearVel.y, carObj->N.orientMat.m[1]);
     c = fixedmult(carObj->N.linearVel.z, carObj->N.orientMat.m[2]);
-    carObj->linearVel_ch.x = (sint32)((uint32)a + (uint32)b + (uint32)c);
+    carObj->linearVel_ch.x = ((a + b) + c);
     a = fixedmult(carObj->N.linearVel.x, carObj->N.orientMat.m[3]);
     b = fixedmult(carObj->N.linearVel.y, carObj->N.orientMat.m[4]);
     c = fixedmult(carObj->N.linearVel.z, carObj->N.orientMat.m[5]);
-    carObj->linearVel_ch.y = (sint32)((uint32)a + (uint32)b + (uint32)c);
+    carObj->linearVel_ch.y = ((a + b) + c);
     a = fixedmult(carObj->N.linearVel.x, carObj->N.orientMat.m[6]);
     b = fixedmult(carObj->N.linearVel.y, carObj->N.orientMat.m[7]);
     c = fixedmult(carObj->N.linearVel.z, carObj->N.orientMat.m[8]);
     sint32 absX = carObj->N.linearVel.x;
     sint32 absZ = carObj->N.linearVel.z;
     if (absX < 0)
-        absX = (sint32)(0U - (uint32)absX);
+        absX = (-absX);
     if (absZ < 0)
-        absZ = (sint32)(0U - (uint32)absZ);
-    carObj->linearVel_ch.z = (sint32)((uint32)a + (uint32)b + (uint32)c);
-    carObj->N.speedXZ = absZ < absX ? (sint32)((uint32)absX + (uint32)(absZ >> 2)) : (sint32)((uint32)absZ + (uint32)(absX >> 2));
+        absZ = (-absZ);
+    carObj->linearVel_ch.z = ((a + b) + c);
+    carObj->N.speedXZ = absZ < absX ? (absX + (absZ >> 2)) : (absZ + (absX >> 2));
     return absvelbx;
 }
 
@@ -290,7 +290,7 @@ void Physics::CorrectPostCollisionYaw(Car::tObj *carObj, sint32 impactVel, coord
 {
     FUNCTION_MARKER(0x800A9320, "NFS4.EXE");
 
-    carObj->N.collision.impulse = (sint32)((uint32)impactVel * 6U);
+    carObj->N.collision.impulse = (impactVel * 6);
     sint32 wallType = currentWallType;
     carObj->N.collision.otherObj = 0;
     carObj->N.collision.sfxType = wallType | 0x40000;
@@ -299,23 +299,23 @@ void Physics::CorrectPostCollisionYaw(Car::tObj *carObj, sint32 impactVel, coord
     sint32 z1 = fixedmult(barrierVec.x, carObj->N.shadowMat.m[6]);
     sint32 z2 = fixedmult(barrierVec.y, carObj->N.shadowMat.m[7]);
     sint32 z3 = fixedmult(barrierVec.z, carObj->N.shadowMat.m[8]);
-    sint32 diffZ = (sint32)((uint32)z1 + (uint32)z2 + (uint32)z3);
+    sint32 diffZ = ((z1 + z2) + z3);
     sint32 x1 = fixedmult(barrierVec.x, carObj->N.shadowMat.m[0]);
     sint32 x2 = fixedmult(barrierVec.y, carObj->N.shadowMat.m[1]);
     sint32 x3 = fixedmult(barrierVec.z, carObj->N.shadowMat.m[2]);
-    sint32 diffX = (sint32)((uint32)x1 + (uint32)x2 + (uint32)x3);
-    sint32 absZ = diffZ < 0 ? (sint32)(0U - (uint32)diffZ) : diffZ;
-    sint32 absX = diffX < 0 ? (sint32)(0U - (uint32)diffX) : diffX;
+    sint32 diffX = ((x1 + x2) + x3);
+    sint32 absZ = diffZ < 0 ? -diffZ : diffZ;
+    sint32 absX = diffX < 0 ? -diffX : diffX;
     sint32 result = (absX < absZ ? absX : absZ) >> 1;
     if (diffZ < 0)
     {
         if (diffX < 0)
-            result = (sint32)(0U - (uint32)result);
+            result = (-result);
     }
     else
     {
         if (diffX > 0)
-            result = (sint32)(0U - (uint32)result);
+            result = (-result);
         result >>= 1;
     }
     if (carObj->linearVel_ch.z > 0xd6666 && ((result > 0 && carObj->control.steering > 0) || (result < 0 && carObj->control.steering < 0)))
@@ -335,45 +335,42 @@ sint32 Physics::DoBarrierCheck(Car::tObj *carObj)
         (sint8)road.right[2] * 512
     };
     coorddef predicted = {
-        (sint32)((uint32)obj.position.x + (uint32)(obj.linearVel.x >> 5) - (uint32)road.center[0]),
-        (sint32)((uint32)obj.position.y + (uint32)(obj.linearVel.y >> 5) - (uint32)road.center[1]),
-        (sint32)((uint32)obj.position.z + (uint32)(obj.linearVel.z >> 5) - (uint32)road.center[2])
+        ((obj.position.x + (obj.linearVel.x >> 5)) - road.center[0]),
+        ((obj.position.y + (obj.linearVel.y >> 5)) - road.center[1]),
+        ((obj.position.z + (obj.linearVel.z >> 5)) - road.center[2])
     };
 
     sint32 r1 = right.x / 256;
     sint32 r2 = right.y / 256;
     sint32 r3 = right.z / 256;
-    sint32 x_relRoad = (sint32)((uint32)r1 * (uint32)(predicted.x / 256) +
-        (uint32)r2 * (uint32)(predicted.y / 256) + (uint32)r3 * (uint32)(predicted.z / 256));
+    sint32 x_relRoad = (((r1 * (predicted.x / 256)) + (r2 * (predicted.y / 256))) + (r3 * (predicted.z / 256)));
     obj.xRelRoadCenter = x_relRoad;
 
     const sint32 *orientation = obj.orientMat.m;
-    sint32 forward = (sint32)((uint32)r1 * (uint32)(orientation[6] / 256) +
-        (uint32)r2 * (uint32)(orientation[7] / 256) + (uint32)r3 * (uint32)(orientation[8] / 256));
+    sint32 forward = (((r1 * (orientation[6] / 256)) + (r2 * (orientation[7] / 256))) + (r3 * (orientation[8] / 256)));
     sint32 lengthWidth = fixedmult(obj.dimension.z, forward);
     if (lengthWidth < 0)
-        lengthWidth = (sint32)(0U - (uint32)lengthWidth);
-    sint32 lateral = (sint32)((uint32)r1 * (uint32)(orientation[0] / 256) +
-        (uint32)r2 * (uint32)(orientation[1] / 256) + (uint32)r3 * (uint32)(orientation[2] / 256));
+        lengthWidth = (-lengthWidth);
+    sint32 lateral = (((r1 * (orientation[0] / 256)) + (r2 * (orientation[1] / 256))) + (r3 * (orientation[2] / 256)));
     sint32 halfWidth = obj.dimension.x / 256;
-    sint32 sideWidth = (sint32)((uint32)halfWidth * (uint32)(lateral / 256));
+    sint32 sideWidth = (halfWidth * (lateral / 256));
     if (sideWidth < 0)
-        sideWidth = (sint32)(0U - (uint32)sideWidth);
-    uint32 carCollisionWidth = (uint32)lengthWidth + (uint32)sideWidth;
+        sideWidth = (-sideWidth);
+    uint32 carCollisionWidth = lengthWidth + (uint32)sideWidth;
 
     sint32 diff = 0;
     sint32 collide = 0;
-    sint32 left = (sint32)(carCollisionWidth - (uint32)(road.leftDrive * 256));
-    if (x_relRoad < (sint32)((uint32)left - (uint32)carObj->extraWallCollisionAllowance))
+    sint32 left = (carCollisionWidth - (uint32)(road.leftDrive * 256));
+    if (x_relRoad < (left - carObj->extraWallCollisionAllowance))
     {
         collide = -1;
-        diff = (sint32)((uint32)left - (uint32)x_relRoad);
+        diff = (left - x_relRoad);
     }
-    sint32 rightLimit = (sint32)((uint32)(road.rightDrive * 256) - carCollisionWidth);
-    if (x_relRoad > (sint32)((uint32)rightLimit + (uint32)carObj->extraWallCollisionAllowance))
+    sint32 rightLimit = ((uint32)(road.rightDrive * 256) - carCollisionWidth);
+    if (x_relRoad > (rightLimit + carObj->extraWallCollisionAllowance))
     {
         collide = 1;
-        diff = (sint32)((uint32)x_relRoad - (uint32)rightLimit);
+        diff = (x_relRoad - rightLimit);
     }
     if (collide == 0)
         return 0;
@@ -384,21 +381,21 @@ sint32 Physics::DoBarrierCheck(Car::tObj *carObj)
 
     halfWidth = obj.dimension.x / 256;
     coorddef widthVector = {
-        (sint32)((uint32)halfWidth * (uint32)right.x) / 256,
-        (sint32)((uint32)halfWidth * (uint32)right.y) / 256,
-        (sint32)((uint32)halfWidth * (uint32)right.z) / 256
+        (halfWidth * right.x) / 256,
+        (halfWidth * right.y) / 256,
+        (halfWidth * right.z) / 256
     };
-    obj.collision.collisionPoint.x = (sint32)((uint32)obj.position.x + (uint32)(collide * widthVector.x));
-    obj.collision.collisionPoint.y = (sint32)((uint32)obj.position.y + (uint32)(collide * widthVector.y));
-    obj.collision.collisionPoint.z = (sint32)((uint32)obj.position.z + (uint32)(collide * widthVector.z));
+    obj.collision.collisionPoint.x = (obj.position.x + (collide * widthVector.x));
+    obj.collision.collisionPoint.y = (obj.position.y + (collide * widthVector.y));
+    obj.collision.collisionPoint.z = (obj.position.z + (collide * widthVector.z));
 
     coorddef normal = { -collide * right.x, -collide * right.y, -collide * right.z };
     if (obj.objAltitude < 0x999A && obj.orientationToGround.y > 0xE665 && obj.flightTime == 0)
     {
-        sint32 force = (sint32)((uint32)diff << 1);
+        sint32 force = ((uint32)diff << 1);
         if (force < 0)
-            force = (sint32)(0U - (uint32)force);
-        sint32 impactVel = AttenuateVelocity(carObj, (sint32)((uint32)collide * (uint32)force), &obj.roadMatrix);
+            force = (-force);
+        sint32 impactVel = AttenuateVelocity(carObj, (collide * force), &obj.roadMatrix);
         CorrectPostCollisionYaw(carObj, impactVel, normal);
     }
     else
@@ -425,8 +422,8 @@ void Physics::AutoShift(Car::tObj *carObj)
         ShiftPoint = redline - redline / 2;
     sint32 sliding = carObj->slide;
     if (sliding < 0)
-        sliding = (sint32)(0U - (uint32)sliding);
-    sint32 maximumVelocity = fixedmult(carObj->specs->velToRpmRatioInv[carObj->specs->numGears - 2], (sint32)((uint32)redline << 16));
+        sliding = (-sliding);
+    sint32 maximumVelocity = fixedmult(carObj->specs->velToRpmRatioInv[carObj->specs->numGears - 2], ((uint32)redline << 16));
     sint32 SkipLastGear = carObj->specs->maxSpeed < maximumVelocity;
     sint32 previousGear = (uint8)carObj->control.gear;
     sint32 nextGear = previousGear;
@@ -436,7 +433,7 @@ void Physics::AutoShift(Car::tObj *carObj)
         --previousGear;
     sint32 velocity = carObj->N.speedXZ;
     if (carObj->linearVel_ch.z < 0)
-        velocity = (sint32)(0U - (uint32)velocity);
+        velocity = (-velocity);
     sint32 wheelRpm = fixedmult(velocity, carObj->specs->velToRpmRatio[(uint8)carObj->control.gear]) / 65536;
     (void)fixedmult(velocity, carObj->specs->velToRpmRatio[nextGear]);
     sint32 previousRpm = fixedmult(velocity, carObj->specs->velToRpmRatio[previousGear]) / 65536;
@@ -486,9 +483,9 @@ void Physics::RampCarControlValues(Car::tObj *carObj)
         carObj->control.brakeLevel = 255;
         carObj->control.downShifting = 0;
         carObj->control.hanno = 0;
-        carObj->N.linearVel.x = (sint32)((uint32)carObj->N.linearVel.x * 254U) / 256;
-        carObj->N.linearVel.y = (sint32)((uint32)carObj->N.linearVel.y * 254U) / 256;
-        carObj->N.linearVel.z = (sint32)((uint32)carObj->N.linearVel.z * 254U) / 256;
+        carObj->N.linearVel.x = (carObj->N.linearVel.x * 254) / 256;
+        carObj->N.linearVel.y = (carObj->N.linearVel.y * 254) / 256;
+        carObj->N.linearVel.z = (carObj->N.linearVel.z * 254) / 256;
     }
     else
     {
@@ -524,7 +521,7 @@ void Physics::RampCarControlValues(Car::tObj *carObj)
                 {
                     sint32 speed = carObj->N.speedXZ;
                     if (speed < 0)
-                        speed = (sint32)(0U - (uint32)speed);
+                        speed = (-speed);
                     if (speed < 0x3333)
                     {
                         if ((uint8)carObj->control.desiredBrakeLevel > 128 && carObj->control.desiredGasLevel == 0 && (uint8)carObj->control.desiredGear >= 2 && carObj->control.hanno == 0)
@@ -557,7 +554,7 @@ void Physics::RampCarControlValues(Car::tObj *carObj)
                         carObj->control.lastGear = carObj->control.gear;
                         for (sint32 i = 2; i < carObj->specs->numGears; ++i)
                         {
-                            sint32 maximumVelocity = fixedmult(carObj->specs->velToRpmRatioInv[i], (sint32)((uint32)carObj->specs->redline << 16));
+                            sint32 maximumVelocity = fixedmult(carObj->specs->velToRpmRatioInv[i], ((uint32)carObj->specs->redline << 16));
                             if (maximumVelocity < carObj->linearVel_ch.z)
                                 gear = i;
                         }
@@ -580,15 +577,15 @@ void Physics::RampCarControlValues(Car::tObj *carObj)
         else
         {
             sint32 steering = carObj->control.steering;
-            diff = (sint32)((uint32)carObj->control.desiredSteering - (uint32)steering);
+            diff = (carObj->control.desiredSteering - steering);
             sint32 rampIn = carObj->specs->steeringRamp;
             if (diff < 0)
             {
-                sint32 magnitude = (sint32)(0U - (uint32)diff);
-                carObj->control.steering = (sint32)((uint32)steering - (uint32)(magnitude < rampIn ? magnitude : rampIn));
+                sint32 magnitude = (-diff);
+                carObj->control.steering = (steering - ((magnitude < rampIn ? magnitude : rampIn)));
             }
             else
-                carObj->control.steering = (sint32)((uint32)steering + (uint32)(diff < rampIn ? diff : rampIn));
+                carObj->control.steering = (steering + ((diff < rampIn ? diff : rampIn)));
         }
     }
     if (simGlobal.gameTicks < 512 && ((GameSetup::gData.raceType != 1 && GameSetup::gData.raceType != 5) || ((Cars::gHumanRaceCarList[0]->carFlags & 0x200) == 0 && (Cars::gNumHumanRaceCars != 2 || (Cars::gHumanRaceCarList[1]->carFlags & 0x200) == 0))))
@@ -611,7 +608,7 @@ void Physics::RampCarControlValues(Car::tObj *carObj)
         carObj->control.gasLevel = 0;
     if (AIInit::forceHumanHandBrake != 0 && carObj->RSControl != 0)
     {
-        sint32 direction = (sint32)((uint32)carObj->roadPosition * (uint32)carObj->direction);
+        sint32 direction = (carObj->roadPosition * carObj->direction);
         carObj->control.steering = direction > 0 ? -124 : 124;
         carObj->control.handBrake = 1;
     }
@@ -621,10 +618,10 @@ void Physics::RampCarControlValues(Car::tObj *carObj)
     sint32 brakeRatio = (((uint8)carObj->control.brakeLevel + 1) * 65536) / 248;
     if (brakeRatio > 65536)
         brakeRatio = 65536;
-    uint32 steeringMagnitude = (uint32)carObj->control.steering;
+    uint32 steeringMagnitude = carObj->control.steering;
     if (carObj->control.steering < 0)
-        steeringMagnitude = 0U - steeringMagnitude;
-    gSteerRatio = (sint32)(steeringMagnitude << 9);
+        steeringMagnitude = (~(steeringMagnitude) + 1);
+    gSteerRatio = (steeringMagnitude << 9);
     gBrakeRatio = brakeRatio;
     if (GameSetup::gData.carInfo[carObj->carIndex].Transmission == 1 && carObj->control.gear == 0 && carObj->control.hanno == 1)
     {
@@ -641,14 +638,14 @@ void Physics::FixEngineRpm(Car::tObj *carObj)
 {
     FUNCTION_MARKER(0x800AA4E4, "NFS4.EXE");
 
-    uint32 productX = (uint32)(carObj->N.linearVel.x / 256) * (uint32)(carObj->N.shadowMat.m[0] / 256);
-    productX += (uint32)(carObj->N.linearVel.y / 256) * (uint32)(carObj->N.shadowMat.m[1] / 256);
-    productX += (uint32)(carObj->N.linearVel.z / 256) * (uint32)(carObj->N.shadowMat.m[2] / 256);
-    carObj->linearVel_ch.x = (sint32)productX;
-    uint32 productZ = (uint32)(carObj->N.linearVel.x / 256) * (uint32)(carObj->N.shadowMat.m[6] / 256);
-    productZ += (uint32)(carObj->N.linearVel.y / 256) * (uint32)(carObj->N.shadowMat.m[7] / 256);
-    productZ += (uint32)(carObj->N.linearVel.z / 256) * (uint32)(carObj->N.shadowMat.m[8] / 256);
-    carObj->linearVel_ch.z = (sint32)productZ;
+    uint32 productX = (carObj->N.linearVel.x / 256) * (uint32)(carObj->N.shadowMat.m[0] / 256);
+    productX += (carObj->N.linearVel.y / 256) * (uint32)(carObj->N.shadowMat.m[1] / 256);
+    productX += (carObj->N.linearVel.z / 256) * (uint32)(carObj->N.shadowMat.m[2] / 256);
+    carObj->linearVel_ch.x = productX;
+    uint32 productZ = (carObj->N.linearVel.x / 256) * (uint32)(carObj->N.shadowMat.m[6] / 256);
+    productZ += (carObj->N.linearVel.y / 256) * (uint32)(carObj->N.shadowMat.m[7] / 256);
+    productZ += (carObj->N.linearVel.z / 256) * (uint32)(carObj->N.shadowMat.m[8] / 256);
+    carObj->linearVel_ch.z = productZ;
     sint32 collided = carObj->N.collision.collided;
     carObj->wheelSpin = 0;
     carObj->slide = 0;
@@ -695,9 +692,9 @@ void Physics::StopCar(Car::tObj *carObj)
 {
     FUNCTION_MARKER(0x800AA6D8, "NFS4.EXE");
 
-    carObj->N.linearVel.x = (sint32)((uint32)carObj->N.linearVel.x * 245U) / 256;
-    carObj->N.linearVel.y = (sint32)((uint32)carObj->N.linearVel.y * 245U) / 256;
-    carObj->N.linearVel.z = (sint32)((uint32)carObj->N.linearVel.z * 245U) / 256;
+    carObj->N.linearVel.x = (carObj->N.linearVel.x * 245) / 256;
+    carObj->N.linearVel.y = (carObj->N.linearVel.y * 245) / 256;
+    carObj->N.linearVel.z = (carObj->N.linearVel.z * 245) / 256;
     if (carObj->N.orientationToGround.y < 0x3333)
         carObj->N.angularVel.y = (carObj->N.angularVel.y / 256) * 250;
 }
@@ -731,25 +728,25 @@ void Physics::CalculateRoadGripModifiers(Car::tObj *carObj)
             ++tempSurface;
         sint32 friction = roadSurfaceFrictionCoeff[tempSurface];
         if (i < 2)
-            frontWheels = (sint32)((uint32)frontWheels + (uint32)friction);
+            frontWheels = (frontWheels + friction);
         else
-            rearWheels = (sint32)((uint32)rearWheels + (uint32)friction);
+            rearWheels = (rearWheels + friction);
         if (i == 0 || i == 2)
-            leftWheels = (sint32)((uint32)leftWheels + (uint32)friction);
+            leftWheels = (leftWheels + friction);
         else
-            rightWheels = (sint32)((uint32)rightWheels + (uint32)friction);
+            rightWheels = (rightWheels + friction);
     }
     leftMult = leftWheels >> 1;
     frontMult = frontWheels >> 1;
     rightMult = rightWheels >> 1;
     rearMult = rearWheels >> 1;
-    roadMult = (sint32)((uint32)((sint32)((uint32)frontMult + (uint32)rearMult) >> 1) + (uint32)carObj->N.roadGravityModifier);
+    roadMult = ((((sint32)((uint32)frontMult + (uint32)rearMult) >> 1)) + carObj->N.roadGravityModifier);
     if (carObj->linearVel_ch.z > 0x50000)
     {
         sint32 downForce = fixedmult(carObj->linearVel_ch.z, carObj->specs->frontAeroDownForce);
-        frontMult = (sint32)((uint32)frontMult + (uint32)downForce);
+        frontMult = (frontMult + downForce);
         downForce = fixedmult(carObj->linearVel_ch.z, carObj->specs->rearAeroDownForce);
-        rearMult = (sint32)((uint32)rearMult + (uint32)downForce);
+        rearMult = (rearMult + downForce);
     }
 }
 
@@ -761,35 +758,35 @@ sint32 Physics::CalculateCarAcceleration(Car::tObj *carObj)
     sint32 smokeRpm = carObj->specs->redline / 8;
     sint32 driveAcc = 0;
     uint32 product = fastRandom * randSeed;
-    sint32 damageSum = (sint32)((uint32)carObj->N.damage[1] + (uint32)carObj->N.damage[5]);
+    sint32 damageSum = (carObj->N.damage[1] + carObj->N.damage[5]);
     randtemp = product;
     fastRandom = product & 0xFFFF;
     bool damage = ((product >> 8) & 0xFFFF) < (uint32)(damageSum / 256);
     Car::tSpecs *specs = carObj->specs;
-    exceedRedline = (sint32)((uint32)specs->redline + 500) < carObj->flywheelRpm;
+    exceedRedline = (specs->redline + 500) < carObj->flywheelRpm;
     sint32 aero = 0x10000;
     if (carObj->carInfo->GroundEffects != 0)
     {
-        sint32 downForce = (sint32)((uint32)carObj->specs->frontAeroDownForce + (uint32)carObj->specs->rearAeroDownForce);
-        aero = (sint32)((uint32)(downForce / 2) + 0x10000);
+        sint32 downForce = (carObj->specs->frontAeroDownForce + carObj->specs->rearAeroDownForce);
+        aero = ((downForce / 2) + 0x10000);
     }
     sint32 speed = fixedmult(carObj->linearVel_ch.z, aero) / 65536;
-    sint32 cube = (sint32)((uint32)speed * (uint32)speed * (uint32)speed);
+    sint32 cube = ((speed * speed) * speed);
     sint32 drag = fixedmult(specs->dragCoeff, cube);
     sint32 rpmAllowance = carObj->control.gear == 1 || powerControl == 0 ? 250 : 100;
-    sint32 desiredRpm = (sint32)((uint32)specs->redline + (uint32)rpmAllowance);
+    sint32 desiredRpm = (specs->redline + rpmAllowance);
     sint32 gasRpm = fixedmult(desiredRpm, gGasRatio);
     if (gasRpm < desiredRpm)
         desiredRpm = gasRpm;
     if (specs->redline <= carObj->flywheelRpm)
     {
         uint8 gear = carObj->control.gear;
-        carObj->flywheelRpm = (sint32)((uint32)specs->redline + 50);
+        carObj->flywheelRpm = (specs->redline + 50);
         carObj->revLimit = gear == 1 || powerControl == 0 ? 3 : 4;
     }
     if (carObj->revLimit > 0)
     {
-        sint32 limit = (sint32)((uint32)specs->redline - (carObj->control.gear == 1 || powerControl == 0 ? 800 : 400));
+        sint32 limit = (specs->redline - ((carObj->control.gear == 1 || powerControl == 0 ? 800 : 400)));
         if (desiredRpm > limit)
             desiredRpm = limit;
         --carObj->revLimit;
@@ -798,13 +795,13 @@ sint32 Physics::CalculateCarAcceleration(Car::tObj *carObj)
     {
         if (damage)
         {
-            sint32 rpm = (sint32)((uint32)carObj->flywheelRpm - 100);
+            sint32 rpm = (carObj->flywheelRpm - 100);
             carObj->flywheelRpm = rpm;
             carObj->flywheelRpm = rpm < 0 ? 0 : rpm;
         }
         else if (carObj->flywheelRpm < desiredRpm && carObj->control.gearShiftTimer == 0)
         {
-            sint32 rpm = (sint32)((uint32)carObj->flywheelRpm + 250);
+            sint32 rpm = (carObj->flywheelRpm + 250);
             carObj->flywheelRpm = rpm;
             carObj->flywheelRpm = rpm <= desiredRpm ? rpm : desiredRpm;
         }
@@ -814,21 +811,21 @@ sint32 Physics::CalculateCarAcceleration(Car::tObj *carObj)
             {
                 sint32 gear = (uint8)carObj->control.desiredGear;
                 sint32 rpmRise = (uint8)carObj->control.brakeLevel < 65 ? blip[gear] : bblip[gear];
-                carObj->flywheelRpm = (sint32)((uint32)carObj->flywheelRpm + (uint32)rpmRise);
+                carObj->flywheelRpm = (carObj->flywheelRpm + rpmRise);
                 if (carObj->flywheelRpm > specs->redline)
                     carObj->flywheelRpm = specs->redline;
             }
             else
             {
                 sint32 rpmDrop = (uint8)carObj->control.gear < 4 ? 100 : 200;
-                sint32 rpm = (sint32)((uint32)carObj->flywheelRpm - (uint32)rpmDrop);
+                sint32 rpm = (carObj->flywheelRpm - rpmDrop);
                 carObj->flywheelRpm = rpm;
                 carObj->flywheelRpm = rpm < 0 ? 0 : rpm;
             }
         }
         else if (carObj->flywheelRpm >= desiredRpm)
         {
-            sint32 rpm = (sint32)((uint32)carObj->flywheelRpm - 200);
+            sint32 rpm = (carObj->flywheelRpm - 200);
             carObj->flywheelRpm = rpm;
             carObj->flywheelRpm = desiredRpm < rpm ? rpm : desiredRpm;
         }
@@ -839,8 +836,7 @@ sint32 Physics::CalculateCarAcceleration(Car::tObj *carObj)
     {
         if (GameSetup::gData.carInfo[carObj->carIndex].Transmission == 1 || carObj->RSControl != 0)
             AutoShift(carObj);
-        sint32 gear = carObj->control.gearShiftTimer != 0 && carObj->control.downShifting == 0
-                 ? (uint8)carObj->control.lastGear : (uint8)carObj->control.gear;
+        sint32 gear = carObj->control.gearShiftTimer != 0 && carObj->control.downShifting == 0 ? (uint8)carObj->control.lastGear : (uint8)carObj->control.gear;
         sint32 wheelRpm = fixedmult(carObj->linearVel_ch.z, specs->velToRpmRatio[gear]) / 65536;
         if (exceedRedline == 0 && carObj->revLimit < 1)
         {
@@ -850,15 +846,14 @@ sint32 Physics::CalculateCarAcceleration(Car::tObj *carObj)
         else
         {
             sint32 torque = specs->torqueCurve[specs->redline / 256];
-            driveAcc = (sint32)((uint32)fixedmult(torque, specs->gearAccCoeff[(uint8)carObj->control.gear]) << 1);
+            driveAcc = ((uint32)fixedmult(torque, specs->gearAccCoeff[(uint8)carObj->control.gear]) << 1);
         }
-        sint32 diffDesiredRpm = (sint32)((uint32)desiredRpm - (uint32)wheelRpm);
-        sint32 magnitude = diffDesiredRpm < 0 ? (sint32)(0 - (uint32)diffDesiredRpm) : diffDesiredRpm;
-        if (magnitude < 125 && desiredRpm < (sint32)((uint32)specs->redline - 300))
+        sint32 diffDesiredRpm = (desiredRpm - wheelRpm);
+        sint32 magnitude = diffDesiredRpm < 0 ? -diffDesiredRpm : diffDesiredRpm;
+        if (magnitude < 125 && desiredRpm < (specs->redline - 300))
             diffDesiredRpm = 0;
-        sint32 diffFlywheelRpm = (sint32)((uint32)carObj->flywheelRpm - (uint32)wheelRpm);
-        bool spinning = diffFlywheelRpm >= 251 && carObj->control.gearShiftTimer == 0
-                        && (uint8)carObj->control.gear < 5;
+        sint32 diffFlywheelRpm = (carObj->flywheelRpm - wheelRpm);
+        bool spinning = diffFlywheelRpm >= 251 && carObj->control.gearShiftTimer == 0 && (uint8)carObj->control.gear < 5;
         if (!spinning)
             spinning = (uint8)carObj->control.gear >= 2 && carObj->linearVel_ch.z <= -0x199A && gGasRatio > 0x8000;
         if (!spinning)
@@ -869,8 +864,7 @@ sint32 Physics::CalculateCarAcceleration(Car::tObj *carObj)
         if (spinning)
         {
             sint32 rpmDrop = 0;
-            if (desiredRpm < 2000 || (uint8)carObj->control.desiredGasLevel < 64 || damage
-                || (carObj->carInfo->carType == 0x13 && (uint8)carObj->control.gear > 2))
+            if (desiredRpm < 2000 || (uint8)carObj->control.desiredGasLevel < 64 || damage || (carObj->carInfo->carType == 0x13 && (uint8)carObj->control.gear > 2))
                 rpmDrop = 200;
             else if (carObj->control.gear == 2 || carObj->control.gear == 0)
                 rpmDrop = 10;
@@ -880,26 +874,25 @@ sint32 Physics::CalculateCarAcceleration(Car::tObj *carObj)
                 carObj->wheelSpin = 2;
             if (diffFlywheelRpm <= rpmDrop)
                 rpmDrop = diffFlywheelRpm;
-            carObj->flywheelRpm = (sint32)((uint32)carObj->flywheelRpm - (uint32)rpmDrop);
+            carObj->flywheelRpm = (carObj->flywheelRpm - rpmDrop);
         }
         else if (diffDesiredRpm < 0)
         {
-            driveAcc = (sint32)(0 - (uint32)fixedmult(driveAcc, specs->gasOffFactor));
+            driveAcc = (-fixedmult(driveAcc, specs->gasOffFactor));
             sint32 slope = gravity_ch.z;
             sint32 currentGear = (uint8)carObj->control.gear;
-            if ((slope > 0 && currentGear == 2 && driveAcc < 0)
-                || (slope < 0 && currentGear == 0 && driveAcc > 0))
+            if ((slope > 0 && currentGear == 2 && driveAcc < 0) || (slope < 0 && currentGear == 0 && driveAcc > 0))
                 driveAcc /= 2;
-            sint32 ratio = (sint32)((uint32)specs->velToRpmRatioInv[(uint8)carObj->control.gear] << 3);
+            sint32 ratio = ((uint32)specs->velToRpmRatioInv[(uint8)carObj->control.gear] << 3);
             sint32 rpmDrop = fixedmult(ratio, 0x28000000) / 65536;
-            sint32 negativeDiff = (sint32)(0 - (uint32)diffFlywheelRpm);
+            sint32 negativeDiff = (-diffFlywheelRpm);
             if (carObj->control.gear == 0)
             {
                 if (rpmDrop < negativeDiff) rpmDrop = negativeDiff;
             }
             else if (negativeDiff <= rpmDrop)
                 rpmDrop = negativeDiff;
-            carObj->flywheelRpm = (sint32)((uint32)carObj->flywheelRpm + (uint32)rpmDrop);
+            carObj->flywheelRpm = (carObj->flywheelRpm + rpmDrop);
             if (exceedRedline == 0 && desiredRpm > carObj->flywheelRpm)
                 carObj->flywheelRpm = desiredRpm;
         }
@@ -913,14 +906,14 @@ sint32 Physics::CalculateCarAcceleration(Car::tObj *carObj)
             if (damage)
             {
                 driveAcc = 0;
-                carObj->flywheelRpm = (sint32)((uint32)carObj->flywheelRpm - 100);
+                carObj->flywheelRpm = (carObj->flywheelRpm - 100);
             }
             else
             {
                 if (diffFlywheelRpm >= 201)
-                    carObj->flywheelRpm = (sint32)((uint32)carObj->flywheelRpm - 200);
+                    carObj->flywheelRpm = (carObj->flywheelRpm - 200);
                 else if (diffFlywheelRpm < -200)
-                    carObj->flywheelRpm = (sint32)((uint32)carObj->flywheelRpm + 200);
+                    carObj->flywheelRpm = (carObj->flywheelRpm + 200);
                 else
                     carObj->flywheelRpm = wheelRpm;
                 driveAcc = fixedmult(driveAcc, gGasRatio);
@@ -928,28 +921,26 @@ sint32 Physics::CalculateCarAcceleration(Car::tObj *carObj)
             if (carObj->flywheelRpm > desiredRpm)
                 carObj->flywheelRpm = desiredRpm;
             sint32 sliding = carObj->slide;
-            if (sliding < 0) sliding = (sint32)(0 - (uint32)sliding);
-            sint32 ratio = (sint32)((uint32)sliding + 0x10000);
+            if (sliding < 0) sliding = (-sliding);
+            sint32 ratio = (sliding + 0x10000);
             sint32 limit = (GameSetup::gData.sgge & 8) != 0 ? 0x30000 : 0x20000;
             if (ratio > limit) ratio = limit;
-            driveAcc = (sint32)((uint32)(driveAcc / 256) * (uint32)(ratio / 256));
+            driveAcc = (((driveAcc / 256)) * (ratio / 256));
         }
         if (carObj->flywheelRpm < 0)
         {
-            sint32 limit = (sint32)(0 - ((uint32)carObj->linearVel_ch.z << 5));
-            sint32 difference = (sint32)((uint32)driveAcc - (uint32)limit);
-            if (!((driveAcc > 0 && limit > 0 && difference > 0)
-                  || (driveAcc < 0 && limit < 0 && difference < 0)))
+            sint32 limit = (-(sint32)((uint32)carObj->linearVel_ch.z << 5));
+            sint32 difference = (driveAcc - limit);
+            if (!((driveAcc > 0 && limit > 0 && difference > 0) || (driveAcc < 0 && limit < 0 && difference < 0)))
             {
                 driveAcc = limit;
                 carObj->flywheelRpm = 0;
             }
         }
     }
-    if ((uint32)carObj->carInfo->carType - 12 < 4 && slippery != 0
-        && carObj->control.gear == 2 && driveAcc > 0)
-        driveAcc = (sint32)(3 * (uint32)driveAcc) >> 2;
-    return (sint32)((uint32)driveAcc - (uint32)drag);
+    if ((uint32)carObj->carInfo->carType - 12 < 4 && slippery != 0 && carObj->control.gear == 2 && driveAcc > 0)
+        driveAcc = (3 * driveAcc) >> 2;
+    return (driveAcc - drag);
 }
 
 void Physics::CalcWheelLockAcc(Car::tObj *carObj, Physics::tWheelAccStruct *wheel)
@@ -961,38 +952,37 @@ void Physics::CalcWheelLockAcc(Car::tObj *carObj, Physics::tWheelAccStruct *whee
         sint32 skid = carObj->frontSkid;
         roadGrip = wheel->roadGrip / 256;
         wheel->skid = skid;
-        roadGrip = (sint32)((uint32)roadGrip * (uint32)(frontMult / 256));
+        roadGrip = (roadGrip * (frontMult / 256));
     }
     else
     {
         sint32 skid = carObj->rearSkid;
         roadGrip = wheel->roadGrip / 256;
         wheel->skid = skid;
-        roadGrip = (sint32)((uint32)roadGrip * (uint32)(rearMult / 256));
+        roadGrip = (roadGrip * (rearMult / 256));
     }
     sint32 vx = wheel->velCap.x;
     sint32 vz = wheel->velCap.z;
-    if (vx < 0) vx = (sint32)(0 - (uint32)vx);
-    if (vz < 0) vz = (sint32)(0 - (uint32)vz);
-    sint32 totalAcc = vz < vx ? (sint32)((uint32)vx + (uint32)(vz >> 2))
-                          : (sint32)((uint32)vz + (uint32)(vx >> 2));
+    if (vx < 0) vx = (-vx);
+    if (vz < 0) vz = (-vz);
+    sint32 totalAcc = vz < vx ? (vx + (vz >> 2)) : (vz + (vx >> 2));
     sint32 divisor = (slippery != 0 ? gripLossTableWet : gripLossTable)[carObj->carInfo->TireType];
     if (divisor == 0 || (divisor == -1 && roadGrip == (-2147483647 - 1)))
         abort();
-    sint32 optVar1 = (sint32)((uint32)roadGrip - (uint32)(roadGrip / divisor));
+    sint32 optVar1 = (roadGrip - (roadGrip / divisor));
     if (roadGrip < totalAcc)
-        wheel->skid = (sint32)(3 * (uint32)wheel->skid + (uint32)totalAcc - (uint32)roadGrip) >> 2;
+        wheel->skid = (((3 * wheel->skid) + totalAcc) - roadGrip) >> 2;
     else
         wheel->skid = 0;
     sint32 skidLimit = carObj->carInfo->TireType == 2 ? 0x80000 : 0xA0000;
     if (wheel->skid > skidLimit)
         wheel->skid = skidLimit;
-    sint32 magnitude = totalAcc < 0 ? (sint32)(0 - (uint32)totalAcc) : totalAcc;
+    sint32 magnitude = totalAcc < 0 ? -totalAcc : totalAcc;
     sint32 optVar2 = vx;
     if (magnitude > 256)
         optVar2 = fixeddiv(optVar1, totalAcc) >> 8;
-    sint32 accX = (sint32)((uint32)wheel->velCap.x * (uint32)optVar2) >> 8;
-    sint32 accZ = (sint32)((uint32)wheel->velCap.z * (uint32)optVar2) >> 8;
+    sint32 accX = (wheel->velCap.x * optVar2) >> 8;
+    sint32 accZ = (wheel->velCap.z * optVar2) >> 8;
     wheel->finalAcc.x = accX;
     wheel->finalAcc.z = accZ;
 }
@@ -1002,10 +992,9 @@ void Physics::CalcTractionCircleAcc(Car::tObj *carObj, Physics::tWheelAccStruct 
     FUNCTION_MARKER(0x800AB698, "NFS4.EXE");
     sint32 ax = wheel->finalAcc.x;
     sint32 az = wheel->finalAcc.z;
-    if (ax < 0) ax = (sint32)(0 - (uint32)ax);
-    if (az < 0) az = (sint32)(0 - (uint32)az);
-    sint32 totalAcc = az < ax ? (sint32)((uint32)ax + (uint32)(az >> 2))
-                          : (sint32)((uint32)az + (uint32)(ax >> 2));
+    if (ax < 0) ax = (-ax);
+    if (az < 0) az = (-az);
+    sint32 totalAcc = az < ax ? (ax + (az >> 2)) : (az + (ax >> 2));
     sint32 roadGrip = wheel->roadGrip;
     if (wheel->frontTire != 0)
         wheel->skid = carObj->frontSkid;
@@ -1013,10 +1002,9 @@ void Physics::CalcTractionCircleAcc(Car::tObj *carObj, Physics::tWheelAccStruct 
     {
         sint32 forwardAcc = wheel->finalAcc.z;
         sint32 skid = carObj->rearSkid;
-        if (forwardAcc < 0) forwardAcc = (sint32)(0 - (uint32)forwardAcc);
+        if (forwardAcc < 0) forwardAcc = (-forwardAcc);
         wheel->skid = skid;
-        if ((roadGrip < forwardAcc && (uint8)carObj->control.gasLevel > 128)
-            || carObj->wheelSpin == 2)
+        if ((roadGrip < forwardAcc && (uint8)carObj->control.gasLevel > 128) || carObj->wheelSpin == 2)
             carObj->wheelSpin = 1;
         else
             carObj->wheelSpin = 0;
@@ -1024,12 +1012,12 @@ void Physics::CalcTractionCircleAcc(Car::tObj *carObj, Physics::tWheelAccStruct 
     sint32 gripLossDivider = (slippery != 0 ? gripLossTableWet : gripLossTable)[carObj->carInfo->TireType];
     if (roadGrip < totalAcc)
     {
-        sint32 excess = (sint32)((uint32)totalAcc - (uint32)roadGrip);
+        sint32 excess = (totalAcc - roadGrip);
         bool lowSlideRear = false;
         if (carObj->carInfo->Traction != 0 && wheel->frontTire == 0)
         {
             sint32 slide = carObj->slide;
-            if (slide < 0) slide = (sint32)(0 - (uint32)slide);
+            if (slide < 0) slide = (-slide);
             lowSlideRear = slide <= 0x2665;
         }
         sint32 ratio;
@@ -1050,11 +1038,11 @@ void Physics::CalcTractionCircleAcc(Car::tObj *carObj, Physics::tWheelAccStruct 
             sint32 maxGripLoss = roadGrip / gripLossDivider;
             if (gripLoss >= maxGripLoss)
                 gripLoss = maxGripLoss;
-            ratio = fixeddiv((sint32)((uint32)roadGrip - (uint32)gripLoss), totalAcc);
+            ratio = fixeddiv(((roadGrip - gripLoss)), totalAcc);
             if (carObj->carInfo->TireType == 2)
-                wheel->skid = (sint32)(15 * (uint32)wheel->skid + (uint32)excess) / 16;
+                wheel->skid = ((15 * wheel->skid) + excess) / 16;
             else
-                wheel->skid = (sint32)(3 * (uint32)wheel->skid + (uint32)excess) / 4;
+                wheel->skid = ((3 * wheel->skid) + excess) / 4;
             sint32 accX = fixedmult(wheel->finalAcc.x, ratio);
             wheel->finalAcc.x = accX;
         }
@@ -1066,7 +1054,7 @@ void Physics::CalcTractionCircleAcc(Car::tObj *carObj, Physics::tWheelAccStruct 
     {
         wheel->skid = totalAcc;
         if ((uint8)carObj->control.gear < 4)
-            wheel->skid = (sint32)((uint32)totalAcc << 2);
+            wheel->skid = ((uint32)totalAcc << 2);
     }
     sint32 tireType = carObj->carInfo->TireType;
     if (tireType == 1 || tireType == 2)
@@ -1076,7 +1064,7 @@ void Physics::CalcTractionCircleAcc(Car::tObj *carObj, Physics::tWheelAccStruct 
             wheel->skid = limit;
     }
     if (carObj->carInfo->Traction != 0)
-        wheel->skid = (sint32)(3 * (uint32)wheel->skid) / 4;
+        wheel->skid = (3 * wheel->skid) / 4;
 }
 
 void Physics::CalculateTireForces(Car::tObj *carObj, Physics::tWheelAccStruct *wheel)
@@ -1085,8 +1073,7 @@ void Physics::CalculateTireForces(Car::tObj *carObj, Physics::tWheelAccStruct *w
     sint32 roadGrip = wheel->roadGrip;
     wheel->skid = 0;
     if (wheel->steeringAngle != 0)
-        Math::ResolveRotatedVector(wheel->velCap.x, wheel->velCap.z, wheel->steeringAngle,
-                                  &wheel->velCap.x, &wheel->velCap.z);
+        Math::ResolveRotatedVector(wheel->velCap.x, wheel->velCap.z, wheel->steeringAngle, &wheel->velCap.x, &wheel->velCap.z);
     bool brakingSituation = false;
     sint32 acc = wheel->acc;
     if (acc < 0 && wheel->velCap.z < 0)
@@ -1112,13 +1099,13 @@ void Physics::CalculateTireForces(Car::tObj *carObj, Physics::tWheelAccStruct *w
     bool brakingForce = false;
     if (brakingSituation)
     {
-        sint32 magnitude = acc < 0 ? (sint32)(0 - (uint32)acc) : acc;
+        sint32 magnitude = acc < 0 ? -acc : acc;
         brakingForce = wheel->roadGrip < magnitude;
     }
     if (!brakingForce && carObj->control.handBrake != 0 && wheel->frontTire == 0)
     {
         sint32 speed = carObj->linearVel_ch.z;
-        if (speed < 0) speed = (sint32)(0 - (uint32)speed);
+        if (speed < 0) speed = (-speed);
         brakingForce = speed > 0x8000;
     }
     if (brakingForce)
@@ -1129,14 +1116,14 @@ void Physics::CalculateTireForces(Car::tObj *carObj, Physics::tWheelAccStruct *w
             sint32 speed = carObj->linearVel_ch.z;
             if (speed <= 0x190000 && (uint8)carObj->control.brakeLevel > 235)
             {
-                if (speed < 0) speed = (sint32)(0 - (uint32)speed);
+                if (speed < 0) speed = (-speed);
                 locked = speed > 0x4FFFF || carObj->wheelSpin != 0;
             }
         }
         if (locked)
         {
             sint32 increment = wheel->frontTire != 0 ? 1 : 2;
-            carObj->wheelLock = (sint32)((uint32)carObj->wheelLock + (uint32)increment);
+            carObj->wheelLock = (carObj->wheelLock + increment);
             CalcWheelLockAcc(carObj, wheel);
             if (wheel->frontTire != 0)
                 carObj->frontSkid = wheel->skid;
@@ -1149,7 +1136,7 @@ void Physics::CalculateTireForces(Car::tObj *carObj, Physics::tWheelAccStruct *w
             wheel->acc = limit;
         else
         {
-            limit = (sint32)(0 - (uint32)limit);
+            limit = (-limit);
             if (wheel->acc < limit)
                 wheel->acc = limit;
         }
@@ -1160,18 +1147,18 @@ void Physics::CalculateTireForces(Car::tObj *carObj, Physics::tWheelAccStruct *w
     sint32 velocityZ = wheel->velCap.z;
     if (velocityZ != 0)
     {
-        slipAngle = fixedatan(wheel->velCap.x, (sint32)(0 - (uint32)velocityZ) / 2);
+        slipAngle = fixedatan(wheel->velCap.x, -velocityZ / 2);
         if (wheel->velCap.z > 0)
         {
             sint32 velocityX = wheel->velCap.x;
             if (velocityX > 0)
-                slipAngle = (sint32)(0x8000 - (uint32)slipAngle);
+                slipAngle = (0x8000 - slipAngle);
             else if (velocityX < 0)
-                slipAngle = (sint32)((uint32)-0x8000 - (uint32)slipAngle);
+                slipAngle = (((-0x8000)) - slipAngle);
         }
-        slipAngle = (sint32)((uint32)slipAngle << 8);
+        slipAngle = ((uint32)slipAngle << 8);
     }
-    sint32 angleMagnitude = slipAngle < 0 ? (sint32)(0 - (uint32)slipAngle) : slipAngle;
+    sint32 angleMagnitude = slipAngle < 0 ? -slipAngle : slipAngle;
     sint32 latAcc;
     bool limitLateral;
     sint32 velocityX;
@@ -1180,35 +1167,35 @@ void Physics::CalculateTireForces(Car::tObj *carObj, Physics::tWheelAccStruct *w
         if (angleMagnitude > 0x100000)
             angleMagnitude = 0x100000;
         latAcc = fixedmult(fixedmult(angleMagnitude, roadGrip), 0x1555);
-        if (slipAngle < 0) latAcc = (sint32)(0 - (uint32)latAcc);
+        if (slipAngle < 0) latAcc = (-latAcc);
         wheel->finalAcc.x = latAcc;
         sint32 gravity = gravity_ch.x;
         velocityX = wheel->velCap.x;
-        wheel->finalAcc.x = (sint32)((uint32)latAcc + (uint32)(gravity / 2));
-        sint32 vx = velocityX < 0 ? (sint32)(0 - (uint32)velocityX) : velocityX;
+        wheel->finalAcc.x = (latAcc + (gravity / 2));
+        sint32 vx = velocityX < 0 ? -velocityX : velocityX;
         sint32 vz = wheel->velCap.z;
-        if (vz < 0) vz = (sint32)(0 - (uint32)vz);
-        limitLateral = (sint32)((uint32)vx + (uint32)vz) < 0x200000;
+        if (vz < 0) vz = (-vz);
+        limitLateral = (vx + vz) < 0x200000;
     }
     else
     {
         if (angleMagnitude < 0x8000) angleMagnitude = 0x8000;
         if (angleMagnitude > 0x20000) angleMagnitude = 0x20000;
         latAcc = fixedmult(angleMagnitude, roadGrip) / 2;
-        if (slipAngle < 0) latAcc = (sint32)(0 - (uint32)latAcc);
+        if (slipAngle < 0) latAcc = (-latAcc);
         sint32 gravity = gravity_ch.x;
         velocityX = wheel->velCap.x;
-        latAcc = (sint32)((uint32)latAcc + (uint32)(gravity / 2));
+        latAcc = (latAcc + (gravity / 2));
         limitLateral = true;
     }
     if (limitLateral)
     {
-        sint32 magnitude = latAcc < 0 ? (sint32)(0 - (uint32)latAcc) : latAcc;
+        sint32 magnitude = latAcc < 0 ? -latAcc : latAcc;
         if (velocityX > 0)
             wheel->finalAcc.x = magnitude < velocityX ? magnitude : velocityX;
         else
         {
-            sint32 negative = (sint32)(0 - (uint32)magnitude);
+            sint32 negative = (-magnitude);
             wheel->finalAcc.x = negative < velocityX ? velocityX : negative;
         }
     }
@@ -1218,8 +1205,7 @@ void Physics::CalculateTireForces(Car::tObj *carObj, Physics::tWheelAccStruct *w
     CalcTractionCircleAcc(carObj, wheel);
     sint32 angle = wheel->steeringAngle;
     if (angle != 0)
-        Math::ResolveRotatedVector(wheel->finalAcc.x, wheel->finalAcc.z,
-                                  (sint32)(0 - (uint32)angle), &wheel->finalAcc.x, &wheel->finalAcc.z);
+        Math::ResolveRotatedVector(wheel->finalAcc.x, wheel->finalAcc.z, -angle, &wheel->finalAcc.x, &wheel->finalAcc.z);
     if (wheel->frontTire != 0)
         carObj->frontSkid = wheel->skid;
     else
@@ -1229,24 +1215,21 @@ void Physics::CalculateTireForces(Car::tObj *carObj, Physics::tWheelAccStruct *w
 sint32 Physics::CalculateRSControlDesiredPosition(Car::tObj *carObj, sint32 sliceAhead, sint32 lookAhead)
 {
     FUNCTION_MARKER(0x800ABFA4, "NFS4.EXE");
-    sint32 driveSide = (sint32)((uint32)carObj->RSControl * (uint32)AITune::driveSide);
+    sint32 driveSide = (carObj->RSControl * AITune::driveSide);
     bool flip = false;
     if (carObj->roadPosition < 0 && driveSide > 0)
-        flip = AIWorld::IsDriveableLane(carObj->N.simRoadInfo.slice,
-                    (sint32)((uint32)carObj->laneIndex + 1)) == 0;
+        flip = AIWorld::IsDriveableLane(carObj->N.simRoadInfo.slice, (carObj->laneIndex + 1)) == 0;
     if (!flip && carObj->roadPosition > 0 && driveSide < 0)
-        flip = AIWorld::IsDriveableLane(carObj->N.simRoadInfo.slice,
-                    (sint32)((uint32)carObj->laneIndex - 1)) == 0;
+        flip = AIWorld::IsDriveableLane(carObj->N.simRoadInfo.slice, (carObj->laneIndex - 1)) == 0;
     if (flip)
-        driveSide = (sint32)(0 - (uint32)driveSide);
+        driveSide = (-driveSide);
     sint32 position;
     if (driveSide > 0)
     {
         sint32 desLane = 7;
         for (;; ++desLane)
         {
-            sint32 driveable = AIWorld::IsDriveableLaneInSliceRange(
-                carObj->N.simRoadInfo.slice, lookAhead, carObj->RSControl, desLane);
+            sint32 driveable = AIWorld::IsDriveableLaneInSliceRange( carObj->N.simRoadInfo.slice, lookAhead, carObj->RSControl, desLane);
             if (driveable != 0 || desLane >= 10)
                 break;
         }
@@ -1261,8 +1244,7 @@ sint32 Physics::CalculateRSControlDesiredPosition(Car::tObj *carObj, sint32 slic
         sint32 desLane = 6;
         for (;; --desLane)
         {
-            sint32 driveable = AIWorld::IsDriveableLaneInSliceRange(
-                carObj->N.simRoadInfo.slice, lookAhead, carObj->RSControl, desLane);
+            sint32 driveable = AIWorld::IsDriveableLaneInSliceRange( carObj->N.simRoadInfo.slice, lookAhead, carObj->RSControl, desLane);
             if (driveable != 0 || desLane < 4)
                 break;
         }
@@ -1299,52 +1281,48 @@ void Physics::Real(Car::tObj *carObj)
             sint32 x = fixedmult(input->x, carObj->N.shadowMat.m[row * 3]);
             sint32 y = fixedmult(input->y, carObj->N.shadowMat.m[row * 3 + 1]);
             sint32 z = fixedmult(input->z, carObj->N.shadowMat.m[row * 3 + 2]);
-            sint32 value = (sint32)((uint32)x + (uint32)y + (uint32)z);
+            sint32 value = ((x + y) + z);
             if (row == 0) output->x = value;
             else if (row == 1) output->y = value;
             else output->z = value;
         }
     }
-    carObj->slide = carObj->linearVel_ch.z > 0x50000
-                  ? fixeddiv(carObj->linearVel_ch.x, carObj->linearVel_ch.z) : 0;
+    carObj->slide = carObj->linearVel_ch.z > 0x50000 ? fixeddiv(carObj->linearVel_ch.x, carObj->linearVel_ch.z) : 0;
     coorddef carAccCap_ch;
-    carAccCap_ch.x = (sint32)(0 - ((uint32)carObj->linearVel_ch.x << 5)) / 2;
-    carAccCap_ch.y = (sint32)(0 - ((uint32)carObj->linearVel_ch.y << 5)) / 2;
-    carAccCap_ch.z = (sint32)(0 - ((uint32)carObj->linearVel_ch.z << 5)) / 2;
-    sint32 rotationalAccCap = (sint32)(0 - (uint32)fixedmult(
-        (sint32)((uint32)carObj->N.angularVel.y << 5), specs->alphaToAccRotInertia)) / 2;
+    carAccCap_ch.x = -(sint32)((uint32)carObj->linearVel_ch.x << 5) / 2;
+    carAccCap_ch.y = -(sint32)((uint32)carObj->linearVel_ch.y << 5) / 2;
+    carAccCap_ch.z = -(sint32)((uint32)carObj->linearVel_ch.z << 5) / 2;
+    sint32 rotationalAccCap = -fixedmult( ((uint32)carObj->N.angularVel.y << 5), specs->alphaToAccRotInertia) / 2;
     gravity_ch.x = fixedmult(-0xA0000, carObj->N.shadowMat.m[1]);
     gravity_ch.y = fixedmult(-0xA0000, carObj->N.shadowMat.m[4]);
     gravity_ch.z = fixedmult(-0xA0000, carObj->N.shadowMat.m[7]);
     tWheelAccStruct frontWheel;
     tWheelAccStruct rearWheel;
-    frontWheel.velCap.x = (sint32)((uint32)carAccCap_ch.x + (uint32)rotationalAccCap);
+    frontWheel.velCap.x = (carAccCap_ch.x + rotationalAccCap);
     frontWheel.velCap.y = carAccCap_ch.y;
     frontWheel.velCap.z = carAccCap_ch.z;
-    rearWheel.velCap.x = (sint32)((uint32)carAccCap_ch.x - (uint32)rotationalAccCap);
+    rearWheel.velCap.x = (carAccCap_ch.x - rotationalAccCap);
     rearWheel.velCap.y = carAccCap_ch.y;
     rearWheel.velCap.z = carAccCap_ch.z;
     RampCarControlValues(carObj);
-    sint32 gravitySteer = (sint32)((uint32)(gravity_ch.x / 256) * 0x300) / 65536;
-    sint32 tempSteer = (sint32)((uint32)carObj->control.steering + (uint32)gravitySteer);
+    sint32 gravitySteer = ((gravity_ch.x / 256) * 0x300) / 65536;
+    sint32 tempSteer = (carObj->control.steering + gravitySteer);
     if (tempSteer > 127) tempSteer = 127;
     else if (tempSteer < -127) tempSteer = -127;
-    tempSteer = (sint32)((uint32)tempSteer * (uint32)specs->maxSteeringAcc) / 128;
-    sint32 damage = (sint32)((uint32)carObj->N.damage[0] + (uint32)carObj->N.damage[1]
-                       + (uint32)carObj->N.damage[2] + (uint32)carObj->N.damage[9]);
-    sint32 damageMult = (sint32)(0x10000 - (uint32)(damage / 512));
-    frontWheel.steeringAngle = (sint32)((uint32)(tempSteer / 256) * (uint32)(damageMult / 256));
+    tempSteer = (tempSteer * specs->maxSteeringAcc) / 128;
+    sint32 damage = (((carObj->N.damage[0] + carObj->N.damage[1]) + carObj->N.damage[2]) + carObj->N.damage[9]);
+    sint32 damageMult = (0x10000 - (damage / 512));
+    frontWheel.steeringAngle = (((tempSteer / 256)) * (damageMult / 256));
     if (carObj->linearVel_ch.z > 0x3C0000)
         frontWheel.steeringAngle = fixeddiv(frontWheel.steeringAngle, fixedmult(carObj->linearVel_ch.z, 0x444));
     sint32 threshold = 0;
     if (carObj->linearVel_ch.z > 0x1AB333) threshold = 0xCCC;
     else if (carObj->linearVel_ch.z > 0xD6666) threshold = 0x2666;
-    if (threshold != 0 && ((carObj->slide > threshold && frontWheel.steeringAngle > 0)
-        || (carObj->slide < -threshold && frontWheel.steeringAngle < 0)))
+    if (threshold != 0 && ((carObj->slide > threshold && frontWheel.steeringAngle > 0) || (carObj->slide < -threshold && frontWheel.steeringAngle < 0)))
     {
         sint32 sliding = carObj->slide;
-        if (sliding < 0) sliding = (sint32)(0 - (uint32)sliding);
-        sint32 ratio = (sint32)((uint32)sliding << 1);
+        if (sliding < 0) sliding = (-sliding);
+        sint32 ratio = ((uint32)sliding << 1);
         if (ratio > 0x10000) ratio = 0x10000;
         frontWheel.steeringAngle = fixedmult(frontWheel.steeringAngle, ratio);
     }
@@ -1352,8 +1330,8 @@ void Physics::Real(Car::tObj *carObj)
     frontWheel.frontTire = 1;
     rearWheel.frontTire = 0;
     sint32 driveAcc = CalculateCarAcceleration(carObj);
-    frontWheel.acc = (sint32)((uint32)(driveAcc / 256) * (uint32)(specs->frontDriveRatio / 256));
-    rearWheel.acc = (sint32)((uint32)driveAcc - (uint32)frontWheel.acc);
+    frontWheel.acc = (((driveAcc / 256)) * (specs->frontDriveRatio / 256));
+    rearWheel.acc = (driveAcc - frontWheel.acc);
     if (steeringControl == 0 && powerControl == 0)
     {
         carObj->frontSkid = 0;
@@ -1361,40 +1339,39 @@ void Physics::Real(Car::tObj *carObj)
         return;
     }
     carObj->crash = 0;
-    sint32 brakeAcc = (sint32)((uint32)(gBrakeRatio / 256) * (uint32)(specs->maxBrakeAcc / 256));
+    sint32 brakeAcc = (((gBrakeRatio / 256)) * (specs->maxBrakeAcc / 256));
     sint32 magnitude = carObj->linearVel_ch.z;
-    if (magnitude < 0) magnitude = (sint32)(0 - (uint32)magnitude);
-    sint32 cap = (sint32)((uint32)magnitude << 5);
+    if (magnitude < 0) magnitude = (-magnitude);
+    sint32 cap = ((uint32)magnitude << 5);
     if (brakeAcc > cap) brakeAcc = cap;
     damage = carObj->N.damage[9];
     if (damage != 0)
     {
-        damageMult = (sint32)(0x10000 - (uint32)(damage / 128));
-        brakeAcc = (sint32)((uint32)(brakeAcc / 256) * (uint32)(damageMult / 256));
+        damageMult = (0x10000 - (damage / 128));
+        brakeAcc = (((brakeAcc / 256)) * (damageMult / 256));
     }
-    if (carObj->linearVel_ch.z > 0) brakeAcc = (sint32)(0 - (uint32)brakeAcc);
+    if (carObj->linearVel_ch.z > 0) brakeAcc = (-brakeAcc);
     sint32 frontBrake = fixedmult(brakeAcc, specs->frontBrakeRatio);
-    frontWheel.acc = (sint32)((uint32)frontWheel.acc + (uint32)frontBrake);
-    rearWheel.acc = (sint32)((uint32)rearWheel.acc + (uint32)brakeAcc - (uint32)frontBrake);
-    sint32 roadGrip = fixedmult((sint32)(0 - (uint32)gravity_ch.y), specs->lateralGripMult);
+    frontWheel.acc = (frontWheel.acc + frontBrake);
+    rearWheel.acc = ((rearWheel.acc + brakeAcc) - frontBrake);
+    sint32 roadGrip = fixedmult((-gravity_ch.y), specs->lateralGripMult);
     CalculateRoadGripModifiers(carObj);
-    roadGrip = (sint32)((uint32)(roadGrip / 256) * (uint32)(roadMult / 256));
+    roadGrip = (((roadGrip / 256)) * (roadMult / 256));
     if (roadGrip < 0) return;
-    sint32 bias = slippery != 0 ? (sint32)((uint32)specs->frontGripBias + 0x28F) : specs->frontGripBias;
+    sint32 bias = slippery != 0 ? (specs->frontGripBias + 0x28F) : specs->frontGripBias;
     sint32 frontGrip = fixedmult(roadGrip, bias);
-    damage = (sint32)((uint32)carObj->N.damage[4] + (uint32)carObj->N.damage[5]
-                   + (uint32)carObj->N.damage[6] + (uint32)carObj->N.damage[9]);
-    sint32 transferMult = (sint32)((uint32)(damage / 512) + 0xC000);
+    damage = (((carObj->N.damage[4] + carObj->N.damage[5]) + carObj->N.damage[6]) + carObj->N.damage[9]);
+    sint32 transferMult = ((damage / 512) + 0xC000);
     sint32 transfer = fixedmult(carObj->gTransferFront, transferMult);
     carObj->gTransferFront = transfer;
     if (transfer < 0)
-        carObj->gTransferFront = (sint32)((uint32)(transfer / 256) * (uint32)(transferMult / 256));
+        carObj->gTransferFront = (((transfer / 256)) * (transferMult / 256));
     else if (transfer > 0)
-        carObj->gTransferFront = (sint32)(3 * (uint32)transfer) / 4;
-    sint32 frontLoad = (sint32)((uint32)frontGrip - (uint32)carObj->gTransferFront);
-    frontWheel.roadGrip = (sint32)((uint32)(frontMult / 256) * (uint32)(frontLoad / 256));
-    sint32 rearLoad = (sint32)((uint32)roadGrip - (uint32)frontGrip + (uint32)carObj->gTransferFront);
-    rearWheel.roadGrip = (sint32)((uint32)(rearMult / 256) * (uint32)(rearLoad / 256));
+        carObj->gTransferFront = (3 * transfer) / 4;
+    sint32 frontLoad = (frontGrip - carObj->gTransferFront);
+    frontWheel.roadGrip = (((frontMult / 256)) * (frontLoad / 256));
+    sint32 rearLoad = ((roadGrip - frontGrip) + carObj->gTransferFront);
+    rearWheel.roadGrip = (((rearMult / 256)) * (rearLoad / 256));
     carObj->wheelLock = 0;
     frontWheel.finalAcc.x = 0;
     frontWheel.finalAcc.z = 0;
@@ -1402,11 +1379,11 @@ void Physics::Real(Car::tObj *carObj)
     rearWheel.finalAcc.z = 0;
     if (steeringControl != 0) CalculateTireForces(carObj, &frontWheel);
     if (powerControl != 0) CalculateTireForces(carObj, &rearWheel);
-    carObj->linearAcc_ch.z = (sint32)((uint32)frontWheel.finalAcc.z + (uint32)rearWheel.finalAcc.z);
-    carObj->linearAcc_ch.x = (sint32)((uint32)frontWheel.finalAcc.x + (uint32)rearWheel.finalAcc.x);
+    carObj->linearAcc_ch.z = (frontWheel.finalAcc.z + rearWheel.finalAcc.z);
+    carObj->linearAcc_ch.x = (frontWheel.finalAcc.x + rearWheel.finalAcc.x);
     carObj->linearAcc_ch.z = fixedmult(carObj->linearAcc_ch.z, specs->lateralGripMultInv);
     if (GameSetup::gData.sgge == 0x80 && carObj->linearAcc_ch.z > 0 && carObj->control.horn != 0)
-        carObj->linearAcc_ch.z = (sint32)((uint32)carObj->linearAcc_ch.z << 2);
+        carObj->linearAcc_ch.z = ((uint32)carObj->linearAcc_ch.z << 2);
     if (slippery == 0)
     {
         sint32 factor = carObj->carInfo->TireType == 2 && (uint8)carObj->control.gear < 4 ? 0x12666 : 0x11999;
@@ -1415,21 +1392,19 @@ void Physics::Real(Car::tObj *carObj)
     carObj->linearAcc_ch.y = 0;
     sint32 gravityTransfer = fixedmult(gravity_ch.z, 0x1999);
     sint32 Xcomponent = fixedmult(carObj->linearAcc_ch.x / 8, specs->gTransferFactor);
-    carObj->gTransferRight = (sint32)(0 - (uint32)Xcomponent);
-    carObj->gTransferFront = (sint32)((uint32)fixedmult(carObj->linearAcc_ch.z, specs->gTransferFactor) - (uint32)gravityTransfer);
+    carObj->gTransferRight = (-Xcomponent);
+    carObj->gTransferFront = (fixedmult(carObj->linearAcc_ch.z, specs->gTransferFactor) - gravityTransfer);
     coorddef finalAngularAcc_ch;
-    sint32 angular = fixedmult((sint32)((uint32)frontWheel.finalAcc.x - (uint32)rearWheel.finalAcc.x), specs->accToAlphaRotInertia);
-    sint32 asymmetric = fixedmult((sint32)((uint32)frontWheel.finalAcc.z + (uint32)rearWheel.finalAcc.z),
-                               (sint32)((uint32)leftMult - (uint32)rightMult));
+    sint32 angular = fixedmult(((frontWheel.finalAcc.x - rearWheel.finalAcc.x)), specs->accToAlphaRotInertia);
+    sint32 asymmetric = fixedmult(((frontWheel.finalAcc.z + rearWheel.finalAcc.z)), (leftMult - rightMult));
     asymmetric = fixedmult(asymmetric, specs->accToAlphaRotInertia);
-    angular = (sint32)((uint32)angular + ((uint32)asymmetric << 1));
+    angular = (angular + ((uint32)asymmetric << 1));
     if ((carObj->N.angularVel.y > 0 && angular > 0) || (carObj->N.angularVel.y < 0 && angular < 0))
     {
         if (carObj->control.handBrake != 0 && (GameSetup::gData.sgge & 8) == 0)
             angular /= 2;
-        else if (((carObj->control.desiredSteering < 0 && carObj->N.angularVel.y > 0x3333)
-                || (carObj->control.desiredSteering > 0 && carObj->N.angularVel.y < -0x3333)) && carObj->wheelSpin == 1)
-            angular = (sint32)(0 - (uint32)carObj->N.angularVel.y);
+        else if (((carObj->control.desiredSteering < 0 && carObj->N.angularVel.y > 0x3333) || (carObj->control.desiredSteering > 0 && carObj->N.angularVel.y < -0x3333)) && carObj->wheelSpin == 1)
+            angular = (-carObj->N.angularVel.y);
         else
             angular = fixedmult(angular, carObj->specs->spinVelCap);
     }
@@ -1448,18 +1423,18 @@ void Physics::Real(Car::tObj *carObj)
             sint32 x = fixedmult(input->x, transposeMat.m[row * 3]);
             sint32 y = fixedmult(input->y, transposeMat.m[row * 3 + 1]);
             sint32 z = fixedmult(input->z, transposeMat.m[row * 3 + 2]);
-            sint32 value = (sint32)((uint32)x + (uint32)y + (uint32)z);
+            sint32 value = ((x + y) + z);
             if (row == 0) output->x = value;
             else if (row == 1) output->y = value;
             else output->z = value;
         }
     }
-    carObj->N.linearVel.x = (sint32)((uint32)carObj->N.linearVel.x + (uint32)(carObj->linearAcc.x / 32));
-    carObj->N.linearVel.y = (sint32)((uint32)carObj->N.linearVel.y + (uint32)(carObj->linearAcc.y / 32));
-    carObj->N.linearVel.z = (sint32)((uint32)carObj->N.linearVel.z + (uint32)(carObj->linearAcc.z / 32));
-    carObj->N.angularVel.x = (sint32)((uint32)carObj->N.angularVel.x + (uint32)(carObj->angularAcc.x / 32));
-    carObj->N.angularVel.y = (sint32)((uint32)carObj->N.angularVel.y + (uint32)(carObj->angularAcc.y / 64));
-    carObj->N.angularVel.z = (sint32)((uint32)carObj->N.angularVel.z + (uint32)(carObj->angularAcc.z / 32));
+    carObj->N.linearVel.x = (carObj->N.linearVel.x + (carObj->linearAcc.x / 32));
+    carObj->N.linearVel.y = (carObj->N.linearVel.y + (carObj->linearAcc.y / 32));
+    carObj->N.linearVel.z = (carObj->N.linearVel.z + (carObj->linearAcc.z / 32));
+    carObj->N.angularVel.x = (carObj->N.angularVel.x + (carObj->angularAcc.x / 32));
+    carObj->N.angularVel.y = (carObj->N.angularVel.y + (carObj->angularAcc.y / 64));
+    carObj->N.angularVel.z = (carObj->N.angularVel.z + (carObj->angularAcc.z / 32));
     if (carObj->RSControl != 0)
     {
         sint32 gear = (uint8)carObj->control.gear;
@@ -1469,16 +1444,16 @@ void Physics::Real(Car::tObj *carObj)
         gear = (uint8)carObj->control.gear;
         if (gear < 2) gear = 2;
         sint32 currentRpm = fixedmult(carObj->linearVel_ch.z, specs->velToRpmRatio[gear]) / 65536;
-        sint32 numerator = (sint32)((uint32)desiredRpm << 8);
+        sint32 numerator = ((uint32)desiredRpm << 8);
         sint32 redline = specs->redline;
         if (redline == 0 || (redline == -1 && numerator == (-2147483647 - 1))) abort();
         sint32 tempGas = numerator / redline;
-        sint32 diffRpm = (sint32)((uint32)desiredRpm - (uint32)currentRpm);
+        sint32 diffRpm = (desiredRpm - currentRpm);
         if (diffRpm != 200)
         {
-            numerator = (sint32)((uint32)diffRpm << 7);
+            numerator = ((uint32)diffRpm << 7);
             if (desiredRpm == 0 || (desiredRpm == -1 && numerator == (-2147483647 - 1))) abort();
-            tempGas = (sint32)((uint32)tempGas + (uint32)(numerator / desiredRpm));
+            tempGas = (tempGas + (numerator / desiredRpm));
             if (diffRpm > 200)
             {
                 if (tempGas > 224) tempGas = 224;
@@ -1489,8 +1464,8 @@ void Physics::Real(Car::tObj *carObj)
                 carObj->RSGasLevel = (char)(tempGas < 0 ? 0 : tempGas);
                 if (diffRpm < 0)
                 {
-                    numerator = (sint32)((uint32)diffRpm << 9);
-                    if (numerator < 0) numerator = (sint32)(0 - (uint32)numerator);
+                    numerator = ((uint32)diffRpm << 9);
+                    if (numerator < 0) numerator = (-numerator);
                     redline = specs->redline;
                     if (redline == 0 || (redline == -1 && numerator == (-2147483647 - 1))) abort();
                     sint32 braking = numerator / redline;
@@ -1501,19 +1476,19 @@ void Physics::Real(Car::tObj *carObj)
             }
         }
         sint32 speed = carObj->currentSpeed;
-        if (speed < 0) speed = (sint32)(0 - (uint32)speed);
+        if (speed < 0) speed = (-speed);
         sint32 factor = speed / 0x60000;
         if (factor < 3) factor = 3;
-        sint32 lookAhead = (sint32)((uint32)carObj->RSControl * (uint32)factor);
-        sint32 sliceAhead = (sint32)((uint32)carObj->N.simRoadInfo.slice + (uint32)lookAhead);
+        sint32 lookAhead = (carObj->RSControl * factor);
+        sint32 sliceAhead = (carObj->N.simRoadInfo.slice + lookAhead);
         if (lookAhead < 0)
         {
-            if (sliceAhead < 0) sliceAhead = (sint32)((uint32)sliceAhead + (uint32)gNumSlices);
+            if (sliceAhead < 0) sliceAhead = (sliceAhead + gNumSlices);
         }
         else if (sliceAhead >= gNumSlices)
-            sliceAhead = (sint32)((uint32)sliceAhead - (uint32)gNumSlices);
-        sint32 sliceRange = (sint32)(3 * (uint32)lookAhead);
-        if (sliceRange < 0) sliceRange = (sint32)(0 - (uint32)sliceRange);
+            sliceAhead = (sliceAhead - gNumSlices);
+        sint32 sliceRange = (3 * lookAhead);
+        if (sliceRange < 0) sliceRange = (-sliceRange);
         coorddef carPos = carObj->N.position;
         coorddef dirVector;
         dirVector.x = BWorldSm::slices[sliceAhead].center[0];
@@ -1524,21 +1499,21 @@ void Physics::Real(Car::tObj *carObj)
         offset.x = fixedmult((sint8)BWorldSm::slices[sliceAhead].right[0] * 512, roadPosition);
         offset.y = fixedmult((sint8)BWorldSm::slices[sliceAhead].right[1] * 512, roadPosition);
         offset.z = fixedmult((sint8)BWorldSm::slices[sliceAhead].right[2] * 512, roadPosition);
-        dirVector.x = (sint32)((uint32)dirVector.x + (uint32)offset.x - (uint32)carPos.x);
-        dirVector.y = (sint32)((uint32)dirVector.y + (uint32)offset.y - (uint32)carPos.y);
-        dirVector.z = (sint32)((uint32)dirVector.z + (uint32)offset.z - (uint32)carPos.z);
+        dirVector.x = ((dirVector.x + offset.x) - carPos.x);
+        dirVector.y = ((dirVector.y + offset.y) - carPos.y);
+        dirVector.z = ((dirVector.z + offset.z) - carPos.z);
         Math::NormalizeVector(&dirVector);
         sint32 x = fixedmult(dirVector.x, carObj->N.orientMat.m[0]);
         sint32 y = fixedmult(dirVector.y, carObj->N.orientMat.m[1]);
         sint32 z = fixedmult(dirVector.z, carObj->N.orientMat.m[2]);
-        carObj->RSSteering = (sint32)((uint32)x + (uint32)y + (uint32)z) / 256;
+        carObj->RSSteering = ((x + y) + z) / 256;
         if (carObj->RSSteering > 127) carObj->RSSteering = 127;
         else if (carObj->RSSteering < -127) carObj->RSSteering = -127;
     }
     if ((GameSetup::gData.sgge & 8) == 0)
     {
         sint32 slide = carObj->slide;
-        if (slide < 0) slide = (sint32)(0 - (uint32)slide);
+        if (slide < 0) slide = (-slide);
         if (carObj->control.gasLevel == 0 || slide >= 0x199A)
         {
             carObj->N.linearVel.x = fixedmult(carObj->specs->dragFactor, carObj->N.linearVel.x);
@@ -1556,16 +1531,16 @@ void Physics::Real(Car::tObj *carObj)
     if (carObj->control.gear == 1)
     {
         sint32 slope = gravity_ch.z;
-        if (slope < 0) slope = (sint32)(0 - (uint32)slope);
+        if (slope < 0) slope = (-slope);
         if (slope < 0x8000)
         {
             sint32 speed = carObj->linearVel_ch.z;
-            if (speed < 0) speed = (sint32)(0 - (uint32)speed);
+            if (speed < 0) speed = (-speed);
             sint32 damp = 0xFD70;
             if (speed > 0x13FFFF)
             {
                 sint32 steering = carObj->control.steering;
-                if (steering < 0) steering = (sint32)(0 - (uint32)steering);
+                if (steering < 0) steering = (-steering);
                 damp = steering > 32 ? 0xFD70 : 0xFF7C;
             }
             carObj->N.linearVel.x = fixedmult(damp, carObj->N.linearVel.x);

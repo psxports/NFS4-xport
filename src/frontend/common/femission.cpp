@@ -39,10 +39,8 @@ void tMissionManager::Initialize(void)
 void tMissionManager::LoadDescription(bool LoadHotPursuit)
 {
     FUNCTION_MARKER(0x8003407C, "FRONT.BIN");
-    (void)LoadHotPursuit;
     char filename[80];
-    sprintf(filename, "%s%s", Paths_Paths[37],
-        (uint8)frontEnd.gameMode == 1 ? "zHPurs2.mis" : "zHPurs.mis");
+    sprintf(filename, "%s%s", Paths_Paths[37], (uint8)frontEnd.gameMode == 1 ? "zHPurs2.mis" : "zHPurs.mis");
     char *input = static_cast<char *>(loadfileadr(filename, 16));
     fNumTiers = input[0];
     uint32 numMissions;

@@ -14,9 +14,9 @@ sint32 elapsedticks(void)
 {
     FUNCTION_MARKER(0x800E8230, "NFS4.EXE");
     uint32 previous = tickval;
-    uint32 current = ((uint32)(gettick()));
+    uint32 current = ((gettick()));
     tickval = current;
-    return (sint32)(current - previous);
+    return (current - previous);
 }
 
 void resettick(void)
@@ -31,8 +31,8 @@ void resettick(void)
 void timedwait(sint32 duration)
 {
     FUNCTION_MARKER(0x800E8284, "NFS4.EXE");
-    uint32 deadline = ((uint32)(gettick())) + ((uint32)(duration));
-    while ((sint32)(((uint32)(gettick())) - deadline) < 0)
+    uint32 deadline = ((gettick())) + ((uint32)(duration));
+    while ((sint32)(((gettick())) - deadline) < 0)
     {
         psx_root_counter_poll();
         systemtask(0);

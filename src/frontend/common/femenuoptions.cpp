@@ -51,24 +51,23 @@ void DrawLeftFlare(sint32 y, sint32 fSelFade, sint32 fFadeVal, sint32 &flareextr
 {
     FUNCTION_MARKER(0x8001BFA0, "FRONT.BIN");
     if (fSelFade == 128)
-        flareextra = (sint32)(uint32(flareextra) + 1u);
+        flareextra = (flareextra + 1);
     else if (flareextra != 0)
-        flareextra = (sint32)(uint32(flareextra) + 5u);
+        flareextra = (flareextra + 5);
     if (flareextra >= 61)
         flareextra = 0;
     sint32 phase = flareextra < 31 ? flareextra : 60 - flareextra;
     uint32 product = uint32(phase / 2 + 20) * uint32(fSelFade);
     product *= 128u - uint32(fFadeVal);
     sint32 flare_intensity = (sint32)product / 128;
-    sint32 glintFade = (sint32)(128u - uint32(fSelFade));
+    sint32 glintFade = (128 - fSelFade);
     if (glintFade < fFadeVal)
         glintFade = fFadeVal;
     if (flare_intensity > 0)
     {
         sint32 x = TextSys::WordX(0x1DE);
-        Flare::_2DHalo(x, (sint32)(uint32(y) + 5u), flare_intensity / 2, (flare_intensity * 2) / 3, 23);
-        DrawShapeExtended(0, 0, (sint32)(uint32(x) - 3u), (sint32)(uint32(y) - 1u),
-            glintFade, glintFade != 0 ? 1 : 0, 0);
+        Flare::_2DHalo(x, (y + 5), flare_intensity / 2, (flare_intensity * 2) / 3, 23);
+        DrawShapeExtended(0, 0, ((x - 3)), (y - 1), glintFade, glintFade != 0 ? 1 : 0, 0);
     }
 }
 
@@ -82,13 +81,13 @@ void SubtractiveBox(sint32 x, sint32 y, sint32 w, sint32 h, sint32 col1, sint32 
     cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
     setaddr(ot, prim);
     setlen(prim, 8);
-    uint32 color = (uint32)col1;
+    uint32 color = col1;
     memcpy(&prim->p[0].rgbc, &color, sizeof(color));
-    color = (uint32)col2;
+    color = col2;
     memcpy(&prim->p[1].rgbc, &color, sizeof(color));
-    color = (uint32)col3;
+    color = col3;
     memcpy(&prim->p[2].rgbc, &color, sizeof(color));
-    color = (uint32)col4;
+    color = col4;
     memcpy(&prim->p[3].rgbc, &color, sizeof(color));
     setcode(prim, 0x3A);
     sint16 right = (sint16)(uint32(x) + uint32(w));
@@ -137,7 +136,7 @@ bool tMenuItemGoToMenuButtonFade::TransitionIsFinished(void)
 void tMenuItemGoToMenuButtonFade::UpdateTransition(bool selected)
 {
     FUNCTION_MARKER(0x8001C2DC, "FRONT.BIN");
-    sint32 fade = sint32(fFadeVal) + sint32(fFadeDir);
+    sint32 fade = fFadeVal + fFadeDir;
     if (fade > 128)
         fade = 128;
     if (fade < 0)
@@ -175,15 +174,14 @@ void tMenuItemLeftRightFade::TransitionOn(void)
 bool tMenuItemLeftRightFade::TransitionIsFinished(void)
 {
     FUNCTION_MARKER(0x8001C3D0, "FRONT.BIN");
-    fInTransition = ((fFadeDir < 0 && fFadeVal > 0) ||
-        (fFadeDir > 0 && fFadeVal < 128)) ? 1 : 0;
+    fInTransition = ((fFadeDir < 0 && fFadeVal > 0) || (fFadeDir > 0 && fFadeVal < 128)) ? 1 : 0;
     return fInTransition == 0;
 }
 
 void tMenuItemLeftRightFade::UpdateTransition(bool selected)
 {
     FUNCTION_MARKER(0x8001C438, "FRONT.BIN");
-    sint32 fade = sint32(fFadeVal) + sint32(fFadeDir);
+    sint32 fade = fFadeVal + fFadeDir;
     if (fade > 128)
         fade = 128;
     if (fade < 0)
@@ -198,7 +196,7 @@ tOptionsMenu::tOptionsMenu(uint32 flags, tScreen *screenHandler, tMenu *nextMenu
     FUNCTION_MARKER(0x8001C4B4, "FRONT.BIN");
     va_list ap;
     va_start(ap, firstItem);
-    tMenuConstructor(firstItem, ap);
+    tMenuConstructor(firstItem, &ap);
     va_end(ap);
     fScreenFade = 0;
     fPrevItem = 0;
@@ -243,8 +241,7 @@ void tOptionsMenu::TransitionOn(void)
 bool tOptionsMenu::TransitionIsFinished(void)
 {
     FUNCTION_MARKER(0x8001C70C, "FRONT.BIN");
-    if ((fScreenFade >= 552 && fTransitionDirection > 0) ||
-        (fScreenFade <= 0 && fTransitionDirection < 0))
+    if ((fScreenFade >= 552 && fTransitionDirection > 0) || (fScreenFade <= 0 && fTransitionDirection < 0))
         fInMenuTransition = 0;
     else
         fInMenuTransition = 1;
@@ -269,7 +266,7 @@ void tOptionsMenu::UpdateTransition(void)
         {
             if (fScreenFade > 0)
             {
-                sint32 fade = (sint32)(uint32(fScreenFade) + uint32(direction));
+                sint32 fade = (fScreenFade + direction);
                 fScreenFade = fade < 0 ? 0 : fade;
             }
             else if (fItemList[0] != 0)
@@ -302,7 +299,7 @@ void tOptionsMenu::UpdateTransition(void)
                 fItemList[(sint16)i]->UpdateTransition(false);
             else if (fScreenFade < 552)
             {
-                sint32 fade = (sint32)(uint32(fScreenFade) + uint32(sint32(fTransitionDirection)));
+                sint32 fade = (fScreenFade + fTransitionDirection);
                 fScreenFade = fade > 552 ? 552 : fade;
             }
         }
@@ -366,7 +363,7 @@ tInsideBoxMenu::tInsideBoxMenu(uint32 flags, tScreen *screenHandler, tMenu *next
     FUNCTION_MARKER(0x8001CD90, "FRONT.BIN");
     va_list ap;
     va_start(ap, firstItem);
-    tMenuConstructor(firstItem, ap);
+    tMenuConstructor(firstItem, &ap);
     va_end(ap);
     fPrevItem = 0;
     fMoving = 0;
@@ -385,15 +382,13 @@ void tInsideBoxMenu::ProcessInput(tPlayer fromPlayer, tInputKeyType &keyval, tMe
         keyval = kInput_KeyType_AlreadyProcessed;
     if (keyval == kInput_KeyType_Up && fCurrentItem == 0)
         fItemList[0]->ProcessInput(fromPlayer, keyval, command);
-    else if (keyval != kInput_KeyType_Down ||
-        fItemList[(sint32)(uint32(fCurrentItem) + 1u)] != 0)
+    else if (keyval != kInput_KeyType_Down || fItemList[(fCurrentItem + 1)] != 0)
         tMenu::ProcessInput(fromPlayer, keyval, command);
 }
 
 void tInsideBoxMenu::Draw(sint16 x, sint16 y, sint16 w, sint16 slideOffset, sint16 maxheight)
 {
     FUNCTION_MARKER(0x8001CEFC, "FRONT.BIN");
-    (void)maxheight;
     if (fCurrentItem != fPrevItem)
     {
         if (fPrevItem < fCurrentItem)
@@ -429,7 +424,7 @@ void tInsideBoxMenu::Draw(sint16 x, sint16 y, sint16 w, sint16 slideOffset, sint
                 bool selected = fMoving == 0 && j == fCurrentItem;
                 item->UpdateTransition(selected);
                 item = fItemList[j];
-                sint32 rowY = sint32(fMoving) + sint32(y) + sint32(slideOffset) + (i - 1) * 24 + 5;
+                sint32 rowY = (((fMoving + y) + slideOffset) + ((i - 1) * 24)) + 5;
                 selected = fMoving == 0 && j == fCurrentItem;
                 item->Draw(sint32(x), rowY, sint32(w), selected);
             }
@@ -492,15 +487,14 @@ bool tMenuItemSlidingMenu::TransitionIsFinished(void)
         fInTransition = 0;
     }
     else
-        fInTransition = ((fFadeDir < 0 && fFadeVal > 0) ||
-            (fFadeDir > 0 && fFadeVal < 128)) ? 1 : 0;
+        fInTransition = ((fFadeDir < 0 && fFadeVal > 0) || (fFadeDir > 0 && fFadeVal < 128)) ? 1 : 0;
     return fInTransition == 0;
 }
 
 void tMenuItemSlidingMenu::UpdateTransition(bool selected)
 {
     FUNCTION_MARKER(0x8001D31C, "FRONT.BIN");
-    sint32 fade = sint32(fFadeVal) + sint32(fFadeDir);
+    sint32 fade = fFadeVal + fFadeDir;
     if (fade > 128)
         fade = 128;
     if (fade < 0)
@@ -534,7 +528,7 @@ void tMenuItemSlidingMenu::UpdatefOpenHeight(bool selected)
     }
     if (nextMenu != currMenu && fOpenHeight > 0)
     {
-        sint32 height = sint32(fOpenHeight) - 4;
+        sint32 height = fOpenHeight - 4;
         fOpenHeight = (sint16)(height < 0 ? 0 : height);
         fClosing = 1;
     }
@@ -542,7 +536,7 @@ void tMenuItemSlidingMenu::UpdatefOpenHeight(bool selected)
     {
         if (fInTransition == 0)
         {
-            sint32 fade = sint32(fFadeVal) + 40;
+            sint32 fade = fFadeVal + 40;
             fFadeVal = (sint16)(fade > 128 ? 128 : fade);
         }
     }
@@ -550,7 +544,7 @@ void tMenuItemSlidingMenu::UpdatefOpenHeight(bool selected)
     {
         if (fInTransition == 0)
         {
-            sint32 fade = sint32(fFadeVal) - 40;
+            sint32 fade = fFadeVal - 40;
             fFadeVal = (sint16)(fade < 0 ? 0 : fade);
         }
         if (fTransitioningOut == 0)
@@ -563,12 +557,12 @@ void tMenuItemSlidingMenu::UpdatefOpenHeight(bool selected)
         {
             if (nextMenu != 0)
             {
-                sint32 fade = sint32(fFadeVal) - 40;
+                sint32 fade = fFadeVal - 40;
                 fFadeVal = (sint16)(fade < 0 ? 0 : fade);
             }
             else
             {
-                sint32 fade = sint32(fFadeVal) + 40;
+                sint32 fade = fFadeVal + 40;
                 fFadeVal = (sint16)(fade > 128 ? 128 : fade);
             }
         }
@@ -581,21 +575,21 @@ void tMenuItemSlidingMenu::UpdatefOpenHeight(bool selected)
             {
                 if (fOpenHeight < fHeight)
                 {
-                    sint32 height = sint32(fOpenHeight) + 4;
+                    sint32 height = fOpenHeight + 4;
                     if (height > fHeight)
                         height = fHeight;
                     fOpenHeight = (sint16)height;
                 }
                 else
                 {
-                    sint32 offset = sint32(fSlideOffset) - 6;
+                    sint32 offset = fSlideOffset - 6;
                     fSlideOffset = (sint16)(offset < 0 ? 0 : offset);
                 }
             }
         }
         else if (fOpenHeight > 0)
         {
-            sint32 height = sint32(fOpenHeight) - 4;
+            sint32 height = fOpenHeight - 4;
             fOpenHeight = (sint16)(height < 0 ? 0 : height);
         }
     }
@@ -613,8 +607,8 @@ void tMenuItemSlidingMenu::Draw(sint32 offx, sint32 offy, bool selected)
     FUNCTION_MARKER(0x8001D63C, "FRONT.BIN");
     UpdatefOpenHeight(selected);
     sint32 ColText = CalcTextFadeSelToHi(textType_Options, fSelFade, fFadeVal);
-    sint32 x = (sint32)(uint32(TextSys::WordX(fTextDescription)) + uint32(offx));
-    sint32 y = (sint32)(uint32(TextSys::WordY(fTextDescription)) + uint32(offy));
+    sint32 x = (TextSys::WordX(fTextDescription) + offx);
+    sint32 y = (TextSys::WordY(fTextDescription) + offy);
     fHelpText = -1;
     tTexture::ShapeInfo *shape = gHelpShapes + 30;
     bool fPlayList = currMenu == &menuDefs->menuPlayListMenu;
@@ -625,18 +619,18 @@ void tMenuItemSlidingMenu::Draw(sint32 offx, sint32 offy, bool selected)
         sint32 width = fPlayList ? 220 : fWidth;
         tDrawShapeExtended drawFlags;
         drawFlags.tint[0] = CalcFadeVal(0, 0xBEBE, fSelFade, fFadeVal);
-        sint32 right = (sint32)(uint32(x) + uint32(width));
-        sint32 arrowX = (sint32)(uint32(right) - uint32(sint32(shape->width)) - 10u);
-        sint32 arrowY = (sint32)(uint32(y) - (fPlayList ? 3u : 2u));
+        sint32 right = (x + width);
+        sint32 arrowX = ((right - shape->width) - 10);
+        sint32 arrowY = (uint32(y) - (fPlayList ? 3u : 2u));
         DrawShapeExtended(57, 0x18, arrowX, arrowY, 0, 1, &drawFlags);
-        arrowX = (sint32)(uint32(right) - uint32(sint32(shape->width)) - 10u);
-        arrowY = (sint32)(uint32(y) + (fPlayList ? 3u : 4u));
+        arrowX = ((right - shape->width) - 10);
+        arrowY = (uint32(y) + (fPlayList ? 3u : 4u));
         DrawShapeExtended(58, 0x18, arrowX, arrowY, 0, 1, &drawFlags);
     }
     if (currMenu == 0)
         return;
-    sint32 xx = (sint32)(uint32(x) + uint32(sint32(fDiffX)));
-    sint32 yy = (sint32)(uint32(y) + uint32(sint32(fDiffY)));
+    sint32 xx = (x + fDiffX);
+    sint32 yy = (y + fDiffY);
     sint16 hh = fOpenHeight;
     sint16 ww = fWidth;
     DRAWENV *drenv = Draw::GetDRAWENV(Draw::gPlayer1View, gFlip);
@@ -650,24 +644,22 @@ void tMenuItemSlidingMenu::Draw(sint32 offx, sint32 offy, bool selected)
     SetDrawArea(daprim, &full);
     sint32 half = sint32(hh) >> 1;
     SubtractiveBox(xx, yy, ww, half, 0x505050, 0x505050, 0, 0);
-    SubtractiveBox(xx, (sint32)(uint32(yy) + uint32(half)), ww, half, 0, 0, 0x505050, 0x505050);
+    SubtractiveBox(xx, ((yy + half)), ww, half, 0, 0, 0x505050, 0x505050);
     tTexture::ShapeInfo *shapetop = gHelpShapes + 31;
     tTexture::ShapeInfo *shapebottom = gHelpShapes + 32;
     currMenu->Draw((sint16)xx, (sint16)yy, ww, (sint16)(uint32((uint16)fSlideOffset) << 1), fHeight);
     if (fFillback != 0 && shapetop->height < hh)
     {
         DrawShapeExtended(31, 12, xx, yy, 0, 0, 0);
-        DrawShapeExtended(31, 8, (sint32)(uint32(xx) + uint32(sint32(ww)) - uint32(sint32(shapetop->width))), yy, 0, 0, 0);
-        DrawShapeExtended(32, 12, xx, (sint32)(uint32(yy) + uint32(sint32(hh)) - uint32(sint32(shapebottom->height))), 0, 0, 0);
-        DrawShapeExtended(32, 8, (sint32)(uint32(xx) + uint32(sint32(ww)) - uint32(sint32(shapebottom->width))),
-            (sint32)(uint32(yy) + uint32(sint32(hh)) - uint32(sint32(shapebottom->height))), 0, 0, 0);
+        DrawShapeExtended(31, 8, (((xx + ww) - shapetop->width)), yy, 0, 0, 0);
+        DrawShapeExtended(32, 12, xx, (((yy + hh) - shapebottom->height)), 0, 0, 0);
+        DrawShapeExtended(32, 8, (((xx + ww) - shapebottom->width)), ((yy + hh) - shapebottom->height), 0, 0, 0);
     }
-    PSXDrawSquare(0, (sint32)(uint32(xx) + uint32(sint32(shapetop->width)) + 5u), yy,
-        sint32(ww) - sint32(shapetop->width) - sint32(shapebottom->width) - 10, hh);
+    PSXDrawSquare(0, (((xx + shapetop->width) + 5)), yy, (((ww - shapetop->width) - shapebottom->width) - 10), hh);
     sint32 topHeight = shapetop->height;
     sint32 bottomHeight = shapebottom->height;
     if (topHeight + bottomHeight < hh)
-        PSXDrawSquare(0, xx, (sint32)(uint32(yy) + uint32(topHeight)), ww, sint32(hh) - topHeight - bottomHeight);
+        PSXDrawSquare(0, xx, ((yy + topHeight)), ww, ((hh - topHeight) - bottomHeight));
     PSX_RECT temp = { (sint16)xx, (sint16)(uint32((uint16)drenv->clip.y) + uint32(yy)), ww, hh };
     daprim = reinterpret_cast<DR_AREA *>(cprim->PrimPtr);
     ot = cprim->LastPrim;
@@ -683,11 +675,11 @@ void tMenuItemSlidingMenu::Draw(sint32 offx, sint32 offy, bool selected)
         FETextRender::FullTextRGB(help, helpX, helpY, PulsateYellow, 0, 2);
     }
     char *text = TextSys::Word(fTextDescription);
-    FETextRender::FullTextRGB(text, (sint16)x, (sint16)y, ColText, 0, fPlayList ? 1 : 0);
-    sint32 topY = (sint32)(uint32(y) - 2u);
-    DrawShapeExtended(30, 8, (sint32)(uint32(x) + uint32(sint32(fWidth)) - uint32(sint32(shape->width))), topY, fFadeVal, 0, 0);
+    FETextRender::FullTextRGB(text, x, y, ColText, 0, fPlayList ? 1 : 0);
+    sint32 topY = (y - 2);
+    DrawShapeExtended(30, 8, (((x + fWidth) - shape->width)), topY, fFadeVal, 0, 0);
     if (fFillback != 0)
-        PSXDrawSquare(0, x, topY, sint32(fWidth) - sint32(shape->width), shape->height);
+        PSXDrawSquare(0, x, topY, (fWidth - shape->width), shape->height);
 }
 
 void tMenuItemSlidingMenu::ProcessInput(tPlayer fromPlayer, tInputKeyType &keyval, tMenuCommand &command)
@@ -767,15 +759,14 @@ bool tMenuItemSlidingActivated::TransitionIsFinished(void)
         fInTransition = 0;
     }
     else
-        fInTransition = ((fFadeDir < 0 && fFadeVal > 0) ||
-            (fFadeDir > 0 && fFadeVal < 128)) ? 1 : 0;
+        fInTransition = ((fFadeDir < 0 && fFadeVal > 0) || (fFadeDir > 0 && fFadeVal < 128)) ? 1 : 0;
     return fInTransition == 0;
 }
 
 void tMenuItemSlidingActivated::UpdateTransition(bool selected)
 {
     FUNCTION_MARKER(0x8001DEC8, "FRONT.BIN");
-    sint32 fade = sint32(fFadeVal) + sint32(fFadeDir);
+    sint32 fade = fFadeVal + fFadeDir;
     if (fade > 128)
         fade = 128;
     if (fade < 0)
@@ -836,10 +827,10 @@ void tMenuItemLeftRightFade::MyLeftRightDraw(sint32 x, sint32 y)
     DrawLeftFlare(y, fSelFade, fFadeVal, flareextra);
     sint32 ColText = CalcTextFadeSelToHi(textType_Options, fSelFade, fFadeVal);
     char *text = TextSys::Word(fTextDescription);
-    FETextRender::FullTextRGB(text, (sint16)x, (sint16)y, ColText, 0, 1);
-    sint32 arrowY = (sint32)(uint32(y) + 1u);
-    DrawShapeExtended(46, 0x18, (sint32)(uint32(x) + 26u), arrowY, 0, 0, &aCol);
-    DrawShapeExtended(47, 0x18, (sint32)(uint32(x) + 200u), arrowY, 0, 0, &aCol);
+    FETextRender::FullTextRGB(text, x, y, ColText, 0, 1);
+    sint32 arrowY = (y + 1);
+    DrawShapeExtended(46, 0x18, ((x + 26)), arrowY, 0, 0, &aCol);
+    DrawShapeExtended(47, 0x18, ((x + 200)), arrowY, 0, 0, &aCol);
 }
 
 void tMenuItemDisplayLeftRightChoice::Draw(sint32 offx, sint32 offy, bool)
@@ -848,14 +839,14 @@ void tMenuItemDisplayLeftRightChoice::Draw(sint32 offx, sint32 offy, bool)
     if (fFadeVal == 128)
         return;
     sint32 x = TextSys::WordX(fTextDescription);
-    x = (sint32)(uint32(x) + uint32(offx));
+    x = (x + offx);
     sint32 y = TextSys::WordY(fTextDescription);
     y = (sint16)(uint32(y) + uint32(offy));
     sint32 ColText = CalcTextFadeSelToHi(textType_Options, fSelFade, fFadeVal);
     MyLeftRightDraw((sint16)x, y);
     sint16 value = fData->TextValue(gMenu_SubMenuPlayer);
     char *text = TextSys::Word(value);
-    FETextRender::FullTextRGB(text, (sint16)(uint32(x) + 115u), (sint16)y, ColText, 0, 2);
+    FETextRender::FullTextRGB(text, (uint32(x) + 115u), y, ColText, 0, 2);
 }
 
 void tMenuItemOnOffLeftRightChoice::TransitionOn(void)
@@ -879,7 +870,7 @@ void tMenuItemOnOffLeftRightChoice::Draw(sint32 offx, sint32 offy, bool)
     if (fOnFade < 0)
         fOnFade = 0;
     sint32 x = TextSys::WordX(fTextDescription);
-    x = (sint32)(uint32(x) + uint32(offx));
+    x = (x + offx);
     sint32 y = TextSys::WordY(fTextDescription);
     y = (sint16)(uint32(y) + uint32(offy));
     sint32 ColTextOn;
@@ -887,9 +878,9 @@ void tMenuItemOnOffLeftRightChoice::Draw(sint32 offx, sint32 offy, bool)
     CalcOnOffFade(textType_Options, fOnFade, fSelFade, fFadeVal, ColTextOn, ColTextOff);
     MyLeftRightDraw((sint16)x, y);
     char *text = TextSys::Word(102);
-    FETextRender::FullTextRGB(text, (sint16)(uint32(x) + 55u), (sint16)y, ColTextOn, 0, 0);
+    FETextRender::FullTextRGB(text, (uint32(x) + 55u), y, ColTextOn, 0, 0);
     text = TextSys::Word(103);
-    FETextRender::FullTextRGB(text, (sint16)(uint32(x) + 158u), (sint16)y, ColTextOff, 0, 0);
+    FETextRender::FullTextRGB(text, (uint32(x) + 158u), y, ColTextOff, 0, 0);
 }
 
 tMenuItemLeftRightAudioSlider::tMenuItemLeftRightAudioSlider(uint32 textDescription, tListIterator *dataPtr, sint32 AudioArt) : tMenuItemLeftRightSlider(textDescription, dataPtr)
@@ -925,11 +916,9 @@ void tMenuItemLeftRightAudioSlider::Draw(sint32 ox, sint32 oy, bool)
     tDrawShapeExtended tCol;
     tCol.tint[0] = CalcFadeVal(0x551E00, 0xBEBE, fSelFade, fFadeVal);
     if (fSelFade != 0)
-        DrawShapeExtended(sint32(fAudioArt) + 1, 0x10, 0, 0, 0, 0, &tCol);
+        DrawShapeExtended((fAudioArt + 1), 0x10, 0, 0, 0, 0, &tCol);
     uint8 value = (uint8)fData->Value(kPlayerBoth);
-    DrawSlider(value, (uint8)fData->fMinValue, (uint8)fData->fMaxValue,
-        (sint16)(sint32(fX) + 20), (sint16)(sint32(fY) + 1), fWidth, fHeight,
-        4, 4, false, false, fSelFade, fFadeVal);
+    DrawSlider(value, (uint8)fData->fMinValue, (uint8)fData->fMaxValue, (sint16)(sint32(fX) + 20), (sint16)(sint32(fY) + 1), fWidth, fHeight, 4, 4, false, false, fSelFade, fFadeVal);
 }
 
 sint32 tMenuItemLeftRightAudioSlider::Percentage(void)
@@ -938,7 +927,7 @@ sint32 tMenuItemLeftRightAudioSlider::Percentage(void)
     uint8 value = (uint8)fData->Value(kPlayerBoth);
     tListIterator *data = fData;
     sint32 minValue = (uint8)data->fMinValue;
-    sint32 range = sint32((uint8)data->fMaxValue) - minValue;
+    sint32 range = ((uint8)data->fMaxValue) - minValue;
     if (range == 0)
         abort();
     sint32 percent = (sint32(value) - minValue) * 100 / range;
@@ -974,7 +963,7 @@ bool tMenuItemLeftRightAudioSlider::TransitionIsFinished(void)
 void tMenuItemLeftRightAudioSlider::UpdateTransition(bool selected)
 {
     FUNCTION_MARKER(0x8001E8D4, "FRONT.BIN");
-    sint32 fade = sint32(fFadeVal) + sint32(fFadeDir);
+    sint32 fade = fFadeVal + fFadeDir;
     if (fade > 128)
         fade = 128;
     if (fade < 0)
@@ -993,7 +982,7 @@ tInsideBoxSongMenu::tInsideBoxSongMenu(uint32 flags, tScreen *screenHandler, tMe
     }
     va_list ap;
     va_start(ap, firstItem);
-    tMenuConstructor(firstItem, ap);
+    tMenuConstructor(firstItem, &ap);
     va_end(ap);
     fMoving = 0;
     fMovingDir = 0;
@@ -1015,18 +1004,18 @@ void tInsideBoxSongMenu::Draw(sint16 x, sint16 y, sint16 w, sint16 slideOffset, 
     FUNCTION_MARKER(0x8001E9D8, "FRONT.BIN");
     if (screenAudio->songlist == 0)
         return;
-    sint32 drawY = sint32(y) + ((sint32(maxheight) - 21) >> 1);
+    sint32 drawY = y + ((sint32(maxheight) - 21) >> 1);
     for (sint32 j = 0; j < 5; ++j)
     {
         if (j != 2)
         {
-            sint32 fade = sint32(fSelFade[j]) - 8;
+            sint32 fade = fSelFade[j] - 8;
             if (fade < 0)
                 fade = 0;
             fSelFade[j] = (sint16)fade;
         }
     }
-    sint32 fade = sint32(fSelFade[2]) + 8;
+    sint32 fade = fSelFade[2] + 8;
     if (fade > 128)
         fade = 128;
     fSelFade[2] = (sint16)fade;
@@ -1040,7 +1029,7 @@ void tInsideBoxSongMenu::Draw(sint16 x, sint16 y, sint16 w, sint16 slideOffset, 
     }
     for (sint32 j = 0; j < 5; ++j)
     {
-        sint32 song = sint32(screenAudio->fSelectedSong) + j - 2;
+        sint32 song = (screenAudio->fSelectedSong + j) - 2;
         if (song >= 0 && song < screenAudio->songlist->numsongs)
         {
             if (frontEnd.FEPlayList[song] != 0)
@@ -1051,9 +1040,7 @@ void tInsideBoxSongMenu::Draw(sint16 x, sint16 y, sint16 w, sint16 slideOffset, 
                 fOnOffFade[j] = 128;
             if (fOnOffFade[j] < 0)
                 fOnOffFade[j] = 0;
-            DrawOneSong((sint16)song, x,
-                (sint16)(sint32(fMoving) + drawY + j * 21 - 40 + sint32(slideOffset)),
-                w, fOnOffFade[j], fSelFade[j]);
+            DrawOneSong((sint16)song, x, (sint16)(sint32(fMoving) + drawY + j * 21 - 40 + sint32(slideOffset)), w, fOnOffFade[j], fSelFade[j]);
         }
     }
 }
@@ -1067,17 +1054,17 @@ void tInsideBoxSongMenu::DrawOneSong(sint16 songnum, sint16 x, sint16 y, sint16 
     CalcOnOffFade(textType_Options, fOnOffFade, fSelFade, 0, ColTextOn, ColTextOff);
     sint32 ColText = CalcTextFadeSelToHi(textType_Options, fSelFade, 0);
     char *text = screenAudio->songlist->song[songnum].title;
-    FETextRender::FullTextRGB(text, (sint16)(sint32(x) + 3), (sint16)(sint32(y) + 2), ColText, 0, 0);
+    FETextRender::FullTextRGB(text, (sint32(x) + 3), (sint32(y) + 2), ColText, 0, 0);
     text = screenAudio->songlist->song[songnum].artist;
-    FETextRender::FullTextRGB(text, (sint16)(sint32(x) + 2), (sint16)(sint32(y) + 10), ColText, 0, 0);
+    FETextRender::FullTextRGB(text, (sint32(x) + 2), (sint32(y) + 10), ColText, 0, 0);
     text = TextSys::Word(102);
-    FETextRender::FullTextRGB(text, (sint16)(sint32(x) + sint32(w) - 90), (sint16)(sint32(y) + 6), ColTextOn, 0, 2);
+    FETextRender::FullTextRGB(text, (sint32(x) + sint32(w) - 90), (sint32(y) + 6), ColTextOn, 0, 2);
     text = TextSys::Word(103);
-    FETextRender::FullTextRGB(text, (sint16)(sint32(x) + sint32(w) - 30), (sint16)(sint32(y) + 6), ColTextOff, 0, 2);
-    PSXDrawSquare(Col, sint32(x) + sint32(w) - 120, y, 2, 19);
-    PSXDrawSquare(Col, sint32(x) + sint32(w) - 60, y, 2, 19);
+    FETextRender::FullTextRGB(text, (sint32(x) + sint32(w) - 30), (sint32(y) + 6), ColTextOff, 0, 2);
+    PSXDrawSquare(Col, ((x + w) - 120), y, 2, 19);
+    PSXDrawSquare(Col, ((x + w) - 60), y, 2, 19);
     PSXDrawSquare(Col, x, y, w, 1);
-    PSXDrawSquare(Col, x, sint32(y) + 19, w, -1);
+    PSXDrawSquare(Col, x, (y + 19), w, -1);
 }
 
 sint32 tInsideBoxSongMenu::DebounceKeys(void)
@@ -1089,8 +1076,6 @@ sint32 tInsideBoxSongMenu::DebounceKeys(void)
 void tInsideBoxSongMenu::ProcessInput(tPlayer fromPlayer, tInputKeyType &keyval, tMenuCommand &command)
 {
     FUNCTION_MARKER(0x8001EE7C, "FRONT.BIN");
-    (void)fromPlayer;
-    (void)command;
     if (screenAudio->songlist == 0)
         return;
     if (keyval == kInput_KeyType_Left)
@@ -1124,7 +1109,7 @@ void tInsideBoxSongMenu::ProcessInput(tPlayer fromPlayer, tInputKeyType &keyval,
         break;
     case kInput_KeyType_Down:
     {
-        sint32 lastSong = (sint32)(uint32(screenAudio->songlist->numsongs) - 1u);
+        sint32 lastSong = (screenAudio->songlist->numsongs - 1);
         if (screenAudio->fSelectedSong < lastSong && fMoving == 0)
         {
             fMoving = 21;
@@ -1151,9 +1136,9 @@ void tMenuItemControllerLeftRightChoice::Draw(sint32 ox, sint32 oy, bool)
 {
     FUNCTION_MARKER(0x8001F084, "FRONT.BIN");
     sint32 x = TextSys::WordX(fTextDescription);
-    x = (sint32)(uint32(x) + uint32(ox));
+    x = (x + ox);
     sint32 y = TextSys::WordY(fTextDescription);
-    y = (sint32)(uint32(y) + uint32(oy));
+    y = (y + oy);
     tTexture::ShapeInfo *shape = gHelpShapes + 30;
     sint32 Col = CalcFadeVal(0xC83C1E, 0xBEBE, fSelFade, fFadeVal);
     sint32 ColText = CalcTextFadeSelToHi(textType_Options, fSelFade, fFadeVal);
@@ -1162,18 +1147,18 @@ void tMenuItemControllerLeftRightChoice::Draw(sint32 ox, sint32 oy, bool)
     {
         drawFlags.tint[0] = Col;
         char *text = TextSys::Word(fTextDescription);
-        FETextRender::FullTextRGB(text, (sint16)x, (sint16)y, ColText, 0, 0);
+        FETextRender::FullTextRGB(text, x, y, ColText, 0, 0);
         sint16 value = fData->TextValue(gMenu_SubMenuPlayer);
         text = TextSys::Word(value);
-        FETextRender::FullTextRGB(text, (sint16)(uint32(x) + 151u), (sint16)y, ColText, 0, 2);
+        FETextRender::FullTextRGB(text, (uint32(x) + 151u), y, ColText, 0, 2);
     }
     drawFlags.tint[0] = CalcFadeVal(0, 0xBEBE, fSelFade, fFadeVal);
     x = (sint16)x;
     y = (sint16)y;
     DrawShapeExtended(10, 0x18, x + 131, y, 0, 1, &drawFlags);
     DrawShapeExtended(11, 0x18, x + 161, y, 0, 1, &drawFlags);
-    DrawShapeExtended(30, 8, x - (sint32(shape->width) - 176), y - 3, fFadeVal, 0, 0);
-    PSXDrawSquare(0, x, y - 3, 176 - sint32(shape->width), shape->height);
+    DrawShapeExtended(30, 8, (x - (shape->width - 176)), y - 3, fFadeVal, 0, 0);
+    PSXDrawSquare(0, x, y - 3, (176 - shape->width), shape->height);
 }
 
 tInsideBoxLeftRightSlider::tInsideBoxLeftRightSlider(uint32 textDescription, tListIterator *dataPtr) : tMenuItemLeftRightSlider(textDescription, dataPtr)
@@ -1191,19 +1176,16 @@ tInsideBoxLeftRightSlider::~tInsideBoxLeftRightSlider(void)
 void tInsideBoxLeftRightSlider::Draw(sint32 x, sint32 y, sint32 w, bool selected)
 {
     FUNCTION_MARKER(0x8001F2F0, "FRONT.BIN");
-    (void)selected;
     fX = (sint16)x;
     fY = (sint16)y;
     sint32 col = CalcFadeVal(0x551E00, 0xC83C1E, fSelFade);
     sint32 coltext = CalcTextFadeUnselToSel(textType_Options, fSelFade, 0);
     PSXDrawSquare(col, fX, fY, w, 1);
-    PSXDrawSquare(col, fX, sint32(fY) + 8, w, 1);
+    PSXDrawSquare(col, fX, (fY + 8), w, 1);
     char *text = TextSys::Word(fTextDescription);
-    FETextRender::FullTextRGB(text, (sint16)(sint32(fX) + 4), (sint16)(sint32(fY) + 10), coltext, 0, 0);
+    FETextRender::FullTextRGB(text, (sint32(fX) + 4), (sint32(fY) + 10), coltext, 0, 0);
     uint8 value = (uint8)fData->Value(kPlayerBoth);
-    DrawSlider(value, (uint8)fData->fMinValue, (uint8)fData->fMaxValue,
-        (sint16)(sint32(fX) + 4), (sint16)(sint32(fY) + 2), (sint16)(uint32(w) - 8u),
-        fHeight, 4, 4, false, false, fSelFade, 0);
+    DrawSlider(value, (uint8)fData->fMinValue, (uint8)fData->fMaxValue, (sint16)(sint32(fX) + 4), (sint16)(sint32(fY) + 2), (sint16)(uint32(w) - 8u), fHeight, 4, 4, false, false, fSelFade, 0);
 }
 
 tInsideBoxTwoWaySlider::tInsideBoxTwoWaySlider(uint32 textDescription, tListIterator *dataPtr, sint32 type) : tMenuItemLeftRightSlider(textDescription, dataPtr)
@@ -1282,8 +1264,6 @@ sint32 SpecialCharacter(char current)
 void tInsideBoxTwoWaySlider::ProcessInput(tPlayer fromPlayer, tInputKeyType &keyval, tMenuCommand &command)
 {
     FUNCTION_MARKER(0x8001F4F0, "FRONT.BIN");
-    (void)fromPlayer;
-    (void)command;
     if (keyval == kInput_KeyType_Cross)
     {
         AudioCmn::PlayFESFX(0);
@@ -1305,7 +1285,6 @@ void tInsideBoxTwoWaySlider::ProcessInput(tPlayer fromPlayer, tInputKeyType &key
 void tInsideBoxTwoWaySlider::Draw(sint32 x, sint32 y, sint32 w, bool selected)
 {
     FUNCTION_MARKER(0x8001F5A0, "FRONT.BIN");
-    (void)selected;
     if (fActive != 0)
         Calibrate();
     sint32 halfWidth = w >> 1;
@@ -1316,21 +1295,17 @@ void tInsideBoxTwoWaySlider::Draw(sint32 x, sint32 y, sint32 w, bool selected)
     sint32 coltext = CalcTextFadeUnselToSel(textType_Options, fSelFade, 0);
     sint32 ww = halfWidth - 4;
     PSXDrawSquare(col, fX, fY, ww, 1);
-    PSXDrawSquare(col, sint32(fX) + ww + 8, fY, ww, 1);
-    PSXDrawSquare(col, fX, sint32(fY) + 8, ww, 1);
-    PSXDrawSquare(col, sint32(fX) + ww + 9, sint32(fY) + 8, ww, 1);
-    PSXDrawSquare(col2, sint32(fX) + ww + 3, fY, 2, 9);
+    PSXDrawSquare(col, ((fX + ww) + 8), fY, ww, 1);
+    PSXDrawSquare(col, fX, (fY + 8), ww, 1);
+    PSXDrawSquare(col, ((fX + ww) + 9), (fY + 8), ww, 1);
+    PSXDrawSquare(col2, ((fX + ww) + 3), fY, 2, 9);
     char *text = TextSys::Word(fTextDescription);
-    FETextRender::FullTextRGB(text, (sint16)(sint32(fX) + 4), (sint16)(sint32(fY) + 10), coltext, 0, 0);
+    FETextRender::FullTextRGB(text, (sint32(fX) + 4), (sint32(fY) + 10), coltext, 0, 0);
     uint8 value = (uint8)fData->Value(kPlayerBoth);
     sint16 sliderWidth = (sint16)(halfWidth - 8);
-    DrawSlider(value, (uint8)fData->fMinValue, (uint8)fData->fMaxValue,
-        (sint16)(sint32(fX) + 1), (sint16)(sint32(fY) + 2), sliderWidth, fHeight,
-        4, 4, true, false, fSelFade, 0);
+    DrawSlider(value, (uint8)fData->fMinValue, (uint8)fData->fMaxValue, (sint16)(sint32(fX) + 1), (sint16)(sint32(fY) + 2), sliderWidth, fHeight, 4, 4, true, false, fSelFade, 0);
     value = (uint8)fData->Value(kPlayerBoth);
-    DrawSlider(value, (uint8)fData->fMinValue, (uint8)fData->fMaxValue,
-        (sint16)(sint32(fX) + ww + 10), (sint16)(sint32(fY) + 2), sliderWidth, fHeight,
-        4, 4, false, false, fSelFade, 0);
+    DrawSlider(value, (uint8)fData->fMinValue, (uint8)fData->fMaxValue, (sint16)(sint32(fX) + ww + 10), (sint16)(sint32(fY) + 2), sliderWidth, fHeight, 4, 4, false, false, fSelFade, 0);
 }
 
 void tInsideBoxTwoWaySlider::Calibrate(void)
@@ -1346,10 +1321,10 @@ void tInsideBoxTwoWaySlider::Calibrate(void)
     case 0:
         if (pad->ID == 0x23)
         {
-            range = 128 - sint32(pad->data.analog.rightx);
+            range = 128 - pad->data.analog.rightx;
             if (range < 0)
                 range = -range;
-            limit = sint32((uint8)frontEnd.deadSpot[player]) + 10;
+            limit = ((uint8)frontEnd.deadSpot[player]) + 10;
             if (range < limit)
                 range = limit;
             frontEnd.steeringRange[player] = (char)range;
@@ -1357,7 +1332,7 @@ void tInsideBoxTwoWaySlider::Calibrate(void)
         else if (pad->ID == 0x53 || pad->ID == 0x73)
         {
             range = (uint8)GetCurrentStickRange(player);
-            limit = sint32((uint8)frontEnd.J1MIN[player]) + 10;
+            limit = ((uint8)frontEnd.J1MIN[player]) + 10;
             if (range < limit)
                 range = limit;
             frontEnd.J1MAX[player] = (char)range;
@@ -1366,10 +1341,10 @@ void tInsideBoxTwoWaySlider::Calibrate(void)
     case 1:
         if (pad->ID == 0x23)
         {
-            range = 128 - sint32(pad->data.analog.rightx);
+            range = 128 - pad->data.analog.rightx;
             if (range < 0)
                 range = -range;
-            limit = sint32((uint8)frontEnd.steeringRange[player]) - 10;
+            limit = ((uint8)frontEnd.steeringRange[player]) - 10;
             if (range > limit)
                 range = limit;
             if (range < 0)
@@ -1379,7 +1354,7 @@ void tInsideBoxTwoWaySlider::Calibrate(void)
         else if (pad->ID == 0x53 || pad->ID == 0x73)
         {
             range = (uint8)GetCurrentStickRange(player);
-            limit = sint32((uint8)frontEnd.J1MAX[player]) - 10;
+            limit = ((uint8)frontEnd.J1MAX[player]) - 10;
             if (range > limit)
                 range = limit;
             if (range < 0)
@@ -1393,7 +1368,7 @@ void tInsideBoxTwoWaySlider::Calibrate(void)
         else if (pad->ID == 0x53 || pad->ID == 0x73)
         {
             range = (uint8)GetCurrentStickRange2(player);
-            limit = sint32((uint8)frontEnd.J2MIN[player]) + 10;
+            limit = ((uint8)frontEnd.J2MIN[player]) + 10;
             if (range < limit)
                 range = limit;
             frontEnd.J2MAX[player] = (char)range;
@@ -1411,7 +1386,7 @@ void tInsideBoxTwoWaySlider::Calibrate(void)
         else if (pad->ID == 0x53 || pad->ID == 0x73)
         {
             range = (uint8)GetCurrentStickRange2(player);
-            limit = sint32((uint8)frontEnd.J2MAX[player]) - 10;
+            limit = ((uint8)frontEnd.J2MAX[player]) - 10;
             if (range > limit)
                 range = limit;
             if (range < 0)
@@ -1498,8 +1473,7 @@ void tUserNameMenuItem::ProcessInput(tPlayer, tInputKeyType &keyval, tMenuComman
                 fData[0] = '\0';
             else
             {
-                keyval = (FEApp->fCurrentMenu[0]->fFlags & 0x100U) != 0 ?
-                    kInput_KeyType_Triangle : kInput_KeyType_Start;
+                keyval = (FEApp->fCurrentMenu[0]->fFlags & 0x100U) != 0 ? kInput_KeyType_Triangle : kInput_KeyType_Start;
                 AudioCmn::PlayFESFX(1);
             }
         }
@@ -1554,24 +1528,23 @@ void tUserNameMenuItem::Draw(bool)
         sint32 ColText = CalcFadeVal(0xBEBE, fFadeVal);
         sint32 Col = CalcFadeVal(0xBEBE, fFadeVal);
         char *text = TextSys::Word(fTextDescription);
-        FETextRender::FullTextRGB(text, (sint16)x, (sint16)y, ColText, 0, 0);
+        FETextRender::FullTextRGB(text, x, y, ColText, 0, 0);
         sint16 sl = (sint16)strlen(fData);
-        sint32 textStartX = x + 78 - sint32(fMaxStringLength) * 10;
+        sint32 textStartX = (x + 78) - (fMaxStringLength * 10);
         for (sint16 j = 0; j < sl; ++j)
         {
             output[0] = fData[j];
-            FETextRender::FullTextRGB(output, (sint16)(textStartX + sint32(j) * 20),
-                (sint16)(y + 17), ColText, 1, 0);
+            FETextRender::FullTextRGB(output, (textStartX + sint32(j) * 20), (y + 17), ColText, 1, 0);
         }
         sint16 startx = (sint16)textStartX;
         sint16 j = sl;
         while (j < fMaxStringLength)
         {
-            PSXDrawSquare(Col, sint32(startx) + sint32(j) * 20, y + 25, 17, 1);
+            PSXDrawSquare(Col, (startx + (j * 20)), y + 25, 17, 1);
             j = (sint16)(sint32(j) + 1);
         }
-        sint32 xx = sint32(fCurrentColumn) * 28 + 258;
-        sint32 yy = sint32(MENUUSERNAME_STARTY) + sint32(fCurrentRow) * 15;
+        sint32 xx = (fCurrentColumn * 28) + 258;
+        sint32 yy = MENUUSERNAME_STARTY + (fCurrentRow * 15);
         if (fFadeVal == 0)
         {
             tDrawShapeExtended fFlags;
@@ -1585,20 +1558,20 @@ void tUserNameMenuItem::Draw(bool)
             else if (current == '&' || current == '^')
                 shapetodraw = 80;
             else if (current >= 'a' && current <= 'z')
-                shapetodraw = sint32(current) - 55;
+                shapetodraw = current - 55;
             else if (current >= '0' && current <= '9')
-                shapetodraw = sint32(current) + 20;
+                shapetodraw = current + 20;
             else
                 shapetodraw = SpecialCharacter((char)current);
             DrawShapeExtended(shapetodraw, 0x10, xx - 5, yy - 3, 0, 0, &fFlags);
         }
     }
     sint32 right = x + 156;
-    DrawShapeExtended(30, 8, right - sint32(shape->width), y - 3, fFadeVal, 0, 0);
-    PSXDrawSquare(0, x, y - 3, 156 - sint32(shape->width), shape->height);
+    DrawShapeExtended(30, 8, (right - shape->width), y - 3, fFadeVal, 0, 0);
+    PSXDrawSquare(0, x, y - 3, (156 - shape->width), shape->height);
     shape = gHelpShapes + 33;
-    DrawShapeExtended(33, 8, right - sint32(shape->width), y + 12, fFadeVal, 0, 0);
-    PSXDrawSquare(0, x, y + 12, 156 - sint32(shape->width), shape->height);
+    DrawShapeExtended(33, 8, (right - shape->width), y + 12, fFadeVal, 0, 0);
+    PSXDrawSquare(0, x, y + 12, (156 - shape->width), shape->height);
 }
 
 void tUserNameMenuItem::TransitionOff(void)
@@ -1673,7 +1646,7 @@ bool tUserNameMenuItem::TransitionIsFinished(void)
 void tUserNameMenuItem::UpdateTransition(bool selected)
 {
     FUNCTION_MARKER(0x80020820, "FRONT.BIN");
-    sint32 fade = sint32(fFadeVal) + sint32(fFadeDir);
+    sint32 fade = fFadeVal + fFadeDir;
     if (fade > 128)
         fade = 128;
     if (fade < 0)

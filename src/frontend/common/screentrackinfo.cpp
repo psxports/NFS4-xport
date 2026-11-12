@@ -47,8 +47,7 @@ void tScreenTrackInfo::GetShapeInfo(sint16 &numPermShapes, sint16 &numSwapShapes
     numSwapShapes = 10;
     tournamentManager.GetTrackToRace(fTrack);
     *permFileName = const_cast<char *>("zInfo");
-    sprintf(gSwapFileName, "TR%02d%c", sint32((sint8)fTrack.fTrackNumber),
-        fTrack.fTimeOfDay * 2 + fTrack.fWeather + 'a');
+    sprintf(gSwapFileName, "TR%02d%c", sint32((sint8)fTrack.fTrackNumber), fTrack.fTimeOfDay * 2 + fTrack.fWeather + 'a');
     *swapFileName = gSwapFileName;
 }
 
@@ -65,7 +64,7 @@ void tScreenTrackInfo::DrawBackground(void)
     while (*trackList != 0)
     {
         tMenuTextState textState = i == (uint32)tournamentManager.fCurrentTrack ? textState_Hilighted : textState_Selected;
-        FETextRender::MenuTextPositioned(*trackList, 170, (sint16)y, textState, textType_ScreenInfo);
+        FETextRender::MenuTextPositioned(*trackList, 170, y, textState, textType_ScreenInfo);
         y = (uint16)(y + 9);
         ++trackList;
         ++i;
@@ -104,7 +103,7 @@ void tScreenTrackInfo::ProcessInput(tPlayer, tInputKeyType &keyval, tMenuCommand
             tTournamentDefinition *definition = tournamentManager.fDefinition;
             sint32 tournament = definition->fTiers[tournamentManager.fTier].fTournOffset + tournamentManager.fTournament;
             uint32 entranceFee = definition->fTournaments[tournament].fEntranceFee;
-            tournamentManager.fMoney = (sint32)((uint32)tournamentManager.fMoney + entranceFee);
+            tournamentManager.fMoney = (tournamentManager.fMoney + entranceFee);
         }
     }
 }

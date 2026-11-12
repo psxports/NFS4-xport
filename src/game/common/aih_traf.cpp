@@ -25,7 +25,7 @@ Car::tObj *AIHigh_Traffic::CheckForCops(sint32 *closestDistance)
         if ((cop->AIFlags & 4) == 0) {
             sint32 sliceDistance = AIWorld::ApxSplineDistance(carObj_, cop);
             if (sliceDistance < 0)
-                sliceDistance = (sint32)(0 - (uint32)sliceDistance);
+                sliceDistance = (-sliceDistance);
             if (sliceDistance < *closestDistance) {
                 closestCop = cop;
                 *closestDistance = sliceDistance;
@@ -47,7 +47,7 @@ AIHigh_Cop *AIHigh_Traffic::CopCheck(sint32 *blockade)
         return 0;
     sint32 speed = closest->currentSpeed;
     if (speed < 0)
-        speed = (sint32)(0 - (uint32)speed);
+        speed = (-speed);
     if (speed < 0x20000 && closestDistance < 0x4B0000) {
         *blockade = 1;
         AIHigh_Cop *cop = static_cast<AIHigh_Cop *>(highLevelAIObjs[closest->carIndex]);
@@ -136,8 +136,7 @@ void AIHigh_Traffic::HighExecute(void)
                         delete oldState;
                     stateType_ = STATE_ROVING_TRAFFIC;
                     state_ = newState;
-                    AILife::ReencarnateTrafficByPosition(carObj_, pNewTrigger->any.slice, 1,
-                        &pNewTrigger->trafficPath.path->position, &pNewTrigger->trafficPath.orientation);
+                    AILife::ReencarnateTrafficByPosition(carObj_, pNewTrigger->any.slice, 1, &pNewTrigger->trafficPath.path->position, &pNewTrigger->trafficPath.orientation);
                 }
             }
         }
@@ -184,9 +183,9 @@ void AIHigh_Traffic::HighExecute(void)
             Trk::NewSlice *roadSlice = BWorldSm::slices + slice;
             sint32 idlePosition;
             if (car->direction == 1)
-                idlePosition = sint32(roadSlice->avgPavedWidthRt) * 32768 * (roadSlice->laneCount & 15);
+                idlePosition = (roadSlice->avgPavedWidthRt * 32768) * (roadSlice->laneCount & 15);
             else
-                idlePosition = sint32(roadSlice->avgPavedWidthLf) * 32768 * (roadSlice->laneCount >> 4);
+                idlePosition = (roadSlice->avgPavedWidthLf * 32768) * (roadSlice->laneCount >> 4);
             idleState->SetIdlePosition(idlePosition);
         }
         else
@@ -251,7 +250,7 @@ AIHigh_Traffic::AIHigh_Traffic(Car::tObj *carObj) : AIHigh_Base(carObj)
 trigger::trigger_t *AIHigh_Traffic::CheckForNewTriggers(void)
 {
     FUNCTION_MARKER(0x80066738, "NFS4.EXE");
-    sint32 sortedLoop = (sint32)((uint32)Cars::gNumCars - 1);
+    sint32 sortedLoop = (Cars::gNumCars - 1);
     for (; sortedLoop >= 0; --sortedLoop) {
         Car::tObj *testCar = Cars::gTotalSortedList[sortedLoop];
         if ((testCar->carFlags & 0x204) == 0)
@@ -261,9 +260,9 @@ trigger::trigger_t *AIHigh_Traffic::CheckForNewTriggers(void)
         sint32 thisSlice = testCar->N.simRoadInfo.slice + dir * 45;
         if (dir > 0) {
             if (thisSlice >= gNumSlices)
-                thisSlice = (sint32)((uint32)thisSlice - (uint32)gNumSlices);
+                thisSlice = (thisSlice - gNumSlices);
         } else if (thisSlice < 0) {
-            thisSlice = (sint32)((uint32)thisSlice + (uint32)gNumSlices);
+            thisSlice = (thisSlice + gNumSlices);
         }
         sint32 oldSlice = thisPlayer->lastTrafficTriggerCheckSlice_;
         thisPlayer->lastTrafficTriggerCheckSlice_ = thisSlice;
@@ -276,7 +275,7 @@ trigger::trigger_t *AIHigh_Traffic::CheckForNewTriggers(void)
             startSlice = thisSlice;
             endSlice = oldSlice;
         }
-        sint32 span = (sint32)((uint32)endSlice - (uint32)startSlice);
+        sint32 span = (endSlice - startSlice);
         for (sint32 sliceLoop = startSlice; sliceLoop < endSlice && span < 50; ++sliceLoop) {
             sint32 triggerHere = triggerManagerTraffic->CheckForTriggerAtSlice(testCar->carIndex, sliceLoop);
             if (triggerHere != -1) {

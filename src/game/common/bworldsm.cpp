@@ -59,7 +59,7 @@ void FindAbsClosestSliceCrude(coorddef *pt, BWorldSm::Pos *slicePos)
     sint32 numSlices = gNumSlices;
     sint32 currDist = 0x7fffffff;
     sint32 currInd = -1;
-    for (sint32 i = 0; i < numSlices; i = (sint32)((uint32)i + 8U))
+    for (sint32 i = 0; i < numSlices; i = (i + 8))
     {
         coorddef center;
         center.x = BWorldSm::slices[i].center[0];
@@ -120,7 +120,7 @@ void RawFindClosestSlice(coorddef *pt, BWorldSm::Pos *slicePos)
 {
     FUNCTION_MARKER(0x8007EAB0, "NFS4.EXE");
     sint32 numSlices = gNumSlices;
-    sint32 maxind = (sint32)((uint32)numSlices - 1U);
+    sint32 maxind = (numSlices - 1);
     Trk::NewSlice *slices = BWorldSm::slices;
     sint32 index = slicePos->slice;
     if (index != -1)
@@ -136,43 +136,43 @@ void RawFindClosestSlice(coorddef *pt, BWorldSm::Pos *slicePos)
                     abort();
                 currentSlice = index % numSlices;
             }
-            sint32 x = (sint32)((uint32)pt->x - (uint32)slices[currentSlice].center[0]) >> 9;
-            sint32 z = (sint32)((uint32)pt->z - (uint32)slices[currentSlice].center[2]) >> 9;
-            sint32 distcurr = (sint32)((uint32)x * (uint32)x + (uint32)z * (uint32)z);
-            sint32 nextSlice = (sint32)((uint32)index + 1U);
-            if (index >= (sint32)((uint32)maxind - 1U))
+            sint32 x = (pt->x - slices[currentSlice].center[0]) >> 9;
+            sint32 z = (pt->z - slices[currentSlice].center[2]) >> 9;
+            sint32 distcurr = ((x * x) + (z * z));
+            sint32 nextSlice = (index + 1);
+            if (index >= (maxind - 1))
             {
                 if (numSlices == 0 || (numSlices == -1 && nextSlice == (-2147483647 - 1)))
                     abort();
                 nextSlice %= numSlices;
             }
-            x = (sint32)((uint32)pt->x - (uint32)slices[nextSlice].center[0]) >> 9;
-            z = (sint32)((uint32)pt->z - (uint32)slices[nextSlice].center[2]) >> 9;
-            sint32 distnext = (sint32)((uint32)x * (uint32)x + (uint32)z * (uint32)z);
+            x = (pt->x - slices[nextSlice].center[0]) >> 9;
+            z = (pt->z - slices[nextSlice].center[2]) >> 9;
+            sint32 distnext = ((x * x) + (z * z));
             if (distnext < distcurr)
                 index = nextSlice;
             else if (index > 0)
             {
-                sint32 previousSlice = (sint32)((uint32)index - 1U);
-                x = (sint32)((uint32)pt->x - (uint32)slices[previousSlice].center[0]) >> 9;
-                z = (sint32)((uint32)pt->z - (uint32)slices[previousSlice].center[2]) >> 9;
-                sint32 distprev = (sint32)((uint32)x * (uint32)x + (uint32)z * (uint32)z);
+                sint32 previousSlice = (index - 1);
+                x = (pt->x - slices[previousSlice].center[0]) >> 9;
+                z = (pt->z - slices[previousSlice].center[2]) >> 9;
+                sint32 distprev = ((x * x) + (z * z));
                 if (distprev < distcurr)
                     index = previousSlice;
             }
             else
             {
-                sint32 candidate = (sint32)((uint32)index + 1U + (uint32)maxind);
-                sint32 previousSlice = (sint32)((uint32)candidate - 1U);
+                sint32 candidate = ((index + 1) + maxind);
+                sint32 previousSlice = (candidate - 1);
                 if (numSlices == 0 || (numSlices == -1 && previousSlice == (-2147483647 - 1)))
                     abort();
                 sint32 previousSlot = previousSlice % numSlices;
-                x = (sint32)((uint32)pt->x - (uint32)slices[previousSlot].center[0]) >> 9;
-                z = (sint32)((uint32)pt->z - (uint32)slices[previousSlot].center[2]) >> 9;
-                sint32 distprev = (sint32)((uint32)x * (uint32)x + (uint32)z * (uint32)z);
+                x = (pt->x - slices[previousSlot].center[0]) >> 9;
+                z = (pt->z - slices[previousSlot].center[2]) >> 9;
+                sint32 distprev = ((x * x) + (z * z));
                 if (distprev < distcurr)
                     candidate = previousSlice;
-                candidate = (sint32)((uint32)candidate + 1U + (uint32)maxind);
+                candidate = ((candidate + 1) + maxind);
                 if (numSlices == 0 || (numSlices == -1 && candidate == (-2147483647 - 1)))
                     abort();
                 index = candidate % numSlices;
@@ -194,27 +194,27 @@ void GetStmQuadPts(BWorldSm::Pos *slicePos, coorddef *cp)
     CCOORD16 *vertices = reinterpret_cast<CCOORD16 *>(Track::chunkList[slicePos->chunk].vertexBuf + 1);
     CCOORD16 *top = &vertices[topInd];
     CCOORD16 *bottom = &vertices[botInd];
-    sint32 x = (sint32)((uint32)cx + (uint32)((sint32)top[1].x * 1024));
-    sint32 y = (sint32)((uint32)cy + (uint32)((sint32)top[1].y * 1024));
-    sint32 z = (sint32)((uint32)cz + (uint32)((sint32)top[1].z * 1024));
+    sint32 x = (cx + (top[1].x * 1024));
+    sint32 y = (cy + (top[1].y * 1024));
+    sint32 z = (cz + (top[1].z * 1024));
     slicePos->quadPts[1].x = x;
     slicePos->quadPts[1].y = y;
     slicePos->quadPts[1].z = z;
-    x = (sint32)((uint32)cx + (uint32)((sint32)top[0].x * 1024));
-    y = (sint32)((uint32)cy + (uint32)((sint32)top[0].y * 1024));
-    z = (sint32)((uint32)cz + (uint32)((sint32)top[0].z * 1024));
+    x = (cx + (top[0].x * 1024));
+    y = (cy + (top[0].y * 1024));
+    z = (cz + (top[0].z * 1024));
     slicePos->quadPts[2].x = x;
     slicePos->quadPts[2].y = y;
     slicePos->quadPts[2].z = z;
-    x = (sint32)((uint32)cx + (uint32)((sint32)bottom[0].x * 1024));
-    y = (sint32)((uint32)cy + (uint32)((sint32)bottom[0].y * 1024));
-    z = (sint32)((uint32)cz + (uint32)((sint32)bottom[0].z * 1024));
+    x = (cx + (bottom[0].x * 1024));
+    y = (cy + (bottom[0].y * 1024));
+    z = (cz + (bottom[0].z * 1024));
     slicePos->quadPts[3].x = x;
     slicePos->quadPts[3].y = y;
     slicePos->quadPts[3].z = z;
-    x = (sint32)((uint32)cx + (uint32)((sint32)bottom[1].x * 1024));
-    y = (sint32)((uint32)cy + (uint32)((sint32)bottom[1].y * 1024));
-    z = (sint32)((uint32)cz + (uint32)((sint32)bottom[1].z * 1024));
+    x = (cx + (bottom[1].x * 1024));
+    y = (cy + (bottom[1].y * 1024));
+    z = (cz + (bottom[1].z * 1024));
     slicePos->quadPts[0].x = x;
     slicePos->quadPts[0].y = y;
     slicePos->quadPts[0].z = z;
@@ -228,16 +228,14 @@ void SetStrip(BWorldSm::Pos *slicePos)
     for (sint32 i = 0; i < maxIndex; ++i)
     {
         sint32 quadCount = (uint8)slicePos->strip->quadCount;
-        slicePos->strip = reinterpret_cast<Trk::NewStrip *>(
-            reinterpret_cast<uint8 *>(slicePos->strip) + sizeof(Trk::NewStrip) + quadCount * 2);
+        slicePos->strip = reinterpret_cast<Trk::NewStrip *>( reinterpret_cast<uint8 *>(slicePos->strip) + sizeof(Trk::NewStrip) + quadCount * 2);
     }
     sint32 i = (sint8)slicePos->quad;
     sint32 quadCount = (uint8)slicePos->strip->quadCount;
     while (i >= quadCount)
     {
-        i = (sint32)((uint32)i - (uint32)quadCount);
-        slicePos->strip = reinterpret_cast<Trk::NewStrip *>(
-            reinterpret_cast<uint8 *>(slicePos->strip) + sizeof(Trk::NewStrip) + quadCount * 2);
+        i = (i - quadCount);
+        slicePos->strip = reinterpret_cast<Trk::NewStrip *>( reinterpret_cast<uint8 *>(slicePos->strip) + sizeof(Trk::NewStrip) + quadCount * 2);
         quadCount = (uint8)slicePos->strip->quadCount;
     }
     slicePos->stripQuadInd = (sint16)i;
@@ -305,8 +303,7 @@ void BworldSm::UpdateSimQuad(BWorldSm::Pos *slicePos)
     sint32 simIndex = (sint8)slicePos->quad - simSlice->simquadStartIndex;
     if (simIndex >= 0 && simIndex < simSlice->simquadCount)
     {
-        Trk::NewSimQuad *startsimquad = reinterpret_cast<Trk::NewSimQuad *>(
-            Track::chunkList[slicePos->chunk].simQuadBuf + 1);
+        Trk::NewSimQuad *startsimquad = reinterpret_cast<Trk::NewSimQuad *>( Track::chunkList[slicePos->chunk].simQuadBuf + 1);
         slicePos->simQuad = startsimquad;
         slicePos->simQuad = &startsimquad[simSlice->simquadIndex + simIndex];
     }
@@ -333,9 +330,9 @@ sint32 RawFindClosestQuad(coorddef *pt, BWorldSm::Pos *slicePos)
     slicePos->simRotFlag = 0;
     BWorld::SetSimSlice(slicePos);
     sint32 startQuadInd = (sint8)slicePos->quad;
-    if (startQuadInd < 0 || startQuadInd >= (sint32)slicePos->simSlice->quadCount - 1 || slicePos->offEdge != 0)
+    if (startQuadInd < 0 || startQuadInd >= slicePos->simSlice->quadCount - 1 || slicePos->offEdge != 0)
     {
-        startQuadInd = ((sint32)slicePos->simSlice->quadCount - 1) / 2;
+        startQuadInd = (slicePos->simSlice->quadCount - 1) / 2;
         slicePos->quad = (char)startQuadInd;
     }
     slicePos->offEdge = 0;
@@ -344,12 +341,12 @@ sint32 RawFindClosestQuad(coorddef *pt, BWorldSm::Pos *slicePos)
     {
         if (attempt >= gMaxFindQuadSliceIterations)
         {
-            sint32 newSlice = (sint32)((uint32)(sint32)slicePos->slice - (uint32)sliceVariance);
+            sint32 newSlice = (slicePos->slice - sliceVariance);
             sint32 numSlices = gNumSlices;
             if (newSlice >= numSlices)
-                newSlice = (sint32)((uint32)newSlice - (uint32)numSlices);
+                newSlice = (newSlice - numSlices);
             if (newSlice < 0)
-                newSlice = (sint32)((uint32)newSlice + (uint32)numSlices);
+                newSlice = (newSlice + numSlices);
             slicePos->slice = (sint16)newSlice;
             BWorld::SetSimSlice(slicePos);
             slicePos->offEdge = (char)firstSliceOffEdge;
@@ -364,15 +361,14 @@ sint32 RawFindClosestQuad(coorddef *pt, BWorldSm::Pos *slicePos)
             slicePos->quad = (char)(quadCount - 2);
         coorddef *cp = &Chunk::chunkCenters[slicePos->chunk];
         CCOORD16 pt16;
-        pt16.x = (sint16)((sint32)((uint32)pt->x - (uint32)cp->x) >> 10);
-        pt16.z = (sint16)((sint32)((uint32)pt->z - (uint32)cp->z) >> 10);
+        pt16.x = (sint16)((pt->x - (uint32)cp->x) >> 10);
+        pt16.z = (sint16)((pt->z - (uint32)cp->z) >> 10);
         CCOORD16 *vertices = reinterpret_cast<CCOORD16 *>(Track::chunkList[slicePos->chunk].vertexBuf + 1);
         for (sint32 direction = 0; direction < 2; ++direction)
         {
             if (direction != 0)
             {
-                sint32 quad = slicePos->offEdge != 0 && attempt == 0 ?
-                    (sint32)slicePos->simSlice->quadCount - 1 : startQuadInd - 1;
+                sint32 quad = slicePos->offEdge != 0 && attempt == 0 ? slicePos->simSlice->quadCount - 1 : startQuadInd - 1;
                 slicePos->quad = (char)quad;
                 if ((sint8)slicePos->quad < 0)
                     slicePos->quad = 0;
@@ -380,8 +376,7 @@ sint32 RawFindClosestQuad(coorddef *pt, BWorldSm::Pos *slicePos)
             GetFirstStmQuadPts(slicePos, vertices);
             BworldSm::UpdateSimQuad(slicePos);
             sint32 lastDist = 0x7fffffff;
-            while (direction == 0 ? (sint8)slicePos->quad <= (sint32)slicePos->simSlice->quadCount - 1 :
-                                   (sint8)slicePos->quad >= 0)
+            while (direction == 0 ? (sint8)slicePos->quad <= slicePos->simSlice->quadCount - 1 : (sint8)slicePos->quad >= 0)
             {
                 GetFirstStmQuadPts(slicePos, vertices);
                 const sint32 edges[4][2] = {{1, 2}, {0, 1}, {2, 3}, {3, 0}};
@@ -390,8 +385,8 @@ sint32 RawFindClosestQuad(coorddef *pt, BWorldSm::Pos *slicePos)
                 {
                     CCOORD16 *first = &slicePos->quadPts16[edges[edge][0]];
                     CCOORD16 *second = &slicePos->quadPts16[edges[edge][1]];
-                    uint32 left = (uint32)((sint32)first->x - second->x) * (uint32)((sint32)pt16.z - second->z);
-                    uint32 right = (uint32)((sint32)pt16.x - second->x) * (uint32)((sint32)first->z - second->z);
+                    uint32 left = (first->x - second->x) * (uint32)(pt16.z - second->z);
+                    uint32 right = (pt16.x - second->x) * (uint32)(first->z - second->z);
                     if ((sint32)(left - right) > 0)
                     {
                         inside = false;
@@ -405,8 +400,7 @@ sint32 RawFindClosestQuad(coorddef *pt, BWorldSm::Pos *slicePos)
                     GetStmQuadPts(slicePos, cp);
                     return 1;
                 }
-                if (direction == 0 ? (sint8)slicePos->quad == (sint32)slicePos->simSlice->quadCount - 1 :
-                                     (sint8)slicePos->quad == 0)
+                if (direction == 0 ? (sint8)slicePos->quad == slicePos->simSlice->quadCount - 1 : (sint8)slicePos->quad == 0)
                 {
                     slicePos->offEdge = (char)(direction == 0 ? 2 : 1);
                     break;
@@ -416,34 +410,34 @@ sint32 RawFindClosestQuad(coorddef *pt, BWorldSm::Pos *slicePos)
                     sint32 dist = 0;
                     for (sint32 corner = 0; corner < 4; ++corner)
                     {
-                        sint32 x = (sint32)pt16.x - slicePos->quadPts16[corner].x;
-                        sint32 z = (sint32)pt16.z - slicePos->quadPts16[corner].z;
+                        sint32 x = pt16.x - slicePos->quadPts16[corner].x;
+                        sint32 z = pt16.z - slicePos->quadPts16[corner].z;
                         if (x < 0)
                             x = -x;
                         if (z < 0)
                             z = -z;
                         dist += x + z;
                     }
-                    if ((sint32)((uint32)dist - (uint32)lastDist) > 40)
+                    if ((dist - lastDist) > 40)
                         break;
                     lastDist = dist;
                 }
-                slicePos->quad = (char)((uint32)(uint8)slicePos->quad + (direction == 0 ? 1U : 0xffffffffU));
+                slicePos->quad = (char)(((uint8)slicePos->quad) + (direction == 0 ? 1U : 0xffffffff));
                 BworldSm::UpdateSimQuad(slicePos);
             }
         }
         if (attempt == 0)
             firstSliceOffEdge = (sint8)slicePos->offEdge;
         sint32 offset = sliceOffs[attempt];
-        sint32 newSlice = (sint32)((uint32)(sint32)slicePos->slice + (uint32)offset);
+        sint32 newSlice = (slicePos->slice + offset);
         sint32 numSlices = gNumSlices;
         if (newSlice >= numSlices)
-            newSlice = (sint32)((uint32)newSlice - (uint32)numSlices);
+            newSlice = (newSlice - numSlices);
         if (newSlice < 0)
-            newSlice = (sint32)((uint32)newSlice + (uint32)numSlices);
+            newSlice = (newSlice + numSlices);
         slicePos->slice = (sint16)newSlice;
         ++attempt;
-        sliceVariance = (sint32)((uint32)sliceVariance + (uint32)offset);
+        sliceVariance = (sliceVariance + offset);
     }
 }
 
@@ -461,21 +455,20 @@ sint32 FindClosestQuad(coorddef *pt, BWorldSm::Pos *slicePos)
         {
             slicePos->slice = (sint16)foundSlice;
             BWorld::SetSimSlice(slicePos);
-            slicePos->quad = slicePos->offEdge == 1 ? 0 :
-                (char)((uint32)(uint8)slicePos->simSlice->quadCount - 1U);
+            slicePos->quad = slicePos->offEdge == 1 ? 0 : (char)((slicePos->simSlice->quadCount) - 1U);
             BworldSm::UpdateSimQuad(slicePos);
             slicePos->rez = 2;
             SetStrip(slicePos);
-            GetStmQuadPts(slicePos, &Chunk::chunkCenters[(uint8)slicePos->chunk]);
+            GetStmQuadPts(slicePos, &Chunk::chunkCenters[slicePos->chunk]);
         }
         static coorddef corrPt;
         corrPt = *pt;
         for (sint32 rCount = 0; slicePos->simQuad == 0 && rCount < 10; ++rCount)
         {
-            sint32 deltaX = (sint32)((uint32)BWorldSm::slices[slicePos->slice].center[0] - (uint32)corrPt.x) >> 5;
-            corrPt.x = (sint32)((uint32)corrPt.x + (uint32)deltaX);
-            sint32 deltaZ = (sint32)((uint32)BWorldSm::slices[slicePos->slice].center[2] - (uint32)corrPt.z) >> 5;
-            corrPt.z = (sint32)((uint32)corrPt.z + (uint32)deltaZ);
+            sint32 deltaX = (BWorldSm::slices[slicePos->slice].center[0] - corrPt.x) >> 5;
+            corrPt.x = (corrPt.x + deltaX);
+            sint32 deltaZ = (BWorldSm::slices[slicePos->slice].center[2] - corrPt.z) >> 5;
+            corrPt.z = (corrPt.z + deltaZ);
             RawFindClosestQuad(&corrPt, slicePos);
         }
     }
@@ -487,11 +480,9 @@ sint32 FindClosestQuad(coorddef *pt, BWorldSm::Pos *slicePos)
 sint32 PointDirection(coorddef *p1, coorddef *p2, coorddef *p3)
 {
     FUNCTION_MARKER(0x8007FCB0, "NFS4.EXE");
-    sint32 first = fixedmult((sint32)((uint32)p1->x - (uint32)p2->x),
-        (sint32)((uint32)p3->z - (uint32)p2->z));
-    sint32 second = fixedmult((sint32)((uint32)p3->x - (uint32)p2->x),
-        (sint32)((uint32)p1->z - (uint32)p2->z));
-    return (sint32)((uint32)first - (uint32)second);
+    sint32 first = fixedmult(((p1->x - p2->x)), (p3->z - p2->z));
+    sint32 second = fixedmult(((p3->x - p2->x)), (p1->z - p2->z));
+    return (first - second);
 }
 
 sint32 BWorldSm::FindClosestQuadRez(coorddef *pt, BWorldSm::Pos *slicePos, sint32 hiRezFlag)
@@ -517,11 +508,9 @@ sint32 BWorldSm::FindClosestQuadRez(coorddef *pt, BWorldSm::Pos *slicePos, sint3
         {
             coorddef *firstPoint = &slicePos->quadPts[edges[edge][0]];
             coorddef *secondPoint = &slicePos->quadPts[edges[edge][1]];
-            sint32 first = fixedmult((sint32)((uint32)firstPoint->x - (uint32)secondPoint->x),
-                (sint32)((uint32)pt->z - (uint32)secondPoint->z));
-            sint32 second = fixedmult((sint32)((uint32)pt->x - (uint32)secondPoint->x),
-                (sint32)((uint32)firstPoint->z - (uint32)secondPoint->z));
-            if ((sint32)((uint32)first - (uint32)second) > 0)
+            sint32 first = fixedmult(((firstPoint->x - secondPoint->x)), (pt->z - secondPoint->z));
+            sint32 second = fixedmult(((pt->x - secondPoint->x)), (firstPoint->z - secondPoint->z));
+            if ((first - second) > 0)
             {
                 inside = false;
                 break;
@@ -540,7 +529,6 @@ sint32 BWorldSm::FindClosestQuadRez(coorddef *pt, BWorldSm::Pos *slicePos, sint3
 sint32 BWorldSm::FindClosestQuadMaxIterations(coorddef *pt, BWorldSm::Pos *slicePos, sint32 maxIterations)
 {
     FUNCTION_MARKER(0x8007FC90, "NFS4.EXE");
-    (void)maxIterations;
     return FindClosestQuadRez(pt, slicePos, 1);
 }
 
@@ -555,9 +543,8 @@ sint32 BWorldSm::FindEdgeOff(coorddef *pt, BWorldSm::Pos *slicePos1, BWorldSm::P
         ret |= 2;
     if (PointDirection(&pts[1], &pts[2], pt) >= 0)
         ret |= 4;
-    sint32 y = (sint32)((uint32)slicePos2->quadPts[0].y + (uint32)slicePos2->quadPts[1].y +
-                    (uint32)slicePos2->quadPts[2].y + (uint32)slicePos2->quadPts[3].y) >> 2;
-    *heightDiff = (sint32)((uint32)y - (uint32)pt->y);
+    sint32 y = (((slicePos2->quadPts[0].y + slicePos2->quadPts[1].y) + slicePos2->quadPts[2].y) + slicePos2->quadPts[3].y) >> 2;
+    *heightDiff = (y - pt->y);
     return ret;
 }
 
@@ -592,16 +579,16 @@ bool BWorldSm::TunnelFlagSm(BWorldSm::Pos *slicePos)
 void NormalCache::AddEntry(BWorldSm::Pos *slicePos)
 {
     FUNCTION_MARKER(0x8008002C, "NFS4.EXE");
-    uint32 oldestTime = 0xFFFFFFFFu;
+    uint32 oldestTime = 0xFFFFFFFF;
     sint32 oldestInd = -1;
-    BWSM::NormalCacheSysTime = (uint32)BWSM::NormalCacheSysTime + 1u;
+    BWSM::NormalCacheSysTime = BWSM::NormalCacheSysTime + 1u;
     for (sint32 i = 0; i < 16; ++i)
     {
         tNormalCacheEntry *ce = &BWSM::NormalCache[i];
-        if ((uint32)ce->accessTime < oldestTime)
+        if (ce->accessTime < oldestTime)
         {
             oldestInd = i;
-            oldestTime = (uint32)ce->accessTime;
+            oldestTime = ce->accessTime;
         }
     }
     tNormalCacheEntry *ce = &BWSM::NormalCache[oldestInd];
@@ -616,14 +603,13 @@ void NormalCache::AddEntry(BWorldSm::Pos *slicePos)
 bool NormalCache::FindEntry(BWorldSm::Pos *slicePos)
 {
     FUNCTION_MARKER(0x800800E8, "NFS4.EXE");
-    BWSM::NormalCacheSysTime = (uint32)BWSM::NormalCacheSysTime + 1U;
+    BWSM::NormalCacheSysTime = BWSM::NormalCacheSysTime + 1U;
     sint32 slice = slicePos->slice;
     sint32 quad = (sint8)slicePos->quad;
     for (sint32 i = 0; i < 16; ++i)
     {
         tNormalCacheEntry *ce = &BWSM::NormalCache[i];
-        if (ce->sliceInd == slice && (sint8)ce->quadInd == quad &&
-            ce->triangleFlag == (sint8)slicePos->triangleFlag)
+        if (ce->sliceInd == slice && (sint8)ce->quadInd == quad && ce->triangleFlag == (sint8)slicePos->triangleFlag)
         {
             ce->accessTime = BWSM::NormalCacheSysTime;
             slicePos->normal = ce->normal;
@@ -644,36 +630,30 @@ void Check_Rot(BWorldSm::Pos *slicePos)
         sint32 triangle = (sint8)slicePos->triangleFlag;
         if (triangle == 3)
         {
-            vecZ.x = (sint32)((uint32)slicePos->quadPts[2].x - (uint32)slicePos->quadPts[3].x +
-                (uint32)((sint32)((uint32)slicePos->quadPts[1].x - (uint32)slicePos->quadPts[0].x) / 8));
-            vecZ.y = (sint32)((uint32)slicePos->quadPts[2].y - (uint32)slicePos->quadPts[3].y +
-                (uint32)((sint32)((uint32)slicePos->quadPts[1].y - (uint32)slicePos->quadPts[0].y) / 8));
-            vecZ.z = (sint32)((uint32)slicePos->quadPts[2].z - (uint32)slicePos->quadPts[3].z +
-                (uint32)((sint32)((uint32)slicePos->quadPts[1].z - (uint32)slicePos->quadPts[0].z) / 8));
-            vecX.x = (sint32)((uint32)slicePos->quadPts[0].x - (uint32)slicePos->quadPts[3].x +
-                (uint32)((sint32)((uint32)slicePos->quadPts[1].x - (uint32)slicePos->quadPts[2].x) / 8));
-            vecX.y = (sint32)((uint32)slicePos->quadPts[0].y - (uint32)slicePos->quadPts[3].y +
-                (uint32)((sint32)((uint32)slicePos->quadPts[1].y - (uint32)slicePos->quadPts[2].y) / 8));
-            vecX.z = (sint32)((uint32)slicePos->quadPts[0].z - (uint32)slicePos->quadPts[3].z +
-                (uint32)((sint32)((uint32)slicePos->quadPts[1].z - (uint32)slicePos->quadPts[2].z) / 8));
+            vecZ.x = ((slicePos->quadPts[2].x - slicePos->quadPts[3].x) + ((sint32)(slicePos->quadPts[1].x - (uint32)slicePos->quadPts[0].x) / 8));
+            vecZ.y = ((slicePos->quadPts[2].y - slicePos->quadPts[3].y) + ((sint32)(slicePos->quadPts[1].y - (uint32)slicePos->quadPts[0].y) / 8));
+            vecZ.z = ((slicePos->quadPts[2].z - slicePos->quadPts[3].z) + ((sint32)(slicePos->quadPts[1].z - (uint32)slicePos->quadPts[0].z) / 8));
+            vecX.x = ((slicePos->quadPts[0].x - slicePos->quadPts[3].x) + ((sint32)(slicePos->quadPts[1].x - (uint32)slicePos->quadPts[2].x) / 8));
+            vecX.y = ((slicePos->quadPts[0].y - slicePos->quadPts[3].y) + ((sint32)(slicePos->quadPts[1].y - (uint32)slicePos->quadPts[2].y) / 8));
+            vecX.z = ((slicePos->quadPts[0].z - slicePos->quadPts[3].z) + ((sint32)(slicePos->quadPts[1].z - (uint32)slicePos->quadPts[2].z) / 8));
         }
         else if (triangle == 2)
         {
-            vecZ.x = (sint32)((uint32)slicePos->quadPts[1].x - (uint32)slicePos->quadPts[0].x);
-            vecZ.y = (sint32)((uint32)slicePos->quadPts[1].y - (uint32)slicePos->quadPts[0].y);
-            vecZ.z = (sint32)((uint32)slicePos->quadPts[1].z - (uint32)slicePos->quadPts[0].z);
-            vecX.x = (sint32)((uint32)slicePos->quadPts[1].x - (uint32)slicePos->quadPts[2].x);
-            vecX.y = (sint32)((uint32)slicePos->quadPts[1].y - (uint32)slicePos->quadPts[2].y);
-            vecX.z = (sint32)((uint32)slicePos->quadPts[1].z - (uint32)slicePos->quadPts[2].z);
+            vecZ.x = (slicePos->quadPts[1].x - slicePos->quadPts[0].x);
+            vecZ.y = (slicePos->quadPts[1].y - slicePos->quadPts[0].y);
+            vecZ.z = (slicePos->quadPts[1].z - slicePos->quadPts[0].z);
+            vecX.x = (slicePos->quadPts[1].x - slicePos->quadPts[2].x);
+            vecX.y = (slicePos->quadPts[1].y - slicePos->quadPts[2].y);
+            vecX.z = (slicePos->quadPts[1].z - slicePos->quadPts[2].z);
         }
         else
         {
-            vecZ.x = (sint32)((uint32)slicePos->quadPts[2].x - (uint32)slicePos->quadPts[3].x);
-            vecZ.y = (sint32)((uint32)slicePos->quadPts[2].y - (uint32)slicePos->quadPts[3].y);
-            vecZ.z = (sint32)((uint32)slicePos->quadPts[2].z - (uint32)slicePos->quadPts[3].z);
-            vecX.x = (sint32)((uint32)slicePos->quadPts[0].x - (uint32)slicePos->quadPts[3].x);
-            vecX.y = (sint32)((uint32)slicePos->quadPts[0].y - (uint32)slicePos->quadPts[3].y);
-            vecX.z = (sint32)((uint32)slicePos->quadPts[0].z - (uint32)slicePos->quadPts[3].z);
+            vecZ.x = (slicePos->quadPts[2].x - slicePos->quadPts[3].x);
+            vecZ.y = (slicePos->quadPts[2].y - slicePos->quadPts[3].y);
+            vecZ.z = (slicePos->quadPts[2].z - slicePos->quadPts[3].z);
+            vecX.x = (slicePos->quadPts[0].x - slicePos->quadPts[3].x);
+            vecX.y = (slicePos->quadPts[0].y - slicePos->quadPts[3].y);
+            vecX.z = (slicePos->quadPts[0].z - slicePos->quadPts[3].z);
         }
         slicePos->forward = vecZ;
         coorddef *normal = &slicePos->normal;
@@ -685,7 +665,7 @@ void Check_Rot(BWorldSm::Pos *slicePos)
         Math::NormalizeVector(forward);
         NormalCache::AddEntry(slicePos);
     }
-    slicePos->simRotFlag = (sint16)(sint8)slicePos->triangleFlag;
+    slicePos->simRotFlag = ((sint8)slicePos->triangleFlag);
 }
 
 void NormalCache::Init(void)
@@ -721,11 +701,9 @@ sint32 BWorldSm::FindClosestTriangleRez(coorddef *pt, BWorldSm::Pos *slicePos, s
     sint32 ret = FindClosestQuadRez(pt, slicePos, hiRezFlag);
     if (slicePos->simQuad != 0)
     {
-        sint32 first = fixedmult((sint32)((uint32)slicePos->quadPts[2].x - (uint32)slicePos->quadPts[0].x),
-            (sint32)((uint32)pt->z - (uint32)slicePos->quadPts[0].z));
-        sint32 second = fixedmult((sint32)((uint32)pt->x - (uint32)slicePos->quadPts[0].x),
-            (sint32)((uint32)slicePos->quadPts[2].z - (uint32)slicePos->quadPts[0].z));
-        slicePos->triangleFlag = (sint32)((uint32)first - (uint32)second) > 0 ? 1 : 2;
+        sint32 first = fixedmult(((slicePos->quadPts[2].x - slicePos->quadPts[0].x)), (pt->z - slicePos->quadPts[0].z));
+        sint32 second = fixedmult(((pt->x - slicePos->quadPts[0].x)), (slicePos->quadPts[2].z - slicePos->quadPts[0].z));
+        slicePos->triangleFlag = (first - second) > 0 ? 1 : 2;
     }
     return ret;
 }

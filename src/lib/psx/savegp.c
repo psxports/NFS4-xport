@@ -21,5 +21,4 @@ void savegp(uint32 *savedGp)
 void restoregp(uint32 savedGp)
 {
     FUNCTION_MARKER(0x800EB0A4, "NFS4.EXE");
-    (void)savedGp;
 }
