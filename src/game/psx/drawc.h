@@ -113,6 +113,20 @@ public:
     static void KillRenderingData(void);
     static void NightHeadlight(Car::tObj *carObj);
     static void MenuColorData(sint32 color, Car::tObj *carObj, sint32 player);
+
+    struct RenderEnvironment
+    {
+        Draw::tPixMap environment[2];
+        sint32 colors[3];
+        sint32 scroll;
+        sint32 wetRoad;
+        sint16 reflectOffset;
+        uint16 roadTpage;
+        bool roadMapSet;
+    };
+
+    static void ReadRenderEnvironment(Car::tObj *carObj, sint32 inMenu, sint32 lightAvg, RenderEnvironment *state, sint32 mapIndex = -1, sint32 roadMapIndex = -1);
+    static void BuildRenderOverlays(Car::tObj *carObj, sint32 inMenu, sint32 mirror, sint16 *overlays);
     static sint32 PrimStart(Draw::tVertex *center, Car::tObj *carObj, sint32 lightAvg, Draw::CarCache *sd);
     static void PrimStop(Car::tObj *carObj, Draw::CarCache *sd);
     static void Prim(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transformer::zOverlay *overlay, sint32 envmap, Draw::CarCache *sd);

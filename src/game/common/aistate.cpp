@@ -1,5 +1,6 @@
 #include <string.h>
 #include "xport.h"
+#include "hd.h"
 #include "eaclib/psx/eaclib.h"
 #include "game/common/ai.h"
 #include "game/common/aispeeds.h"
@@ -679,7 +680,8 @@ void AIState_Offroad::Execute(void)
     FUNCTION_MARKER(0x800712E0, "NFS4.EXE");
     if (letGo_ == 0)
     {
-        coorddef zero = { 0, 0, 0 };
+        hd_reset_car(carObj_);
+        coorddef zero = {0, 0, 0};
         carObj_->N.linearVel = zero;
         carObj_->N.angularVel = zero;
         carObj_->desiredSpeed = 0;
@@ -710,7 +712,7 @@ void AIState_Offroad::Execute(void)
 
 AIState_NonActive::AIState_NonActive(Car::tObj *carObj) : AIState_Base(carObj)
 {
-    coorddef trafficOffset = { 0, 0, 0 };
+    coorddef trafficOffset = {0, 0, 0};
     trafficOffset.y = (carObj->carIndex * 0xa0000);
     Newton::SetInitialSlicePositionOrientationEtc(&carObj_->N, 0, &trafficOffset, 1);
     carObj_->N.active = 0;
@@ -873,12 +875,12 @@ void AIState_RovingTraffic::Execute(void)
     carRelativeForLatPos.x = (carObj_->targetPos.x - centerBack.x);
     carRelativeForLatPos.y = (carObj_->targetPos.y - centerBack.y);
     carRelativeForLatPos.z = (carObj_->targetPos.z - centerBack.z);
-    carObj_->targetLatPos = ( ((((carObj_->N.roadMatrix.m[0] / 256)) * (carRelativeForLatPos.x / 256)) + (((carObj_->N.roadMatrix.m[1] / 256)) * (carRelativeForLatPos.y / 256))) + (((carObj_->N.roadMatrix.m[2] / 256)) * (carRelativeForLatPos.z / 256)));
+    carObj_->targetLatPos = (((((carObj_->N.roadMatrix.m[0] / 256)) * (carRelativeForLatPos.x / 256)) + (((carObj_->N.roadMatrix.m[1] / 256)) * (carRelativeForLatPos.y / 256))) + (((carObj_->N.roadMatrix.m[2] / 256)) * (carRelativeForLatPos.z / 256)));
     coorddef carRelativeForDistance;
     carRelativeForDistance.x = (carObj_->targetPos.x - carObj_->N.position.x) >> 12;
     carRelativeForDistance.y = (carObj_->targetPos.y - carObj_->N.position.y);
     carRelativeForDistance.z = (carObj_->targetPos.z - carObj_->N.position.z) >> 12;
-    sint32 distanceSquared = ( (carRelativeForDistance.x * carRelativeForDistance.x) + (carRelativeForDistance.z * carRelativeForDistance.z));
+    sint32 distanceSquared = ((carRelativeForDistance.x * carRelativeForDistance.x) + (carRelativeForDistance.z * carRelativeForDistance.z));
     if (distanceSquared < 10000)
     {
         if (waitTick_ == 0)
@@ -916,7 +918,7 @@ void AIState_Donuts::Execute(void)
 {
     FUNCTION_MARKER(0x80071E70, "NFS4.EXE");
     sint32 slice = carObj_->N.simRoadInfo.slice;
-    sint32 forwardDot = ( ((((carObj_->N.orientMat.m[6] / 256)) * (carObj_->N.roadMatrix.m[6] / 256)) + (((carObj_->N.orientMat.m[7] / 256)) * (carObj_->N.roadMatrix.m[7] / 256))) + (((carObj_->N.orientMat.m[8] / 256)) * (carObj_->N.roadMatrix.m[8] / 256)));
+    sint32 forwardDot = (((((carObj_->N.orientMat.m[6] / 256)) * (carObj_->N.roadMatrix.m[6] / 256)) + (((carObj_->N.orientMat.m[7] / 256)) * (carObj_->N.roadMatrix.m[7] / 256))) + (((carObj_->N.orientMat.m[8] / 256)) * (carObj_->N.roadMatrix.m[8] / 256)));
     carObj_->direction = forwardDot > 0 ? 1 : -1;
     carObj_->desiredDirection = carObj_->direction;
     coorddef targetPos;

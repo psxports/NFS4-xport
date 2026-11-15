@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include "xport.h"
+#include "hd.h"
 #include "eaclib/psx/eaclib.h"
 #include "game/common/aicop.h"
 #include "game/common/aihigh.h"
@@ -14,6 +15,8 @@
 #include "game/common/collide.h"
 #include "game/common/dashhud.h"
 #include "game/common/fastrand.h"
+#include "game/common/frame.h"
+#include "game/common/frameclock.h"
 #include "game/common/gmesetup.h"
 #include "game/common/input.h"
 #include "game/common/mpause.h"
@@ -37,7 +40,7 @@ sint32 quitType;
 sint32 InBetween;
 Sim::tSimGlobalVar simGlobal;
 Sim::tSimSystemVar simVar;
-sint32 counter[4] = { 320, 384, 448, 512 };
+sint32 counter[4] = {320, 384, 448, 512};
 
 static void UpdateCameraForSchedule(void *)
 {
@@ -128,13 +131,15 @@ void Sim::CleanUp(void)
 void Sim::FadeInSFX(void)
 {
     FUNCTION_MARKER(0x800B67F8, "NFS4.EXE");
-    if (simGlobal.gameTicks == 0) {
+    if (simGlobal.gameTicks == 0)
+    {
         sint32 level = gMasterSFXLevel;
         gMasterSFXLevel = 0;
         GameSetup::gData.userSetting.sfxLevel = level;
         return;
     }
-    if (simGlobal.gameTicks - 17U < 64U) {
+    if (simGlobal.gameTicks - 17U < 64U)
+    {
         sint32 level = GameSetup::gData.userSetting.sfxLevel;
         if (Replay::ReplayInterface.statsScreen != 0)
             level >>= 2;
@@ -146,16 +151,20 @@ void Sim::FadeInSFX(void)
 void Sim::ProcessSimSchedules(void)
 {
     FUNCTION_MARKER(0x800B6878, "NFS4.EXE");
-    if ((GameSetup::gData.raceType == 1 || GameSetup::gData.raceType == 5) && ((Cars::gHumanRaceCarList[0]->carFlags & 0x200) != 0 || (Cars::gNumHumanRaceCars == 2 && (Cars::gHumanRaceCarList[1]->carFlags & 0x200) != 0))) {
+    if ((GameSetup::gData.raceType == 1 || GameSetup::gData.raceType == 5) && ((Cars::gHumanRaceCarList[0]->carFlags & 0x200) != 0 || (Cars::gNumHumanRaceCars == 2 && (Cars::gHumanRaceCarList[1]->carFlags & 0x200) != 0)))
+    {
         FadeInSFX();
         simGlobal.gameStarted = 1;
-    } else if (simGlobal.gameStarted == 0) {
+    }
+    else if (simGlobal.gameStarted == 0)
+    {
         sint32 i = (uint8)countdown - 1;
         if (i < 0)
             i = 0;
         for (; i < 4; ++i)
             AudioCmn::GetAsyncSfx(2, i + 35, false);
-        if (counter[(uint8)countdown] <= simGlobal.gameTicks) {
+        if (counter[(uint8)countdown] <= simGlobal.gameTicks)
+        {
             if (simGlobal.gameTicks >= 512)
                 simGlobal.gameStarted = 1;
             AudioCmn::PlaySound(-4, (uint8)countdown + 35, 0, 127, 64);
@@ -163,7 +172,8 @@ void Sim::ProcessSimSchedules(void)
         }
         FadeInSFX();
     }
-    if ((simGlobal.gameTicks & 1) == 0) {
+    if ((simGlobal.gameTicks & 1) == 0)
+    {
         systemtask(0);
 
         stackSpeedUpEnbabledFlag = 1;
@@ -177,7 +187,8 @@ void Sim::ProcessSimSchedules(void)
     stackSpeedUpEnbabledFlag = 1;
     Sched::Execute(simGlobal.schedule64Hz);
     stackSpeedUpEnbabledFlag = 0;
-    if ((simGlobal.gameTicks & 1) != 0) {
+    if ((simGlobal.gameTicks & 1) != 0)
+    {
         stackSpeedUpEnbabledFlag = 1;
         AIHigh::Execute();
         stackSpeedUpEnbabledFlag = 0;
@@ -198,18 +209,23 @@ void Sim::ProcessPause(void)
         return;
 
     sint32 r = MPause::Logic();
-    if (r == 1) {
+    if (r == 1)
+    {
         if (simVar.quickPauseSim == 0)
             AudioCmn::UnPause();
         gSimQueue_BlockSelf = 0;
         simVar.pauseSim = 0;
         Force::UnPause();
-    } else if (r == 2) {
+    }
+    else if (r == 2)
+    {
         AudioCmn::UnPauseAndRestart();
         simVar.pauseSim = 1;
         simVar.endSimGame = 1;
         simVar.restartGame = 1;
-    } else {
+    }
+    else
+    {
         if (r - 4U >= 2U)
             return;
         if (r == 5)
@@ -230,7 +246,8 @@ void Sim::CheckForPause(sint32 checkInput)
     FUNCTION_MARKER(0x800B6CA0, "NFS4.EXE");
     if (Replay::ReplayMode >= 2 || simVar.restartGame != 0 || simGlobal.gameTicks <= 32)
         return;
-    if ((checkInput != 0 && Input::Interface(6, 1) != 0) || Device::gForcePause != 0) {
+    if ((checkInput != 0 && Input::Interface(6, 1) != 0) || Device::gForcePause != 0)
+    {
         unPauseDelay = (clock_realTime.time32Hz + 4);
         AudioCmn::Pause();
         gSimQueue_BlockSelf = 1;
@@ -243,62 +260,84 @@ void Sim::MainGameLoop(void)
 {
     FUNCTION_MARKER(0x800B6D4C, "NFS4.EXE");
     quitType = 1;
-    sint32 lastGoalTick = 0;
-    sint32 lastRealTick = (clock_realTime.time64Hz + 10000);
+    uint64 tick;
+    Render::ResetState();
+    xport_frame_fract_ex(&tick, 128);
+    FrameClock clock;
+    clock.Reset(tick);
+    hd_set_logic_cursor(clock.ProcessedTick());
+    bool firstFrame = true;
+    bool wasPaused = simVar.pauseSim != 0 || simVar.quickPauseSim != 0;
     simGlobal.time32Hz = Input::gTime;
-    for (;;) {
-        if (simVar.endSimGame != 0) {
+    for (;;)
+    {
+        if (simVar.endSimGame != 0)
+        {
             if (Replay::ReplayMode < 2)
                 GameSetup::gData.finalPerpArrests = GameSetup::gData.perpArrests;
             return;
         }
+        FramePresentation presentation;
         systemtask(0);
-        sint32 realTick = clock_realTime.time64Hz;
-        simVar.goalClockTicks = ((uint32)gSimQueue_Ticker << 1);
-        sint32 diffReal = (realTick - lastRealTick);
-        sint32 diffGoal = (simVar.goalClockTicks - lastGoalTick);
-        if (diffGoal < diffReal)
-            simVar.goalClockTicks = (simVar.goalClockTicks + 1);
-        lastGoalTick = simVar.goalClockTicks;
-        lastRealTick = realTick;
+        sint32 interfaceTime = simGlobal.time32Hz;
         if ((Input::gTime - simGlobal.time32Hz) > 16)
             simGlobal.time32Hz = Input::gTime;
-        while (simGlobal.time32Hz <= Input::gTime && simVar.endSimGame == 0) {
-            if (Replay::ReplayMode == 2 && simVar.pauseSim == 0) {
+        while (simGlobal.time32Hz <= Input::gTime && simVar.endSimGame == 0)
+        {
+            if (Replay::ReplayMode == 2 && simVar.pauseSim == 0)
+            {
                 Replay::GetInterfaceKey();
-                if (Replay::ReplayInterface.depressed == 4) {
+                if (Replay::ReplayInterface.depressed == 4)
+                {
                     Replay::ReplayInterface.depressed = 0;
                     simVar.endSimGame = Replay::ReplayInterface.end;
-                    if (GameSetup::gData.instantReplay != 0) {
+                    if (GameSetup::gData.instantReplay != 0)
+                    {
                         AudioCmn::UnPauseAndRestart();
-                    } else if (Replay::ReplayInterface.end != 0 && simVar.quickPauseSim != 0) {
+                    }
+                    else if (Replay::ReplayInterface.end != 0 && simVar.quickPauseSim != 0)
+                    {
                         simVar.quickPauseSim = 0;
                         AudioCmn::UnPauseAndQuit();
-                    } else if (simVar.quickPauseSim != Replay::ReplayInterface.pause) {
+                    }
+                    else if (simVar.quickPauseSim != Replay::ReplayInterface.pause)
+                    {
                         simVar.quickPauseSim = Replay::ReplayInterface.pause;
-                        if (Replay::ReplayInterface.pause == 0) {
+                        if (Replay::ReplayInterface.pause == 0)
+                        {
                             AudioCmn::UnPause();
-                        } else {
+                        }
+                        else
+                        {
                             Camera::Update();
                             AudioCmn::Pause();
                         }
                     }
                 }
             }
-            if (simVar.endSimGame == 0) {
-                if (simVar.pauseSim != 0) {
+            if (simVar.endSimGame == 0)
+            {
+                if (simVar.pauseSim != 0)
+                {
                     ProcessPause();
                     simVar.keyRelease = 0x18;
-                } else {
-                    if (Input::Interface(0x15, 1) != 0) {
+                }
+                else
+                {
+                    if (Input::Interface(0x15, 1) != 0)
+                    {
                         AudioMus::SwitchSong();
                         Hud::ActivateCDPlayer = 1;
                     }
-                    if (simVar.keyRelease != 0) {
+                    if (simVar.keyRelease != 0)
+                    {
                         if (Input::Interface(simVar.keyRelease, 0) == 0)
                             simVar.keyRelease = 0;
-                    } else {
-                        for (sint32 i = 0; i <= (sint32)(GameSetup::gData.commMode == 1); ++i) {
+                    }
+                    else
+                    {
+                        for (sint32 i = 0; i <= (sint32)(GameSetup::gData.commMode == 1); ++i)
+                        {
                             if (Input::Interface(i == 0 ? 0x1A : 0x1B, 1) != 0 && Replay::ReplayMode < 2)
                                 Camera::NextMode(i);
                             if (Input::Interface(i == 0 ? 0x1C : 0x1D, 1) != 0)
@@ -311,35 +350,78 @@ void Sim::MainGameLoop(void)
             }
             simGlobal.time32Hz = (simGlobal.time32Hz + 1);
         }
-        skipRender = 0;
-        if (simVar.pauseSim == 0 && simVar.quickPauseSim == 0 && simVar.endSimGame == 0) {
-            if (simVar.goalClockTicks < simVar.currentClockTicks) {
-                skipRender = 1;
-            } else {
-                do {
-                    if ((simVar.currentClockTicks & 1) == 0)
-                        SimQueue::SetCurrentInput(simVar.currentClockTicks >> 1);
-                    InBetween = 0;
-                    if (Replay::ReplayMode == 2 && Replay::ReplayInterface.speed != 2 && (Replay::ReplayInterface.speed != 1 || (simVar.currentClockTicks & 1) != 0) && (Replay::ReplayInterface.speed != 0 || (simVar.currentClockTicks & 3) != 0)) {
-                        if (Replay::ReplayInterface.speed == 3) {
-                            ProcessSimSchedules();
-                            ProcessSimSchedules();
-                        } else {
-                            InBetween = 1;
-                            Camera::Update();
-                        }
-                    } else {
+        xport_frame_fract_ex(&tick, 128);
+        bool paused = simVar.pauseSim != 0 || simVar.quickPauseSim != 0;
+        bool pauseChanged = paused != wasPaused;
+        bool reseeded;
+        if (paused || pauseChanged || FramePresentation::Handoff())
+            clock.Reset(tick);
+        uint32 due = clock.Pending(tick, 2, 8, 16, &reseeded);
+        hd_set_logic_cursor(clock.ProcessedTick());
+        if (reseeded || pauseChanged)
+            hd_reset_history();
+        if (firstFrame && !paused)
+            due = 7;
+        bool inputChanged = interfaceTime != simGlobal.time32Hz;
+        bool advanced = false;
+        simVar.goalClockTicks = simVar.currentClockTicks + (sint32)due - 1;
+        if (simVar.pauseSim == 0 && simVar.quickPauseSim == 0 && simVar.endSimGame == 0)
+        {
+            for (uint32 step = 0; step < due && simVar.endSimGame == 0; ++step)
+            {
+                if ((simVar.currentClockTicks & 1) == 0)
+                {
+                    if ((simVar.currentClockTicks >> 1) > gSimQueue_Ticker)
+                        break;
+                    SimQueue::SetCurrentInput(simVar.currentClockTicks >> 1);
+                }
+                InBetween = 0;
+                if (Replay::ReplayMode == 2 && Replay::ReplayInterface.speed != 2 && (Replay::ReplayInterface.speed != 1 || (simVar.currentClockTicks & 1) != 0) && (Replay::ReplayInterface.speed != 0 || (simVar.currentClockTicks & 3) != 0))
+                {
+                    if (Replay::ReplayInterface.speed == 3)
+                    {
+                        ProcessSimSchedules();
                         ProcessSimSchedules();
                     }
-                    simVar.currentClockTicks = (simVar.currentClockTicks + 1);
-                } while (simVar.currentClockTicks <= simVar.goalClockTicks);
+                    else
+                    {
+                        InBetween = 1;
+                        Camera::Update();
+                    }
+                }
+                else
+                {
+                    ProcessSimSchedules();
+                }
+                if (!firstFrame)
+                    clock.Consume(2);
+                hd_set_logic_cursor(clock.ProcessedTick());
+                Render::UpdateState(true);
+                simVar.currentClockTicks = (simVar.currentClockTicks + 1);
+                advanced = true;
             }
-        } else {
-            Camera::Update();
         }
+        else if (firstFrame || pauseChanged || inputChanged)
+        {
+            Camera::Update();
+            Render::UpdateState(false);
+            hd_reset_history();
+        }
+        skipRender = !advanced && !firstFrame && !pauseChanged && !(paused && (inputChanged || MPause::NeedsRedraw()));
         if (skipRender == 0)
             Render_Render(simVar.pauseSim);
-        if (Input::MainExitKey() != 0 || (Replay::ReplayMode == 3 && simGlobal.gameTicks > 64))
+        if ((inputChanged && Input::MainExitKey() != 0) || (Replay::ReplayMode == 3 && simGlobal.gameTicks > 64))
             simVar.endSimGame = 1;
+        if (firstFrame)
+        {
+            xport_frame_fract_ex(&tick, 128);
+            clock.Reset(tick);
+            hd_set_logic_cursor(clock.ProcessedTick());
+            hd_reset_history();
+            firstFrame = false;
+        }
+        float phase = xport_frame_fract_ex(&tick, 128);
+        FramePresentation::SetPhase(paused ? 1 : clock.Phase(tick, phase, 2));
+        wasPaused = paused;
     }
 }

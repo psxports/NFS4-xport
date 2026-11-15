@@ -3,6 +3,7 @@
 #include <string.h>
 #include "xport.h"
 #include "psx.h"
+#include "hd_ui.h"
 #include "eaclib/psx/globals.h"
 #include "frontend/common/feapp.h"
 #include "frontend/common/femenudefs.h"
@@ -55,7 +56,7 @@ struct tTrackInformation
 };
 
 static char gSwapFileName[20];
-static sint16 tvOrder[10] = { 2, 7, 4, 8, 1, 6, 0, 9, 3, 5 };
+static sint16 tvOrder[10] = {2, 7, 4, 8, 1, 6, 0, 9, 3, 5};
 tScreenTrackSelect *screenTrackSelect;
 
 static bool StartTrackMovie(sint32 &session, const char *movieName, sint32 trackID)
@@ -75,7 +76,7 @@ void tScreenTrackSelect::DrawBackground(void)
 {
     FUNCTION_MARKER(0x80041600, "FRONT.BIN");
 
-    PSX_RECT r = { 320, 200, 170, 12 };
+    PSX_RECT r = {320, 200, 170, 12};
     sint16 trackText = menuDefs->iteratorTrack.TextValue(kPlayerBoth);
     DrawShape::NFS4RoundRectangle(trackText, r, 0);
     tTrackInformation trackInfo;
@@ -101,7 +102,7 @@ void tScreenTrackSelect::DrawBackground(void)
         }
         else if (result == 0 && hVideo == 1)
         {
-            PSX_RECT clearRect = { 512, 0, 170, 256 };
+            PSX_RECT clearRect = {512, 0, 170, 256};
             ClearImage(&clearRect, 0, 0, 0);
             DrawSync(0);
             uint32 startTicks = ticks;
@@ -152,6 +153,7 @@ void tScreenTrackSelect::DrawBackground(void)
         prim->p[2].uv.v = prim->p[3].uv.v = (uint8)(shapeY | 127);
         prim->p[1].attr = GetTPage(2, 1, 512, 0);
         prim->p[0].attr = 0;
+        hd_ui_ft4(prim);
 
         cprim = &DrawC::carCache.head.cprim;
         prim = reinterpret_cast<POLY_FT4 *>(cprim->PrimPtr);
@@ -175,6 +177,7 @@ void tScreenTrackSelect::DrawBackground(void)
         prim->p[2].uv.v = prim->p[3].uv.v = (uint8)(shapeY | 127);
         prim->p[1].attr = GetTPage(2, 1, 576, 0);
         prim->p[0].attr = 0;
+        hd_ui_ft4(prim);
     }
     DrawVideoWall();
 }
@@ -202,7 +205,7 @@ void tScreenTrackSelect::Initialize(void)
     menuDefs->iteratorTrack.Increment(kPlayerBoth);
     tTrackInformation trackInfo;
     trackManager.GetTrack((uint8)frontEnd.track[0], trackInfo);
-    PSX_RECT r = { 512, 0, 170, 256 };
+    PSX_RECT r = {512, 0, 170, 256};
     ClearImage(&r, 0, 0, 0);
     DrawSync(0);
     tScreen::Initialize();

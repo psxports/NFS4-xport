@@ -2,7 +2,9 @@
 #include <string.h>
 #include "xport.h"
 #include "psx.h"
+#include "hd_ui.h"
 #include "eaclib/psx/eaclib.h"
+#include "game/common/frame.h"
 #include "game/common/render.h"
 #include "game/psx/draw.h"
 #include "game/psx/rpause.h"
@@ -41,14 +43,13 @@ void RPause::StopPauseMenu(void)
     FUNCTION_MARKER(0x800DCFA4, "NFS4.EXE");
     PutDispEnv(&gEnviro[1].disp);
     DrawSync(0);
-    VSync(0);
+    if (!FramePresentation::Active())
+        VSync(0);
     CopyBackToFrontBuffer();
     sint32 frame = gFlip;
     sint32 viewid = Render::gPauseMenuView;
-    Draw::tView *view = &Draw::gView[viewid];
-    sint32 otsize = view->otsize;
-    uint32 *ot = view->ot[frame];
-    DrawOTag(ot + otsize - 1);
+    hd_ui_end_frame();
+    FramePresentation::SubmitOriginal(frame, viewid, 0);
     systemtask(0);
     gFlip = (1 - gFlip);
 }

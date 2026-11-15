@@ -7,6 +7,7 @@
 #include "xport.h"
 #include "psx.h"
 #include "psx_gpu.h"
+#include "hd_ui.h"
 #include "eaclib/psx/eaclib.h"
 #include "eaclib/psx/globals.h"
 #include "eaclib/psx/pad.h"
@@ -19,6 +20,7 @@
 #include "game/common/cars.h"
 #include "game/common/copspeak.h"
 #include "game/common/dashhud.h"
+#include "game/common/frame.h"
 #include "game/common/gmesetup.h"
 #include "game/common/input.h"
 #include "game/common/mathnfs.h"
@@ -53,20 +55,36 @@ struct tSmallCoordXY
     sint16 y;
 };
 
+struct HudSprite
+{
+    RGBC rgbc;
+    POINT_T p[1];
+    sint16 w;
+    sint16 h;
+};
+
+struct HudQuad
+{
+    tSmallCoordXY p[4];
+    uint32 color[4];
+    uint32 texture[4];
+    uint8 code;
+};
+
 static char currentSpriteTransparent;
 static sint32 currentSpriteColor;
 static tSmallCoordXY *g1Player;
-static SPRT *gSprite0;
-static SPRT *gSprite1;
+static HudSprite *gSprite0;
+static HudSprite *gSprite1;
 static sint32 PerpOverlayOn[2];
 static sint32 PerpOverlayMessage[2];
-static uint32 day_needle[30] = { 0x000A09BA, 0x00F4F4F4, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x00039AE4, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x00080808, 0x000A09BA, 0x00F4F4F4, 0x0000A8B0, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x0000A8B0, 0x000A09BA, 0x00000000, 0x00000000, 0x00000000 };
-static uint32 night_needle[30] = { 0x000A09BA, 0x001180AF, 0x003F9AE4, 0x000A09BA, 0x000A09BA, 0x00039AE4, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x00080808, 0x003EB8F5, 0x00286828, 0x0000A8B0, 0x000A09BA, 0x000A09BA, 0x003EB8F5, 0x003F9AE4, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x003EB8F5, 0x0000A8B0, 0x000A09BA, 0x00000000, 0x00000000, 0x00000000 };
-static POLY_F4 gHudF4[14];
-static POLY_FT4 gHudFT4[10];
+static uint32 day_needle[30] = {0x000A09BA, 0x00F4F4F4, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x00039AE4, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x00080808, 0x000A09BA, 0x00F4F4F4, 0x0000A8B0, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x0000A8B0, 0x000A09BA, 0x00000000, 0x00000000, 0x00000000};
+static uint32 night_needle[30] = {0x000A09BA, 0x001180AF, 0x003F9AE4, 0x000A09BA, 0x000A09BA, 0x00039AE4, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x00080808, 0x003EB8F5, 0x00286828, 0x0000A8B0, 0x000A09BA, 0x000A09BA, 0x003EB8F5, 0x003F9AE4, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x000A09BA, 0x003EB8F5, 0x0000A8B0, 0x000A09BA, 0x00000000, 0x00000000, 0x00000000};
+static HudQuad gHudF4[14];
+static HudQuad gHudFT4[10];
 static DR_MODE gTPage0[2][4];
 static DR_MODE gTPage1[2][4];
-static POLY_G4 gHudG4[8];
+static HudQuad gHudG4[8];
 static sint32 HudSplitTimeDiff1[2];
 static sint32 HudSplitTimeDiff2[2];
 sint32 FinalBTC_Countdown;
@@ -80,13 +98,13 @@ sint32 gMapScaleY;
 sint32 gMapOffX;
 sint32 gMapOffY;
 sint32 HudBustedOverlay;
-float fMapScaleX[11] = { 39.5f, 50.0f, 44.0f, 43.5f, 39.5f, 52.5999985f, 43.4000015f, 33.5f, 35.5999985f, 29.7999992f, 38.0f };
-float fMapScaleY[11] = { 40.7999992f, 50.0f, 46.0999985f, 45.2999992f, 36.7000008f, 51.2000008f, 42.4000015f, 32.5f, 37.2999992f, 27.3999996f, 37.9000015f };
-sint16 fMapOffX[11] = { 7, 0, 16, 3, -88, 19, 2, -5, -3, 45, 4 };
-sint16 fMapOffY[11] = { 7, 0, -3, 2, -12, -7, 7, 4, 0, -32, -2 };
-sint16 fMapRotate[11] = { 4032, 0, 454, 2476, 3694, 3689, 3758, 3822, 1370, 3808, 32 };
-char HudminChar[6] = { 58, 58, 39, 39, 39, 46 };
-char HudsecChar[6] = { 46, 58, 34, 34, 34, 44 };
+float fMapScaleX[11] = {39.5f, 50.0f, 44.0f, 43.5f, 39.5f, 52.5999985f, 43.4000015f, 33.5f, 35.5999985f, 29.7999992f, 38.0f};
+float fMapScaleY[11] = {40.7999992f, 50.0f, 46.0999985f, 45.2999992f, 36.7000008f, 51.2000008f, 42.4000015f, 32.5f, 37.2999992f, 27.3999996f, 37.9000015f};
+sint16 fMapOffX[11] = {7, 0, 16, 3, -88, 19, 2, -5, -3, 45, 4};
+sint16 fMapOffY[11] = {7, 0, -3, 2, -12, -7, 7, 4, 0, -32, -2};
+sint16 fMapRotate[11] = {4032, 0, 454, 2476, 3694, 3689, 3758, 3822, 1370, 3808, 32};
+char HudminChar[6] = {58, 58, 39, 39, 39, 46};
+char HudsecChar[6] = {46, 58, 34, 34, 34, 44};
 sint32 Hud::gCdActive;
 sint32 Hud::ActivateCDPlayer;
 sint32 BTC::Countdown;
@@ -101,7 +119,7 @@ sint32 BTC::UserHasControl;
 sint32 Hud::gShowedCDPlayer;
 sint32 Hud::BeTheCop;
 sint32 Hud::kTurnSongOffNext;
-uint32 Hud::Character[5] = { 4347332, 4337928, 15776284, 7617052, 0 };
+uint32 Hud::Character[5] = {4347332, 4337928, 15776284, 7617052, 0};
 sint32 Hud::gHudView[2];
 sint32 Hud::gMapView[2];
 sint32 Hud::gTacView[2];
@@ -111,53 +129,230 @@ sint32 Hud::gWingmanFlashTicks[2];
 CVECTOR Hud::gMarkerColor[12];
 CVECTOR Hud::gCopMarkerColor[12];
 
-tSmallCoordXY Hud::gElementPositions[2][19] =
-{
+tSmallCoordXY Hud::gElementPositions[2][19] = {
     {
-        {22, 54},
-        {159, 19},
-        {8, 19},
-        {18, 35},
-        {8, 204},
-        {221, 24},
-        {23, -2},
-        {21, -2},
-        {23, -3},
-        {2, -4},
-        {7, 50},
-        {4, 18},
-        {-41, 0},
-        {90, 212},
-        {253, 162},
-        {8, 196},
-        {218, 20},
-        {160, 97},
-        {160, 97},
+        {22, 54}, {159, 19}, {8, 19}, {18, 35}, {8, 204}, {221, 24}, {23, -2}, {21, -2}, {23, -3}, {2, -4}, {7, 50}, {4, 18}, {-41, 0}, {90, 212}, {253, 162}, {8, 196}, {218, 20}, {160, 97}, {160, 97},
     },
     {
-        {22, 56},
-        {252, 17},
-        {8, 17},
-        {26, 30},
-        {8, 101},
-        {128, 18},
-        {23, -2},
-        {21, -2},
-        {23, -3},
-        {2, -1},
-        {7, 52},
-        {4, 18},
-        {-42, 0},
-        {90, 105},
-        {259, 60},
-        {8, 72},
-        {215, 22},
-        {160, 99},
-        {160, 42},
+        {22, 56}, {252, 17}, {8, 17}, {26, 30}, {8, 101}, {128, 18}, {23, -2}, {21, -2}, {23, -3}, {2, -1}, {7, 52}, {4, 18}, {-42, 0}, {90, 105}, {259, 60}, {8, 72}, {215, 22}, {160, 99}, {160, 42},
     },
 };
 
 char BTC::CurrentPerpName[10];
+uint32 hd_hud_sprite_deferred;
+uint32 hd_hud_quad_deferred;
+uint32 hd_hud_gt4_deferred;
+uint32 hd_hud_template_deferred;
+uint32 hd_hud_texture_template_deferred;
+uint32 hd_hud_sprite_template_deferred;
+
+static bool defer_hud_quad(Draw::PrimStruct *cprim, const uint32 position[4], const uint32 color[4], uint8 code, const uint32 texture[4] = 0)
+{
+    uint32 *marker = (uint32 *)cprim->PrimPtr;
+    if (!FramePresentation::DeferQuad(marker, position, color, code, texture))
+        return false;
+    *marker = getaddr(cprim->LastPrim);
+    setaddr(cprim->LastPrim, marker);
+    cprim->PrimPtr += texture != 0 ? ((code & 16) != 0 ? sizeof(POLY_GT4) : sizeof(POLY_FT4)) : ((code & 16) != 0 ? sizeof(POLY_G4) : sizeof(POLY_F4));
+    ++hd_hud_quad_deferred;
+    return true;
+}
+
+static void submit_hud_flat(const uint32 position[4], uint32 color, uint8 code)
+{
+    Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
+    uint32 *marker = (uint32 *)cprim->PrimPtr;
+    bool triangle = (code & 0xFC) == 0x20;
+    size_t bytes = triangle ? sizeof(POLY_F3) : sizeof(LINE_F2);
+    bool deferred = FramePresentation::DeferFlat(marker, position, color, code);
+    if (deferred)
+        *marker = 0;
+    else
+    {
+        marker[0] = triangle ? 0x04000000 : 0x03000000;
+        marker[1] = (color & 0xFFFFFF) | ((uint32)code << 24);
+        memcpy(marker + 2, position, triangle ? 12 : 8);
+    }
+    setaddr(marker, getaddr(cprim->LastPrim));
+    setaddr(cprim->LastPrim, marker);
+    cprim->PrimPtr += bytes;
+    if (!deferred)
+    {
+        if (triangle)
+            hd_ui_queue((POLY_F3 *)marker);
+        else
+            hd_ui_queue((LINE_F2 *)marker);
+    }
+}
+
+static void prepare_hud_quad(HudQuad *quad, sint32 trans, sint32 x, sint32 y, sint32 w, sint32 h, const uint32 colors[4], uint8 code)
+{
+    uint32 top = (uint32)y << 16;
+    uint32 right = x + (uint32)w;
+    uint32 bottom = (y + (uint32)h) << 16;
+    uint32 position[4] = {top | x, top | right, bottom | x, bottom | right};
+    memcpy(quad->p, position, sizeof(position));
+    memcpy(quad->color, colors, sizeof(quad->color));
+    memset(quad->texture, 0, sizeof(quad->texture));
+    quad->code = code | (trans != 0 ? 2 : 0);
+}
+
+static void prepare_hud_f4(HudQuad *quad, sint32 trans, sint32 x, sint32 y, sint32 w, sint32 h, uint32 color)
+{
+    uint32 colors[4] = {color, color, color, color};
+    prepare_hud_quad(quad, trans, x, y, w, h, colors, 0x28);
+}
+
+static void prepare_hud_g4(HudQuad *quad, sint32 trans, sint32 x, sint32 y, sint32 w, sint32 h, uint32 c1, uint32 c2, uint32 c3, uint32 c4)
+{
+    uint32 colors[4] = {c1, c2, c3, c4};
+    prepare_hud_quad(quad, trans, x, y, w, h, colors, 0x38);
+}
+
+static void prepare_hud_ft4(HudQuad *quad, const HudPmx::tShape *shape, sint32 x, sint32 y, uint32 color, sint32 trans, sint32 mirror)
+{
+    prepare_hud_f4(quad, trans, x, y, shape->width, shape->height, color);
+    quad->code = 0x2C | (trans != 0 ? 2 : 0);
+    memcpy(quad->texture, &shape->pixmap, sizeof(quad->texture));
+    if (mirror != 0)
+        for (sint32 i = 0; i < 4; i += 2)
+        {
+            tSmallCoordXY point = quad->p[i];
+            quad->p[i] = quad->p[i + 1];
+            quad->p[i + 1] = point;
+        }
+    if (mirror == 1)
+        for (sint32 i = 1; i < 4; i += 2)
+            quad->texture[i] = (quad->texture[i] & 0xFFFFFF00) | (uint8)(quad->texture[i] - 1);
+    if (mirror == 2)
+        for (sint32 i = 0; i < 4; ++i)
+            quad->p[i].x = (sint16)((uint16)quad->p[i].x - 3);
+}
+
+static void submit_hud_quad(uint32 *ot, const HudQuad *source)
+{
+    Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
+    uint32 position[4];
+    memcpy(position, source->p, sizeof(position));
+    uint32 *marker = (uint32 *)cprim->PrimPtr;
+    bool textured = (source->code & 4) != 0;
+    if (FramePresentation::DeferQuad(marker, position, source->color, source->code, textured ? source->texture : 0))
+    {
+        *marker = getaddr(ot);
+        setaddr(ot, marker);
+        cprim->PrimPtr += textured ? sizeof(POLY_FT4) : ((source->code & 16) != 0 ? sizeof(POLY_G4) : sizeof(POLY_F4));
+        ++hd_hud_template_deferred;
+        if (textured)
+            ++hd_hud_texture_template_deferred;
+        return;
+    }
+    if (textured)
+    {
+        POLY_FT4 *quad = (POLY_FT4 *)marker;
+        setlen(quad, 9);
+        memcpy(&quad->rgbc, source->color, sizeof(source->color[0]));
+        for (sint32 i = 0; i < 4; ++i)
+        {
+            memcpy(&quad->p[i].xy, position + i, sizeof(position[i]));
+            memcpy(&quad->p[i].uv, source->texture + i, sizeof(source->texture[i]));
+        }
+        setcode(quad, source->code);
+        setaddr(quad, getaddr(ot));
+        setaddr(ot, quad);
+        cprim->PrimPtr += sizeof(*quad);
+        hd_ui_queue(quad);
+    }
+    else if ((source->code & 16) != 0)
+    {
+        POLY_G4 *quad = (POLY_G4 *)marker;
+        setlen(quad, 8);
+        for (sint32 i = 0; i < 4; ++i)
+        {
+            memcpy(&quad->p[i].xy, position + i, sizeof(position[i]));
+            memcpy(&quad->p[i].rgbc, source->color + i, sizeof(source->color[i]));
+        }
+        setcode(quad, source->code);
+        setaddr(quad, getaddr(ot));
+        setaddr(ot, quad);
+        cprim->PrimPtr += sizeof(*quad);
+        hd_ui_queue(quad);
+    }
+    else
+    {
+        POLY_F4 *quad = (POLY_F4 *)marker;
+        setlen(quad, 5);
+        memcpy(quad->p, position, sizeof(position));
+        memcpy(&quad->rgbc, source->color, sizeof(source->color[0]));
+        setcode(quad, source->code);
+        setaddr(quad, getaddr(ot));
+        setaddr(ot, quad);
+        cprim->PrimPtr += sizeof(*quad);
+        hd_ui_queue(quad);
+    }
+}
+
+static void HudAddPrim(uint32 *ot, const HudQuad *primitive)
+{
+    submit_hud_quad(ot, primitive);
+}
+
+static void submit_hud_sprite(uint32 *ot, const HudSprite *source)
+{
+    Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
+    uint32 position;
+    uint32 color;
+    uint32 size;
+    memcpy(&position, &source->p[0].xy, sizeof(position));
+    memcpy(&color, &source->rgbc, sizeof(color));
+    memcpy(&size, &source->w, sizeof(size));
+    uint32 *marker = (uint32 *)cprim->PrimPtr;
+    if (FramePresentation::DeferGlyph(marker, position, source->p[0].uv_attr, color, size))
+    {
+        *marker = getaddr(ot);
+        setaddr(ot, marker);
+        cprim->PrimPtr += sizeof(SPRT);
+        ++hd_hud_sprite_template_deferred;
+        return;
+    }
+    SPRT *sprite = (SPRT *)marker;
+    setlen(sprite, 4);
+    sprite->rgbc = source->rgbc;
+    sprite->p[0] = source->p[0];
+    sprite->w = source->w;
+    sprite->h = source->h;
+    addPrim(ot, sprite);
+    cprim->PrimPtr += sizeof(*sprite);
+    hd_ui_queue(sprite);
+}
+
+static void HudAddPrim(uint32 *ot, const HudSprite *primitive)
+{
+    submit_hud_sprite(ot, primitive);
+}
+
+static void HudAddPrim(uint32 *ot, POLY_FT4 *primitive)
+{
+    addPrim(ot, primitive);
+    hd_ui_queue(primitive);
+}
+
+static void HudAddPrim(uint32 *ot, POLY_F4 *primitive)
+{
+    addPrim(ot, primitive);
+    hd_ui_queue(primitive);
+}
+
+static void HudAddPrim(uint32 *ot, POLY_G4 *primitive)
+{
+    addPrim(ot, primitive);
+    hd_ui_queue(primitive);
+}
+
+static void HudAddPrim(uint32 *ot, DR_MODE *primitive)
+{
+    addPrim(ot, primitive);
+    hd_ui_queue(primitive);
+}
 
 void Hud::CreateHudViews(void)
 {
@@ -204,13 +399,16 @@ void Hud::GoTpage(sint32 page)
     setaddr(prim, getaddr(ot));
     cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
     setaddr(ot, prim);
+    hd_ui_queue(prim);
     uint32 tpage = ((((uint32)page << 6) + 128) & 1023U) >> 6;
     SetDrawMode(prim, 0, 0, tpage, 0);
 }
 
+#if 0
 void Hud::DebugInfo(void)
 {
     FUNCTION_MARKER(0x800D1DFC, "NFS4.EXE");
+    HdUiLayout layout(HdUiLayout::Right);
     char string[20];
     sprintf(string, "SLC %d", Cars::gList[0]->N.simRoadInfo.slice);
     Font::TextXY(string, 230, 45);
@@ -222,10 +420,11 @@ void Hud::DebugInfo(void)
     Font::TextXY(string, 230, 35);
     width = textpixels(string);
     FBuildF4(1, 230, 38, (width + 5), 10, 0x50505, 0, 0);
-#if 0
+    #if 0
     CopSpeak::ShowQueue();
-#endif
+    #endif
 }
+#endif
 
 static void uppercase(char *string)
 {
@@ -244,12 +443,20 @@ void Hud::DebugCrap(void)
     FUNCTION_MARKER(0x800D1F90, "NFS4.EXE");
 }
 
-void Hud::BuildSprite(SPRT *sprt, sint32 shapeIdx, sint32 x, sint32 y, uint32 color, sint32 trans)
+static void prepare_hud_sprite_header(SPRT *sprite)
 {
-    FUNCTION_MARKER(0x800D1F98, "NFS4.EXE");
+    setlen(sprite, 4);
+}
+
+static void prepare_hud_sprite_header(HudSprite *)
+{
+}
+
+template <class Sprite>
+static void prepare_hud_sprite(Sprite *sprt, sint32 shapeIdx, sint32 x, sint32 y, uint32 color, sint32 trans)
+{
     HudPmx::tShape *shape = &HudPmx::gShapes[shapeIdx];
-    SetSemiTrans(sprt, trans);
-    setlen(sprt, 4);
+    prepare_hud_sprite_header(sprt);
     uint32 rgbc = color | 0x66000000U;
     uint32 xy = ((uint32)y << 16) | x;
     memcpy(&sprt->rgbc, &rgbc, sizeof(rgbc));
@@ -261,32 +468,20 @@ void Hud::BuildSprite(SPRT *sprt, sint32 shapeIdx, sint32 x, sint32 y, uint32 co
     memcpy(&sprt->w, &wh, sizeof(wh));
 }
 
-void Hud::BuildSprite2(SPRT *sprt, sint32 shapeIdx, sint32 x, sint32 y)
+template <class Sprite>
+static void prepare_hud_sprite2(Sprite *sprt, sint32 shapeIdx, sint32 x, sint32 y)
 {
-    FUNCTION_MARKER(0x800D2044, "NFS4.EXE");
     uint32 color = currentSpriteColor;
     sint32 trans = (uint8)currentSpriteTransparent;
-    BuildSprite(sprt, shapeIdx, x, y, color, trans);
+    prepare_hud_sprite(sprt, shapeIdx, x, y, color, trans);
 }
 
-void Hud::FBuildSprite(sint32 shapeIdx, sint32 x, sint32 y, uint32 color, sint32 trans)
+template <class Sprite>
+static void prepare_hud_font_sprite(Sprite *sprt, char ch, sint32 x, sint32 y)
 {
-    FUNCTION_MARKER(0x800D2070, "NFS4.EXE");
-    Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
-    SPRT *prim = reinterpret_cast<SPRT *>(cprim->PrimPtr);
-    uint32 *ot = cprim->LastPrim;
-    setaddr(prim, getaddr(ot));
-    cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
-    setaddr(ot, prim);
-    BuildSprite(prim, shapeIdx, x, y, color, trans);
-}
-
-void Hud::BuildSpriteFromFont(SPRT *sprt, char ch, sint32 x, sint32 y)
-{
-    FUNCTION_MARKER(0x800D2104, "NFS4.EXE");
     sint32 u, v, w, h, yo;
     Font::GetUVWH(ch, &u, &v, &w, &h, &yo);
-    setlen(sprt, 4);
+    prepare_hud_sprite_header(sprt);
     uint32 rgbc = currentSpriteColor | 0x66000000U;
     memcpy(&sprt->rgbc, &rgbc, sizeof(rgbc));
     uint32 xy = ((y + (uint32)yo) << 16) | x;
@@ -297,6 +492,125 @@ void Hud::BuildSpriteFromFont(SPRT *sprt, char ch, sint32 x, sint32 y)
     sprt->p[0].attr = clut;
     sprt->w = ((uint16)w);
     sprt->h = ((uint16)h);
+}
+
+template <class Sprite>
+static void prepare_hud_time_sprites(Sprite *sprt, const char *str, sint32 x, sint32 y)
+{
+    char minSep[6] = {58, 58, 39, 39, 39, 46};
+    char secSep[6] = {46, 58, 34, 34, 34, 44};
+    sint32 language = GameSetup::gData.userSetting.language;
+    uint8 langMin = (uint8)minSep[language];
+    uint8 langSec = (uint8)secSep[language];
+    for (sint32 c = (uint8)*str; c != 0; c = (uint8)*str)
+    {
+        if (c == 'M')
+            c = langMin;
+        if (c == 'S')
+            c = langSec;
+        charactertbl *ch = Font::Getcharacter(c);
+        sint32 w = (sint8)ch->advance + 1;
+        prepare_hud_font_sprite(sprt, (char)c, x, y);
+        ++sprt;
+        ++str;
+        x = (x + w);
+    }
+}
+
+template <class Sprite>
+static void prepare_hud_elapsed(Sprite *sprt, sint32 time)
+{
+    if (time < 0)
+        time = 0;
+    sint32 temp1 = time / 64;
+    sint32 min = (temp1 / 60) % 60;
+    sint32 sec = temp1 % 60;
+    sint32 hun = ((time % 64) * 100) / 64;
+    memcpy(&sprt[0].p[0].uv, &HudPmx::gHudNumberUV[min / 10], 4);
+    memcpy(&sprt[1].p[0].uv, &HudPmx::gHudNumberUV[min % 10], 4);
+    memcpy(&sprt[3].p[0].uv, &HudPmx::gHudNumberUV[sec / 10], 4);
+    memcpy(&sprt[4].p[0].uv, &HudPmx::gHudNumberUV[sec % 10], 4);
+    memcpy(&sprt[6].p[0].uv, &HudPmx::gHudNumberUV[hun / 10], 4);
+    memcpy(&sprt[7].p[0].uv, &HudPmx::gHudNumberUV[hun % 10], 4);
+}
+
+template <class Sprite>
+static bool prepare_hud_distance(Sprite *sprt, sint32 player)
+{
+    sint32 slices = Cars::gHumanRaceCarList[player]->stats.checkpointUpdate;
+    sint32 dist = (slices * 6);
+    if (dist < 0)
+        dist = (-dist);
+    if (GameSetup::gData.checkpointHUD[player] == 2)
+        dist = (dist * 1000) / 1607;
+    if (dist >= 10000)
+        return false;
+    memcpy(&sprt[0].p[0].uv, &HudPmx::gHudNumberUV[dist / 1000], 4);
+    memcpy(&sprt[2].p[0].uv, &HudPmx::gHudNumberUV[(dist % 1000) / 100], 4);
+    memcpy(&sprt[3].p[0].uv, &HudPmx::gHudNumberUV[(dist % 100) / 10], 4);
+    memcpy(&sprt[4].p[0].uv, &HudPmx::gHudNumberUV[dist % 10], 4);
+    return true;
+}
+
+template <class Sprite>
+static void prepare_hud_time(Sprite *sprt, sint32 time)
+{
+    if (time < 0)
+        time = (-time);
+    sint32 temp1 = time / 64;
+    sint32 min = temp1 / 60;
+    sint32 sec = temp1 % 60;
+    sint32 hun = ((time % 64) * 100) / 64;
+    memcpy(&sprt[0].p[0].uv, &HudPmx::gHudNumberUV[min % 10], 4);
+    memcpy(&sprt[2].p[0].uv, &HudPmx::gHudNumberUV[sec / 10], 4);
+    memcpy(&sprt[3].p[0].uv, &HudPmx::gHudNumberUV[sec % 10], 4);
+    memcpy(&sprt[5].p[0].uv, &HudPmx::gHudNumberUV[hun / 10], 4);
+    memcpy(&sprt[6].p[0].uv, &HudPmx::gHudNumberUV[hun % 10], 4);
+}
+
+void Hud::BuildSprite(SPRT *sprt, sint32 shapeIdx, sint32 x, sint32 y, uint32 color, sint32 trans)
+{
+    FUNCTION_MARKER(0x800D1F98, "NFS4.EXE");
+    prepare_hud_sprite(sprt, shapeIdx, x, y, color, trans);
+}
+
+void Hud::BuildSprite2(SPRT *sprt, sint32 shapeIdx, sint32 x, sint32 y)
+{
+    FUNCTION_MARKER(0x800D2044, "NFS4.EXE");
+    prepare_hud_sprite2(sprt, shapeIdx, x, y);
+}
+
+void Hud::FBuildSprite(sint32 shapeIdx, sint32 x, sint32 y, uint32 color, sint32 trans)
+{
+    FUNCTION_MARKER(0x800D2070, "NFS4.EXE");
+    Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
+    const HudPmx::tShape *shape = &HudPmx::gShapes[shapeIdx];
+    uint32 texture;
+    memcpy(&texture, &shape->pixmap.u0, sizeof(texture));
+    uint32 position = ((uint32)y << 16) | x;
+    uint32 size = ((uint32)shape->height << 16) | (sint32)shape->width;
+    uint32 *marker = (uint32 *)cprim->PrimPtr;
+    if (FramePresentation::DeferGlyph(marker, position, texture, color | 0x66000000, size))
+    {
+        *marker = getaddr(cprim->LastPrim);
+        setaddr(cprim->LastPrim, marker);
+        cprim->PrimPtr += sizeof(SPRT);
+        ++hd_hud_sprite_deferred;
+        return;
+    }
+    SPRT *prim = reinterpret_cast<SPRT *>(cprim->PrimPtr);
+    uint32 *ot = cprim->LastPrim;
+    setaddr(prim, getaddr(ot));
+    cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
+    setaddr(ot, prim);
+    hd_ui_queue(prim);
+    BuildSprite(prim, shapeIdx, x, y, color, trans);
+}
+
+void Hud::BuildSpriteFromFont(SPRT *sprt, char ch, sint32 x, sint32 y)
+{
+    FUNCTION_MARKER(0x800D2104, "NFS4.EXE");
+    prepare_hud_font_sprite(sprt, ch, x, y);
 }
 
 void Hud::BuildF3(POLY_F3 *prim, HudPmx::tShape *shape, sint32 x, sint32 y, uint32 color)
@@ -519,36 +833,62 @@ void Hud::BuildF4o(POLY_F4 *prim, sint32 trans, sint32 x, sint32 y, sint32 w, si
     memcpy(&prim->p[3], &xy3, sizeof(xy3));
 }
 
-void Hud::FBuildGT4(HudPmx::tShape *shape, sint32 x, sint32 y, uint32 col1)
+static void submit_hud_gt4(HudPmx::tShape *shape, sint32 x, sint32 y, uint32 topColor, uint32 bottomColor)
 {
-    FUNCTION_MARKER(0x800D2868, "NFS4.EXE");
     Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
+    uint32 right = x + (uint32)(sint32)shape->width;
+    uint32 top = (uint32)y << 16;
+    uint32 bottom = (y + (uint32)(sint32)shape->height) << 16;
+    uint32 position[4] = {top | x, top | right, bottom | x, bottom | right};
+    uint32 colors[4] = {topColor, topColor, bottomColor, bottomColor};
+    uint32 texture[4];
+    memcpy(texture, &shape->pixmap, sizeof(texture));
+    if (defer_hud_quad(cprim, position, colors, (uint8)(topColor >> 24) | 0x3E, texture))
+    {
+        ++hd_hud_gt4_deferred;
+        return;
+    }
     POLY_GT4 *prim = reinterpret_cast<POLY_GT4 *>(cprim->PrimPtr);
     uint32 *ot = cprim->LastPrim;
     setaddr(prim, getaddr(ot));
     cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
     setaddr(ot, prim);
-    BuildGT4(prim, shape, x, y, col1);
+    hd_ui_queue(prim);
+    Hud::BuildGT4(prim, shape, x, y, topColor);
+    memcpy(&prim->p[3].rgbc, &bottomColor, sizeof(bottomColor));
+    memcpy(&prim->p[2].rgbc, &bottomColor, sizeof(bottomColor));
+}
+
+void Hud::FBuildGT4(HudPmx::tShape *shape, sint32 x, sint32 y, uint32 col1)
+{
+    FUNCTION_MARKER(0x800D2868, "NFS4.EXE");
+    submit_hud_gt4(shape, x, y, col1, col1);
 }
 
 static void BuildSpeedDigit(sint32 digit, sint32 x, sint32 y)
 {
-    POLY_GT4 *prim = reinterpret_cast<POLY_GT4 *>(DrawC::carCache.head.cprim.PrimPtr);
-    Hud::FBuildGT4(&HudPmx::gShapes[44 + digit], x, y, 0xC8C8C8);
-    const uint32 color2 = 0x505050;
-    memcpy(&prim->p[3].rgbc, &color2, sizeof(color2));
-    memcpy(&prim->p[2].rgbc, &color2, sizeof(color2));
+    submit_hud_gt4(&HudPmx::gShapes[44 + digit], x, y, 0xC8C8C8, 0x505050);
 }
 
 void Hud::FBuildFT4(HudPmx::tShape *shape, sint32 x, sint32 y, uint32 col1)
 {
     FUNCTION_MARKER(0x800D28F4, "NFS4.EXE");
     Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
+    uint32 right = x + (uint32)(sint32)shape->width;
+    uint32 top = (uint32)y << 16;
+    uint32 bottom = (y + (uint32)(sint32)shape->height) << 16;
+    uint32 position[4] = {top | x, top | right, bottom | x, bottom | right};
+    uint32 colors[4] = {col1, col1, col1, col1};
+    uint32 texture[4];
+    memcpy(texture, &shape->pixmap, sizeof(texture));
+    if (defer_hud_quad(cprim, position, colors, 0x2C, texture))
+        return;
     POLY_FT4 *prim = reinterpret_cast<POLY_FT4 *>(cprim->PrimPtr);
     uint32 *ot = cprim->LastPrim;
     setaddr(prim, getaddr(ot));
     cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
     setaddr(ot, prim);
+    hd_ui_queue(prim);
     BuildFT4(prim, shape, x, y, col1, 0);
 }
 
@@ -556,11 +896,19 @@ void Hud::FBuildF4(sint32 transparent, sint32 x, sint32 y, sint32 w, sint32 h, u
 {
     FUNCTION_MARKER(0x800D2984, "NFS4.EXE");
     Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
+    uint32 top = (uint32)y << 16;
+    uint32 right = x + (uint32)w;
+    uint32 bottom = (y + (uint32)h) << 16;
+    uint32 position[4] = {top | (x + (uint32)(sint32)(sint8)x0off), top | (right + (sint8)x1off), bottom | x, bottom | right};
+    uint32 colors[4] = {col1, col1, col1, col1};
+    if (defer_hud_quad(cprim, position, colors, transparent != 0 ? 0x2A : 0x28))
+        return;
     POLY_F4 *prim = reinterpret_cast<POLY_F4 *>(cprim->PrimPtr);
     uint32 *ot = cprim->LastPrim;
     setaddr(prim, getaddr(ot));
     cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
     setaddr(ot, prim);
+    hd_ui_queue(prim);
     BuildF4o(prim, transparent, x, y, w, h, col1, (sint8)x0off, (sint8)x1off);
 }
 
@@ -570,7 +918,7 @@ void Hud::Kill(void)
     HudPmx::ReleaseFont();
     if (gSprite0 != 0)
         purgememadr(gSprite0);
-    SPRT *sprite1 = gSprite1;
+    HudSprite *sprite1 = gSprite1;
     gSprite0 = 0;
     if (sprite1 != 0)
         purgememadr(sprite1);
@@ -580,17 +928,17 @@ void Hud::Kill(void)
 void Hud::Init0(void)
 {
     FUNCTION_MARKER(0x800D2AF4, "NFS4.EXE");
-    gSprite0 = static_cast<SPRT *>(reservememadr("HUD1", 0x80C, 0));
+    gSprite0 = static_cast<HudSprite *>(reservememadr("HUD1", sizeof(HudSprite) * 103, 0));
     if (GameSetup::gData.commMode == 1)
-        gSprite1 = static_cast<SPRT *>(reservememadr("HUD2", 0x80C, 0));
+        gSprite1 = static_cast<HudSprite *>(reservememadr("HUD2", sizeof(HudSprite) * 103, 0));
 }
 
 void Hud::InitMapFrame(sint32 i, sint32 mode)
 {
     FUNCTION_MARKER(0x800D2B4C, "NFS4.EXE");
-    SPRT *gSprt1 = i == 0 ? gSprite0 : gSprite1;
-    POLY_F4 *HudF4 = i == 0 ? gHudF4 : gHudF4 + 7;
-    POLY_FT4 *HudFT4 = i == 0 ? gHudFT4 : gHudFT4 + 5;
+    HudSprite *gSprt1 = i == 0 ? gSprite0 : gSprite1;
+    HudQuad *HudF4 = i == 0 ? gHudF4 : gHudF4 + 7;
+    HudQuad *HudFT4 = i == 0 ? gHudFT4 : gHudFT4 + 5;
     sint32 splitY = i == 0 ? 0 : -13;
     sint32 h1 = HudPmx::gShapes[14].height;
     sint32 w1 = HudPmx::gShapes[14].width;
@@ -604,61 +952,44 @@ void Hud::InitMapFrame(sint32 i, sint32 mode)
     currentSpriteColor = 0xFF5721;
     currentSpriteTransparent = 0;
     uint32 y = g1Player[14].y + (uint32)HudMapOffsetY;
-    BuildSprite2(gSprt1 + 63, 14, lx, (sint32)(y + splitY));
+    prepare_hud_sprite2(gSprt1 + 63, 14, lx, (sint32)(y + splitY));
     y = g1Player[14].y + (uint32)HudMapOffsetY;
-    BuildSprite2(gSprt1 + 64, 15, g1Player[14].x + w1 + w2, (sint32)(y + splitY));
+    prepare_hud_sprite2(gSprt1 + 64, 15, g1Player[14].x + w1 + w2, (sint32)(y + splitY));
     y = g1Player[14].y + (uint32)HudMapOffsetY;
-    BuildSprite2(gSprt1 + 65, 16, lx, (sint32)(y + h1 + h2 + (uint32)splitY));
+    prepare_hud_sprite2(gSprt1 + 65, 16, lx, (sint32)(y + h1 + h2 + (uint32)splitY));
     y = g1Player[14].y + (uint32)HudMapOffsetY;
-    BuildSprite2(gSprt1 + 66, 17, g1Player[14].x + w1 + w2, (sint32)(y + h1 + h2 + (uint32)splitY));
+    prepare_hud_sprite2(gSprt1 + 66, 17, g1Player[14].x + w1 + w2, (sint32)(y + h1 + h2 + (uint32)splitY));
     sint32 shapeIdx = (mode + 20);
     sint32 middleX = lx + w1;
     y = g1Player[14].y + (uint32)HudMapOffsetY;
-    BuildSprite2(gSprt1 + 67, shapeIdx, middleX, (sint32)(y + splitY));
+    prepare_hud_sprite2(gSprt1 + 67, shapeIdx, middleX, (sint32)(y + splitY));
     y = g1Player[14].y + (uint32)HudMapOffsetY;
-    BuildSprite2(gSprt1 + 68, shapeIdx, middleX, (sint32)(y + h1 + h2 + (uint32)h3 + (uint32)splitY));
+    prepare_hud_sprite2(gSprt1 + 68, shapeIdx, middleX, (sint32)(y + h1 + h2 + (uint32)h3 + (uint32)splitY));
     y = g1Player[14].y + (uint32)HudMapOffsetY;
-    BuildSprite2(gSprt1 + 69, 24, lx, (sint32)(y + h1 + splitY));
+    prepare_hud_sprite2(gSprt1 + 69, 24, lx, (sint32)(y + h1 + splitY));
     y = g1Player[14].y + (uint32)HudMapOffsetY;
-    BuildSprite2(gSprt1 + 70, 24, g1Player[14].x + w1 + w2 + w3, (sint32)(y + h1 + splitY));
-    BuildF4(HudF4 + 4, 1, 0, 0, 45, 48, 0);
+    prepare_hud_sprite2(gSprt1 + 70, 24, g1Player[14].x + w1 + w2 + w3, (sint32)(y + h1 + splitY));
+    prepare_hud_f4(HudF4 + 4, 1, 0, 0, 45, 48, 0);
     if (GameSetup::gData.mirrorTrack == 0)
-        BuildFT4(HudFT4, &HudPmx::gShapes[120], 0, 0, 0x808080, 1);
+        prepare_hud_ft4(HudFT4, &HudPmx::gShapes[120], 0, 0, 0x808080, 1, 0);
     else
-        BuildMapMirrorFT4(HudFT4, &HudPmx::gShapes[120], 0, 0, 0x808080, 1);
-    BuildFT4(HudFT4 + 1, &HudPmx::gShapes[112], 0, 0, 0x808080, 1);
-    BuildMirrorFT4(HudFT4 + 2, &HudPmx::gShapes[112], HudPmx::gShapes[112].width, 0, 0x808080, 1);
-    BuildFT4(HudFT4 + 3, &HudPmx::gShapes[113], 0, 0, 0x808080, 1);
-    BuildMirrorFT4(HudFT4 + 4, &HudPmx::gShapes[113], HudPmx::gShapes[113].width, 0, 0x808080, 1);
+        prepare_hud_ft4(HudFT4, &HudPmx::gShapes[120], 0, 0, 0x808080, 1, 2);
+    prepare_hud_ft4(HudFT4 + 1, &HudPmx::gShapes[112], 0, 0, 0x808080, 1, 0);
+    prepare_hud_ft4(HudFT4 + 2, &HudPmx::gShapes[112], HudPmx::gShapes[112].width, 0, 0x808080, 1, 1);
+    prepare_hud_ft4(HudFT4 + 3, &HudPmx::gShapes[113], 0, 0, 0x808080, 1, 0);
+    prepare_hud_ft4(HudFT4 + 4, &HudPmx::gShapes[113], HudPmx::gShapes[113].width, 0, 0x808080, 1, 1);
 }
 
 void Hud::BuildTimeSprites(SPRT *sprt, const char *str, sint32 x, sint32 y)
 {
     FUNCTION_MARKER(0x800D2EF8, "NFS4.EXE");
-    char minSep[6] = { 58, 58, 39, 39, 39, 46 };
-    char secSep[6] = { 46, 58, 34, 34, 34, 44 };
-    sint32 language = GameSetup::gData.userSetting.language;
-    uint8 langMin = (uint8)minSep[language];
-    uint8 langSec = (uint8)secSep[language];
-    for (sint32 c = (uint8)*str; c != 0; c = (uint8)*str)
-    {
-        if (c == 'M')
-            c = langMin;
-        if (c == 'S')
-            c = langSec;
-        charactertbl *ch = Font::Getcharacter(c);
-        sint32 w = (sint8)ch->advance + 1;
-        BuildSpriteFromFont(sprt, (char)c, x, y);
-        ++sprt;
-        ++str;
-        x = (x + w);
-    }
+    prepare_hud_time_sprites(sprt, str, x, y);
 }
 
 void Hud::Init(void)
 {
     FUNCTION_MARKER(0x800D302C, "NFS4.EXE");
-    if (!gpu_register_packet_range(gTPage0, sizeof(gTPage0)) || !gpu_register_packet_range(gTPage1, sizeof(gTPage1)) || !gpu_register_packet_range(gHudG4, sizeof(gHudG4)) || !gpu_register_packet_range(gHudF4, sizeof(gHudF4)) || !gpu_register_packet_range(gHudFT4, sizeof(gHudFT4)))
+    if (!gpu_register_packet_range(gTPage0, sizeof(gTPage0)) || !gpu_register_packet_range(gTPage1, sizeof(gTPage1)))
         abort();
     for (sint32 i = 0; i < 2; ++i)
     {
@@ -670,49 +1001,49 @@ void Hud::Init(void)
     }
     for (sint32 i = 0; i <= DashHUD::gInfo.splitscreen; ++i)
     {
-        SPRT *gSprt1 = i == 0 ? gSprite0 : gSprite1;
-        POLY_F4 *HudF4 = i == 0 ? gHudF4 : gHudF4 + 7;
-        POLY_G4 *HudG4 = i == 0 ? gHudG4 : gHudG4 + 4;
+        HudSprite *gSprt1 = i == 0 ? gSprite0 : gSprite1;
+        HudQuad *HudF4 = i == 0 ? gHudF4 : gHudF4 + 7;
+        HudQuad *HudG4 = i == 0 ? gHudG4 : gHudG4 + 4;
         sint32 splitY = i == 0 ? 0 : -15;
         GameSetup::tCarData *carInfo = &GameSetup::gData.carInfo[i];
         sint32 timelapshift = carInfo->HudTime == 0 ? 16 : 0;
         if (carInfo->HudLapnum == 0)
             timelapshift += 16;
-        BuildSprite(gSprt1, 104, g1Player[0].x, g1Player[0].y + splitY - timelapshift, 0xBEBE, 0);
+        prepare_hud_sprite(gSprt1, 104, g1Player[0].x, g1Player[0].y + splitY - timelapshift, 0xBEBE, 0);
         currentSpriteColor = 0x808080;
-        BuildSprite2(gSprt1 + 1, 128, g1Player[1].x, g1Player[1].y + splitY);
-        BuildSprite2(gSprt1 + 2, i == 0 ? 129 : 131, 0, 0);
+        prepare_hud_sprite2(gSprt1 + 1, 128, g1Player[1].x, g1Player[1].y + splitY);
+        prepare_hud_sprite2(gSprt1 + 2, i == 0 ? 129 : 131, 0, 0);
         gSprt1[2].w = 28;
         gSprt1[2].h = 28;
         sint32 w1 = HudPmx::gShapes[107].width;
         sint32 w2 = BeTheCop == 0 ? 70 : 46;
         sint32 x = g1Player[2].x;
         sint32 y = g1Player[2].y + splitY;
-        BuildSprite2(gSprt1 + 4, 105, x, y);
+        prepare_hud_sprite2(gSprt1 + 4, 105, x, y);
         x += w1;
-        BuildG4(HudG4, 1, x, y, w2, 10, 0, 0x707070, 0, 0x707070);
+        prepare_hud_g4(HudG4, 1, x, y, w2, 10, 0, 0x707070, 0, 0x707070);
         x += w2;
-        BuildSprite2(gSprt1 + 5, 125, x, y);
-        BuildF4(HudF4, 1, x, y + 7, 7, 3, 0x707070);
+        prepare_hud_sprite2(gSprt1 + 5, 125, x, y);
+        prepare_hud_f4(HudF4, 1, x, y + 7, 7, 3, 0x707070);
         w1 = HudPmx::gShapes[107].width;
         x = g1Player[3].x;
         timelapshift = carInfo->HudTime == 0 ? 16 : 0;
         y = g1Player[3].y + splitY - timelapshift;
-        BuildSprite2(gSprt1 + 6, 107, x, y);
+        prepare_hud_sprite2(gSprt1 + 6, 107, x, y);
         x += w1;
-        BuildG4(HudG4 + 1, 1, x, y, 29, 10, 0, 0x707070, 0, 0x707070);
+        prepare_hud_g4(HudG4 + 1, 1, x, y, 29, 10, 0, 0x707070, 0, 0x707070);
         x += 29;
-        BuildF4(HudF4 + 1, 1, x, y + 7, 7, 3, 0x707070);
-        BuildSprite2(gSprt1 + 7, 125, x, y);
+        prepare_hud_f4(HudF4 + 1, 1, x, y + 7, 7, 3, 0x707070);
+        prepare_hud_sprite2(gSprt1 + 7, 125, x, y);
         w1 = HudPmx::gShapes[107].width;
         x = g1Player[4].x;
         y = g1Player[4].y + splitY;
-        BuildSprite2(gSprt1 + 8, 105, x, y);
+        prepare_hud_sprite2(gSprt1 + 8, 105, x, y);
         x += w1;
-        BuildG4(HudG4 + 3, 1, x, y, 60, 10, 0, 0x707070, 0, 0x707070);
+        prepare_hud_g4(HudG4 + 3, 1, x, y, 60, 10, 0, 0x707070, 0, 0x707070);
         x += 60;
-        BuildF4(HudF4 + 2, 1, x, y + 7, 7, 3, 0x707070);
-        BuildSprite2(gSprt1 + 9, 125, x, y);
+        prepare_hud_f4(HudF4 + 2, 1, x, y + 7, 7, 3, 0x707070);
+        prepare_hud_sprite2(gSprt1 + 9, 125, x, y);
         w1 = HudPmx::gShapes[118].width;
         w2 = 38;
         if (BeTheCop == 0)
@@ -725,17 +1056,17 @@ void Hud::Init(void)
             y = g1Player[5].y + splitY;
         else
             y = g1Player[2].y + splitY + 14;
-        BuildSprite2(gSprt1 + 10, 118, x, y);
+        prepare_hud_sprite2(gSprt1 + 10, 118, x, y);
         x += w1;
-        BuildG4(HudG4 + 2, 1, x, y, w2, 10, 0, 0x707070, 0, 0x707070);
+        prepare_hud_g4(HudG4 + 2, 1, x, y, w2, 10, 0, 0x707070, 0, 0x707070);
         x += w2;
-        BuildF4(HudF4 + 3, 1, x, y + 7, 7, 3, 0x707070);
-        BuildSprite(gSprt1 + 11, 125, x, y, 0x808080, 0);
+        prepare_hud_f4(HudF4 + 3, 1, x, y + 7, 7, 3, 0x707070);
+        prepare_hud_sprite(gSprt1 + 11, 125, x, y, 0x808080, 0);
         currentSpriteColor = 0xA0A0A0;
-        BuildTimeSprites(gSprt1 + 12, "00M00S00", g1Player[2].x + g1Player[6].x, g1Player[2].y + splitY + g1Player[6].y);
-        BuildTimeSprites(gSprt1 + 20, "0/0", g1Player[3].x + g1Player[7].x, g1Player[3].y + g1Player[7].y + splitY - timelapshift);
+        prepare_hud_time_sprites(gSprt1 + 12, "00M00S00", g1Player[2].x + g1Player[6].x, g1Player[2].y + splitY + g1Player[6].y);
+        prepare_hud_time_sprites(gSprt1 + 20, "0/0", g1Player[3].x + g1Player[7].x, g1Player[3].y + g1Player[7].y + splitY - timelapshift);
         currentSpriteColor = 0xA0A0A0;
-        BuildTimeSprites(gSprt1 + 23, "0M00S00", g1Player[4].x + g1Player[8].x, g1Player[4].y + g1Player[8].y + splitY + 1);
+        prepare_hud_time_sprites(gSprt1 + 23, "0M00S00", g1Player[4].x + g1Player[8].x, g1Player[4].y + g1Player[8].y + splitY + 1);
         if (BeTheCop == 0)
             x = g1Player[5].x + g1Player[9].x;
         else
@@ -746,7 +1077,7 @@ void Hud::Init(void)
             y = g1Player[2].y + splitY + 12;
         const char *str = GameSetup::gData.checkpointHUD[i] == 0 ? "0M00S00" : "0.000";
         x += HudPmx::gShapes[118].width;
-        BuildTimeSprites(gSprt1 + 30, str, x, y);
+        prepare_hud_time_sprites(gSprt1 + 30, str, x, y);
         HudSplitTimeDiff1[i] = gSprt1[31].p[0].xy.y - gSprt1[30].p[0].xy.y;
         currentSpriteColor = 0xA0A0A0;
         HudSplitTimeDiff2[i] = gSprt1[34].p[0].xy.y - gSprt1[30].p[0].xy.y;
@@ -756,32 +1087,32 @@ void Hud::Init(void)
         y = (((g1Player[14].y + HudMapOffsetY) + g1Player[10].y) + splitY);
         if (i == 0 && DashHUD::gInfo.splitscreen != 0)
             y = (y - 2);
-        BuildSprite(gSprt1 + 40, 62, g1Player[14].x + 19, (y - 1), 0x808080, 0);
-        BuildSprite2(gSprt1 + 37, 44, x, y);
+        prepare_hud_sprite(gSprt1 + 40, 62, g1Player[14].x + 19, (y - 1), 0x808080, 0);
+        prepare_hud_sprite2(gSprt1 + 37, 44, x, y);
         x += w1;
-        BuildSprite2(gSprt1 + 38, 71, x, y);
-        BuildSprite2(gSprt1 + 39, 54, x + w2, y);
+        prepare_hud_sprite2(gSprt1 + 38, 71, x, y);
+        prepare_hud_sprite2(gSprt1 + 39, 54, x + w2, y);
         currentSpriteColor = 0x808080;
         x = g1Player[1].x + g1Player[11].x;
         y = g1Player[1].y + g1Player[11].y + splitY;
-        BuildSprite2(gSprt1 + 49, 26, x - 1, y);
-        BuildSprite2(gSprt1 + 50, 27, x - 2, y - 1);
+        prepare_hud_sprite2(gSprt1 + 49, 26, x - 1, y);
+        prepare_hud_sprite2(gSprt1 + 50, 27, x - 2, y - 1);
         for (sint32 j = 0; j < 8; ++j)
-            BuildSprite2(gSprt1 + 41 + j, 28 + j, x + 2, y + 6);
+            prepare_hud_sprite2(gSprt1 + 41 + j, 28 + j, x + 2, y + 6);
         InitMapFrame(i, 0);
     }
     currentSpriteColor = 0x808080;
     currentSpriteTransparent = 1;
-    SPRT *spriteReplay = gSprite0;
+    HudSprite *spriteReplay = gSprite0;
     sint32 baseX = g1Player[13].x;
     sint32 baseY = g1Player[13].y;
-    BuildSprite2(spriteReplay + 55, 111, baseX, baseY);
-    BuildSprite2(spriteReplay + 51, 108, baseX + 18, baseY);
-    BuildSprite2(spriteReplay + 52, 110, baseX + 37, baseY);
-    BuildSprite2(spriteReplay + 53, 63, baseX + 58, baseY);
-    BuildSprite2(spriteReplay + 56, 114, baseX + 74, baseY);
-    BuildSprite2(spriteReplay + 54, 0, baseX + 109, baseY - 7);
-    BuildSprite2(spriteReplay + 57, 3, 0, baseY + 4);
+    prepare_hud_sprite2(spriteReplay + 55, 111, baseX, baseY);
+    prepare_hud_sprite2(spriteReplay + 51, 108, baseX + 18, baseY);
+    prepare_hud_sprite2(spriteReplay + 52, 110, baseX + 37, baseY);
+    prepare_hud_sprite2(spriteReplay + 53, 63, baseX + 58, baseY);
+    prepare_hud_sprite2(spriteReplay + 56, 114, baseX + 74, baseY);
+    prepare_hud_sprite2(spriteReplay + 54, 0, baseX + 109, baseY - 7);
+    prepare_hud_sprite2(spriteReplay + 57, 3, 0, baseY + 4);
     currentSpriteTransparent = 0;
     InitCdPlayer();
     Reset();
@@ -807,58 +1138,25 @@ void Hud::InitTables(void)
 void Hud::BuildETimeString(SPRT *sprt, sint32 time)
 {
     FUNCTION_MARKER(0x800D3A18, "NFS4.EXE");
-    if (time < 0)
-        time = 0;
-    sint32 temp1 = time / 64;
-    sint32 min = (temp1 / 60) % 60;
-    sint32 sec = temp1 % 60;
-    sint32 hun = ((time % 64) * 100) / 64;
-    memcpy(&sprt[0].p[0].uv, &HudPmx::gHudNumberUV[min / 10], 4);
-    memcpy(&sprt[1].p[0].uv, &HudPmx::gHudNumberUV[min % 10], 4);
-    memcpy(&sprt[3].p[0].uv, &HudPmx::gHudNumberUV[sec / 10], 4);
-    memcpy(&sprt[4].p[0].uv, &HudPmx::gHudNumberUV[sec % 10], 4);
-    memcpy(&sprt[6].p[0].uv, &HudPmx::gHudNumberUV[hun / 10], 4);
-    memcpy(&sprt[7].p[0].uv, &HudPmx::gHudNumberUV[hun % 10], 4);
+    prepare_hud_elapsed(sprt, time);
 }
 
 bool Hud::BuildDistanceString(SPRT *sprt, sint32 player)
 {
     FUNCTION_MARKER(0x800D3BA4, "NFS4.EXE");
-    sint32 slices = Cars::gHumanRaceCarList[player]->stats.checkpointUpdate;
-    sint32 dist = (slices * 6);
-    if (dist < 0)
-        dist = (-dist);
-    if (GameSetup::gData.checkpointHUD[player] == 2)
-        dist = (dist * 1000) / 1607;
-    if (dist >= 10000)
-        return false;
-    memcpy(&sprt[0].p[0].uv, &HudPmx::gHudNumberUV[dist / 1000], 4);
-    memcpy(&sprt[2].p[0].uv, &HudPmx::gHudNumberUV[(dist % 1000) / 100], 4);
-    memcpy(&sprt[3].p[0].uv, &HudPmx::gHudNumberUV[(dist % 100) / 10], 4);
-    memcpy(&sprt[4].p[0].uv, &HudPmx::gHudNumberUV[dist % 10], 4);
-    return true;
+    return prepare_hud_distance(sprt, player);
 }
 
 void Hud::BuildTimeString(SPRT *sprt, sint32 time)
 {
     FUNCTION_MARKER(0x800D3D44, "NFS4.EXE");
-    if (time < 0)
-        time = (-time);
-    sint32 temp1 = time / 64;
-    sint32 min = temp1 / 60;
-    sint32 sec = temp1 % 60;
-    sint32 hun = ((time % 64) * 100) / 64;
-    memcpy(&sprt[0].p[0].uv, &HudPmx::gHudNumberUV[min % 10], 4);
-    memcpy(&sprt[2].p[0].uv, &HudPmx::gHudNumberUV[sec / 10], 4);
-    memcpy(&sprt[3].p[0].uv, &HudPmx::gHudNumberUV[sec % 10], 4);
-    memcpy(&sprt[5].p[0].uv, &HudPmx::gHudNumberUV[hun / 10], 4);
-    memcpy(&sprt[6].p[0].uv, &HudPmx::gHudNumberUV[hun % 10], 4);
+    prepare_hud_time(sprt, time);
 }
 
 void Hud::BuildTach(sint32 player)
 {
     FUNCTION_MARKER(0x800D3E94, "NFS4.EXE");
-    SPRT *gSprt1 = player == 0 ? gSprite0 : gSprite1;
+    HudSprite *gSprt1 = player == 0 ? gSprite0 : gSprite1;
     sint32 carType = GameSetup::gData.carInfo[player].carType;
     if (carType >= 30)
         carType = 29;
@@ -879,50 +1177,21 @@ void Hud::BuildTach(sint32 player)
     memcpy(&gSprt1[2].p[0].uv, &uv, 4);
     sint32 cos1 = fixedmult(cos, 10) + 14;
     sint32 sin1 = fixedmult(sin, 10) + 14;
-    Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
-    POLY_F3 *prim = reinterpret_cast<POLY_F3 *>(cprim->PrimPtr);
-    uint32 *ot = cprim->LastPrim;
-    setaddr(prim, getaddr(ot));
-    cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
-    setaddr(ot, prim);
-    LINE_F2 *line = reinterpret_cast<LINE_F2 *>(cprim->PrimPtr);
-    setaddr(line, getaddr(ot));
-    cprim->PrimPtr = reinterpret_cast<char *>(line + 1);
-    setaddr(ot, line);
-    setlen(line, 3);
+    uint32 triangle[4] = {((uint32)sin1 << 16) | cos1, 0, 0, 0};
+    uint32 line[4] = {(uint16)(14 - x) | ((uint32)(uint16)(14 - y) << 16), (uint16)cos1 | ((uint32)(uint16)sin1 << 16), 0, 0};
     uint32 lineColor = (color + 0x484848U) | 0x42000000U;
-    line->p[0].x = (sint16)(14 - x);
-    memcpy(&line->rgbc, &lineColor, 4);
-    line->p[0].y = (sint16)(14 - y);
-    line->p[1].y = (sint16)sin1;
-    line->p[1].x = (sint16)cos1;
-    POLY_F3 *prim2 = reinterpret_cast<POLY_F3 *>(cprim->PrimPtr);
-    ot = cprim->LastPrim;
-    setaddr(prim2, getaddr(ot));
-    cprim->PrimPtr = reinterpret_cast<char *>(prim2 + 1);
-    setaddr(ot, prim2);
-    BuildF3(prim, &HudPmx::gShapes[130], cos1, sin1, color);
-    BuildF3(prim2, &HudPmx::gShapes[130], cos1, sin1, 0);
-    SetSemiTrans(prim, 0);
     fixedsincos(fangle - 0x200, &sin, &cos);
-    sint16 coord = (sint16)(14 - fixedmult(cos, 32));
-    prim->p[1].x = coord;
-    prim2->p[1].x = coord;
-    coord = (sint16)(14 - fixedmult(sin, 32));
-    prim->p[1].y = coord;
-    prim2->p[1].y = coord;
+    triangle[1] = (uint16)(14 - fixedmult(cos, 32)) | ((uint32)(uint16)(14 - fixedmult(sin, 32)) << 16);
     fixedsincos(fangle + 0x200, &sin, &cos);
-    coord = (sint16)(14 - fixedmult(cos, 32));
-    prim->p[2].x = coord;
-    prim2->p[2].x = coord;
-    coord = (sint16)(14 - fixedmult(sin, 32));
-    prim->p[2].y = coord;
-    prim2->p[2].y = coord;
-    ot = cprim->LastPrim;
-    prim2->p[0].y = (sint16)(prim2->p[0].y + 2);
-    prim2->p[2].y = (sint16)(coord + 2);
-    prim2->p[1].y = (sint16)(prim2->p[1].y + 2);
-    addPrim(ot, &gSprt1[2]);
+    triangle[2] = (uint16)(14 - fixedmult(cos, 32)) | ((uint32)(uint16)(14 - fixedmult(sin, 32)) << 16);
+    submit_hud_flat(triangle, color, 0x20);
+    submit_hud_flat(line, lineColor, (uint8)(lineColor >> 24));
+    for (sint32 i = 0; i < 3; ++i)
+        triangle[i] = (triangle[i] & 0xFFFF) | ((uint32)(uint16)((triangle[i] >> 16) + 2) << 16);
+    submit_hud_flat(triangle, 0, 0x20);
+    uint32 *ot = DrawC::carCache.head.cprim.LastPrim;
+    HudAddPrim(ot, &gSprt1[2]);
+    hd_ui_tach(player, (float)DashHUD::gInfo.rpm, Cars::gHumanRaceCarList[player], &HudPmx::gShapes[player == 0 ? 129 : 131].pixmap);
 }
 
 sint32 Hud::BuildString(char *str, sint32 x, sint32 y, sint32 color, sint32 player, bool justwidth)
@@ -1008,36 +1277,37 @@ sint32 Hud::BuildString(char *str, sint32 x, sint32 y, sint32 color, sint32 play
 void Hud::BuildNumbers0(sint32 player)
 {
     FUNCTION_MARKER(0x800D4624, "NFS4.EXE");
-    SPRT *pSprt = player == 0 ? gSprite0 : gSprite1;
-    POLY_F4 *HudF4 = player == 0 ? gHudF4 : gHudF4 + 7;
-    POLY_G4 *HudG4 = player == 0 ? gHudG4 : gHudG4 + 4;
+    HdUiLayout layout(HdUiLayout::Left);
+    HudSprite *pSprt = player == 0 ? gSprite0 : gSprite1;
+    HudQuad *HudF4 = player == 0 ? gHudF4 : gHudF4 + 7;
+    HudQuad *HudG4 = player == 0 ? gHudG4 : gHudG4 + 4;
     sint32 splitY = player == 0 ? 0 : -15;
     if (GameSetup::gData.carInfo[player].HudTime != 0)
     {
         if (DashHUD::gInfo.flashtime == 0 || (simGlobal.gameTicks & 16) == 0)
         {
             sint32 time = BeTheCop != 0 ? BTC::Countdown : DashHUD::gInfo.laptime;
-            BuildETimeString(pSprt + 12, time);
+            prepare_hud_elapsed(pSprt + 12, time);
         }
         sint32 num = BeTheCop != 0 ? 5 : 8;
         uint32 *ot = DrawC::carCache.head.cprim.LastPrim;
         for (sint32 j = 12; j < 12 + num; ++j)
-            addPrim(ot, &pSprt[j]);
+            HudAddPrim(ot, &pSprt[j]);
         ot = DrawC::carCache.head.cprim.LastPrim;
         for (sint32 j = 4; j < 6; ++j)
-            addPrim(ot, &pSprt[j]);
+            HudAddPrim(ot, &pSprt[j]);
         ot = DrawC::carCache.head.cprim.LastPrim;
-        addPrim(ot, &HudG4[0]);
-        addPrim(ot, &HudF4[0]);
+        HudAddPrim(ot, &HudG4[0]);
+        HudAddPrim(ot, &HudF4[0]);
     }
     if (BeTheCop == 0)
     {
         sint32 y = g1Player[5].y + splitY + g1Player[9].y;
         pSprt[10].p[0].xy.y = (sint16)y;
-        HudG4[2].p[0].xy.y = (sint16)y;
-        HudG4[2].p[1].xy.y = (sint16)y;
-        HudG4[2].p[2].xy.y = (sint16)(y + 10);
-        HudG4[2].p[3].xy.y = (sint16)(y + 10);
+        HudG4[2].p[0].y = (sint16)y;
+        HudG4[2].p[1].y = (sint16)y;
+        HudG4[2].p[2].y = (sint16)(y + 10);
+        HudG4[2].p[3].y = (sint16)(y + 10);
         pSprt[11].p[0].xy.y = (sint16)y;
         HudF4[3].p[0].y = (sint16)(y + 7);
         HudF4[3].p[1].y = (sint16)(y + 7);
@@ -1054,6 +1324,7 @@ void Hud::BuildNumbers0(sint32 player)
         pSprt[36].p[0].xy.y = (sint16)y;
         pSprt[34].p[0].xy.y = (sint16)(diff + y);
     }
+    HdUiLayout checkpointLayout(DashHUD::gInfo.splitscreen != 0 ? HdUiLayout::Center : HdUiLayout::Right);
     sint32 bonusTime = BTC::BonusTime;
     sint32 num;
     if (bonusTime != 0 && BeTheCop != 0)
@@ -1061,7 +1332,7 @@ void Hud::BuildNumbers0(sint32 player)
         if (GameSetup::gData.carInfo[player].HudTime == 0)
             return;
         memcpy(&pSprt[10].p[0].uv, &HudPmx::gShapes[118].pixmap.u0, 4);
-        BuildTimeString(pSprt + 30, bonusTime < 0 ? 0 : bonusTime);
+        prepare_hud_time(pSprt + 30, bonusTime < 0 ? 0 : bonusTime);
         num = 4;
     }
     else
@@ -1078,12 +1349,12 @@ void Hud::BuildNumbers0(sint32 player)
                 return;
             sint32 shape = time < 0 ? 119 : 118;
             memcpy(&pSprt[10].p[0].uv, &HudPmx::gShapes[shape].pixmap.u0, 4);
-            BuildTimeString(pSprt + 30, Cars::gHumanRaceCarList[player]->stats.checkpointDifference);
+            prepare_hud_time(pSprt + 30, Cars::gHumanRaceCarList[player]->stats.checkpointDifference);
             num = 7;
         }
         else
         {
-            if (!BuildDistanceString(pSprt + 30, player))
+            if (!prepare_hud_distance(pSprt + 30, player))
                 return;
             sint32 shape = Cars::gHumanRaceCarList[player]->stats.checkpointUpdate < 0 ? 119 : 118;
             memcpy(&pSprt[10].p[0].uv, &HudPmx::gShapes[shape].pixmap.u0, 4);
@@ -1092,24 +1363,25 @@ void Hud::BuildNumbers0(sint32 player)
     }
     uint32 *ot = DrawC::carCache.head.cprim.LastPrim;
     for (sint32 j = 30; j < 30 + num; ++j)
-        addPrim(ot, &pSprt[j]);
+        HudAddPrim(ot, &pSprt[j]);
     GoTpage(0);
     ot = DrawC::carCache.head.cprim.LastPrim;
-    addPrim(ot, &pSprt[10]);
+    HudAddPrim(ot, &pSprt[10]);
     GoTpage(1);
     ot = DrawC::carCache.head.cprim.LastPrim;
-    addPrim(ot, &pSprt[11]);
+    HudAddPrim(ot, &pSprt[11]);
     ot = DrawC::carCache.head.cprim.LastPrim;
-    addPrim(ot, &HudG4[2]);
-    addPrim(ot, &HudF4[3]);
+    HudAddPrim(ot, &HudG4[2]);
+    HudAddPrim(ot, &HudF4[3]);
 }
 
 void Hud::BuildNumbers(sint32 player)
 {
     FUNCTION_MARKER(0x800D4E70, "NFS4.EXE");
-    SPRT *pSprt = player == 0 ? gSprite0 : gSprite1;
-    POLY_F4 *HudF4 = player == 0 ? gHudF4 : gHudF4 + 7;
-    POLY_G4 *HudG4 = player == 0 ? gHudG4 : gHudG4 + 4;
+    HdUiLayout layout(HdUiLayout::Left);
+    HudSprite *pSprt = player == 0 ? gSprite0 : gSprite1;
+    HudQuad *HudF4 = player == 0 ? gHudF4 : gHudF4 + 7;
+    HudQuad *HudG4 = player == 0 ? gHudG4 : gHudG4 + 4;
     sint32 splitY = player == 0 ? 0 : -15;
     const GameSetup::tCarData &carInfo = GameSetup::gData.carInfo[player];
     const DashHUD::tInfo &info = DashHUD::gInfo;
@@ -1121,28 +1393,29 @@ void Hud::BuildNumbers(sint32 player)
         memcpy(&pSprt[22].p[0].uv, &HudPmx::gHudNumberUV[info.maxlaps], 4);
         uint32 *ot = cprim.LastPrim;
         for (sint32 j = 20; j < 23; ++j)
-            addPrim(ot, &pSprt[j]);
+            HudAddPrim(ot, &pSprt[j]);
         for (sint32 j = 6; j < 8; ++j)
-            addPrim(ot, &pSprt[j]);
-        addPrim(ot, &HudG4[1]);
-        addPrim(ot, &HudF4[1]);
+            HudAddPrim(ot, &pSprt[j]);
+        HudAddPrim(ot, &HudG4[1]);
+        HudAddPrim(ot, &HudF4[1]);
     }
 
     if (carInfo.HudTime != 0 && info.record != 0 && info.record < 0x9600 && BeTheCop == 0 && gShowedCDPlayer == 0 && info.maxlaps != 1)
     {
         if (info.flashtime == 0 || (simGlobal.gameTicks & 16) == 0)
-            BuildTimeString(pSprt + 23, info.record);
+            prepare_hud_time(pSprt + 23, info.record);
         uint32 *ot = cprim.LastPrim;
         for (sint32 j = 23; j < 30; ++j)
-            addPrim(ot, &pSprt[j]);
+            HudAddPrim(ot, &pSprt[j]);
         for (sint32 j = 8; j < 10; ++j)
-            addPrim(ot, &pSprt[j]);
-        addPrim(ot, &HudG4[3]);
-        addPrim(ot, &HudF4[2]);
+            HudAddPrim(ot, &pSprt[j]);
+        HudAddPrim(ot, &HudG4[3]);
+        HudAddPrim(ot, &HudF4[2]);
     }
 
     if (carInfo.HudPosition != 0 && BeTheCop == 0 && info.opponents > 1)
     {
+        HdUiLayout positionLayout(HdUiLayout::Right);
         const HudPmx::tShape &position = HudPmx::gShapes[44 + info.position];
         const HudPmx::tShape &opponents = HudPmx::gShapes[53 + info.opponents];
         pSprt[37].p[0].xy.x = (sint16)(g1Player[14].x + g1Player[10].x + HudPmx::gShapes[44].width - 2 - position.width);
@@ -1152,12 +1425,12 @@ void Hud::BuildNumbers(sint32 player)
         pSprt[39].w = opponents.width;
         uint32 *ot = cprim.LastPrim;
         for (sint32 j = 37; j < 40; ++j)
-            addPrim(ot, &pSprt[j]);
+            HudAddPrim(ot, &pSprt[j]);
         if (carInfo.HudMap != 0)
         {
             GoTpage(0);
             ot = cprim.LastPrim;
-            addPrim(ot, &pSprt[40]);
+            HudAddPrim(ot, &pSprt[40]);
             GoTpage(1);
         }
     }
@@ -1165,14 +1438,16 @@ void Hud::BuildNumbers(sint32 player)
     GoTpage(0);
     if (carInfo.HudTach != 0)
     {
+        HdUiLayout speedLayout(info.splitscreen != 0 ? HdUiLayout::Right : HdUiLayout::Center);
         uint32 *ot = cprim.LastPrim;
         sint32 gearSprite = info.gear == 0 ? 48 : (info.gear == 1 ? 47 : 39 + info.gear);
-        addPrim(ot, &pSprt[gearSprite]);
-        addPrim(ot, &pSprt[carInfo.HudSpeed == 0 ? 50 : 49]);
+        HudAddPrim(ot, &pSprt[gearSprite]);
+        HudAddPrim(ot, &pSprt[carInfo.HudSpeed == 0 ? 50 : 49]);
     }
     GoTpage(1);
     if (carInfo.HudTach != 0)
     {
+        HdUiLayout speedLayout(info.splitscreen != 0 ? HdUiLayout::Right : HdUiLayout::Center);
         sint32 speed = fixedmult(carInfo.HudSpeedMult, info.speed) / 65536;
         sint32 hun = speed / 100;
         sint32 ten = speed / 10 - hun * 10;
@@ -1193,8 +1468,9 @@ void Hud::BuildNumbers(sint32 player)
 
     if (info.wrongway[player] != 0 && (simGlobal.gameTicks & 32) != 0)
     {
+        HdUiLayout noticeLayout(HdUiLayout::Center);
         uint32 *ot = cprim.LastPrim;
-        addPrim(ot, &pSprt[0]);
+        HudAddPrim(ot, &pSprt[0]);
     }
 }
 
@@ -1242,14 +1518,8 @@ void Hud::BuildMapMarkers(sint32 player)
             rz = ((cenZ + rotatedX) + rotatedZ);
             if (GameSetup::gData.mirrorTrack != 0)
                 rx = (-rx);
-            Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
-            SPRT *sprt = reinterpret_cast<SPRT *>(cprim->PrimPtr);
-            uint32 *ot = cprim->LastPrim;
-            setaddr(sprt, getaddr(ot));
-            setaddr(ot, sprt);
             car = cars[i];
             sint32 flags = group == 0 ? car->AIFlags : car->carFlags;
-            cprim->PrimPtr = reinterpret_cast<char *>(sprt + 1);
             uint32 color;
             sint32 shape;
             sint32 markerX;
@@ -1279,7 +1549,7 @@ void Hud::BuildMapMarkers(sint32 player)
                 markerX = (flags & 4) != 0 ? 19 : 20;
                 memcpy(&color, &gMarkerColor[i], sizeof(color));
             }
-            BuildSprite(sprt, shape, (sint32)((rx + (uint32)markerX) & 0xFFFFU), (sint32)((24U - rz) & 0xFFFFU), color, 0);
+            FBuildSprite(shape, (sint32)((rx + (uint32)markerX) & 0xFFFFU), (sint32)((24U - rz) & 0xFFFFU), color, 0);
         }
     }
 }
@@ -1302,6 +1572,7 @@ void Hud::WingmanFlash(sint32 player, sint32 index)
 void Hud::BuildWingmanInterface(sint32 player)
 {
     FUNCTION_MARKER(0x800D606C, "NFS4.EXE");
+    HdUiLayout layout(HdUiLayout::Right);
     sint32 splitY = player == 0 ? 0 : -15;
     uint32 currentTick = (uint32)ticks;
     sint32 flashTicks = (gWingmanFlashTicks[player] - currentTick);
@@ -1312,32 +1583,16 @@ void Hud::BuildWingmanInterface(sint32 player)
         char *text = TextSys::Word(0x29 + i);
         BuildString(text, x - 27, ((y + 3) + (i * 9)), 0x808080, i == 0 ? 0 : player, false);
     }
-    Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
     if (flashTicks > 0)
     {
-        POLY_F4 *poly = reinterpret_cast<POLY_F4 *>(cprim->PrimPtr);
-        uint32 *ot = cprim->LastPrim;
-        setaddr(poly, getaddr(ot));
-        cprim->PrimPtr = reinterpret_cast<char *>(poly + 1);
-        setaddr(ot, poly);
         sint32 flashY = ((y + ((((uint8)gWingmanFlashIcon[player]) + 1) * 9)) + 2);
-        BuildF4(poly, 0, x - 16, flashY, 63, 8, (flashTicks % 20) * 10);
+        FBuildF4(0, x - 16, flashY, 63, 8, (flashTicks % 20) * 10, 0, 0);
     }
     for (sint32 i = 0; i < 5; ++i)
     {
-        POLY_F4 *poly = reinterpret_cast<POLY_F4 *>(cprim->PrimPtr);
-        uint32 *ot = cprim->LastPrim;
-        setaddr(poly, getaddr(ot));
-        cprim->PrimPtr = reinterpret_cast<char *>(poly + 1);
-        setaddr(ot, poly);
-        BuildF4(poly, 0, x - 28, ((y + 2) + (i * 9)), 75, 7, 0);
+        FBuildF4(0, x - 28, ((y + 2) + (i * 9)), 75, 7, 0, 0, 0);
     }
-    POLY_F4 *poly = reinterpret_cast<POLY_F4 *>(cprim->PrimPtr);
-    uint32 *ot = cprim->LastPrim;
-    setaddr(poly, getaddr(ot));
-    cprim->PrimPtr = reinterpret_cast<char *>(poly + 1);
-    setaddr(ot, poly);
-    BuildF4(poly, 1, x - 28, y, 75, 48, 0);
+    FBuildF4(1, x - 28, y, 75, 48, 0, 0, 0);
 }
 
 void Hud::InitCdPlayer(void)
@@ -1353,6 +1608,7 @@ void Hud::InitCdPlayer(void)
 void Hud::BuildCdPlayer(sint32 type, sint32)
 {
     FUNCTION_MARKER(0x800D63DC, "NFS4.EXE");
+    HdUiLayout layout(HdUiLayout::Left);
     static sint32 keepup = 0;
 
     sint32 x = g1Player[15].x + 2;
@@ -1363,11 +1619,13 @@ void Hud::BuildCdPlayer(sint32 type, sint32)
     if (!currentSong)
         return;
 
-    if (!gCdActive && (simGlobal.gameTicks < 576 || ((uint8)countdown < 4 && !BeTheCop) || ((PAD_state(4) & 0x400) && DashHUD::gInfo.splitscreen) || ((PAD_state(0) & 0x400) && (!BeTheCop || DashHUD::gInfo.splitscreen)) || (gPadinfo.buf[0].ID == 0x23 && gPadinfo.buf[0].data.analog.lefty >= 192 && (!BeTheCop || DashHUD::gInfo.splitscreen)) || (gPadinfo.buf[4].ID == 0x23 && gPadinfo.buf[4].data.analog.lefty >= 192 && DashHUD::gInfo.splitscreen))) {
+    if (!gCdActive && (simGlobal.gameTicks < 576 || ((uint8)countdown < 4 && !BeTheCop) || ((PAD_state(4) & 0x400) && DashHUD::gInfo.splitscreen) || ((PAD_state(0) & 0x400) && (!BeTheCop || DashHUD::gInfo.splitscreen)) || (gPadinfo.buf[0].ID == 0x23 && gPadinfo.buf[0].data.analog.lefty >= 192 && (!BeTheCop || DashHUD::gInfo.splitscreen)) || (gPadinfo.buf[4].ID == 0x23 && gPadinfo.buf[4].data.analog.lefty >= 192 && DashHUD::gInfo.splitscreen)))
+    {
         gCdActive = 1;
         ActivateCDPlayer = 1;
     }
-    if (ActivateCDPlayer) {
+    if (ActivateCDPlayer)
+    {
         if (BeTheCop)
             gCdActive = 1;
         sint32 now = ticks;
@@ -1385,40 +1643,51 @@ void Hud::BuildCdPlayer(sint32 type, sint32)
     char strartist[32];
     char *title = 0;
     char *artist = 0;
-    if (currentSong->info.title) {
+    if (currentSong->info.title)
+    {
         sprintf(strtitle, "%.31s", currentSong->info.title);
         title = strtitle;
         uppercase(title);
     }
-    if (currentSong->info.artist) {
+    if (currentSong->info.artist)
+    {
         sprintf(strartist, "%.31s", currentSong->info.artist);
         artist = strartist;
         if (type == 0)
             uppercase(artist);
     }
-    if (!gCdActive) {
+    if (!gCdActive)
+    {
         kTurnSongOffNext = 1;
         return;
     }
 
     char strindex[12];
-    if (index > 0) {
+    if (index > 0)
+    {
         sprintf(strindex, "%02d", index);
-        if (!title) {
+        if (!title)
+        {
             sint32 now = ticks;
             gCdScrollTitle = 1;
             gCdLastTick = now;
         }
-    } else {
+    }
+    else
+    {
         strcpy(strindex, "- -");
         artist = 0;
-        if (index == 0 || index == -2 || !title) {
+        if (index == 0 || index == -2 || !title)
+        {
             const char *status = TextSys::Word(index == 0 ? 68 : index == -2 ? 69 : 70);
-            if (status) {
+            if (status)
+            {
                 sprintf(strtitle, "%.63s", status);
                 title = strtitle;
                 uppercase(title);
-            } else {
+            }
+            else
+            {
                 title = 0;
             }
         }
@@ -1426,29 +1695,38 @@ void Hud::BuildCdPlayer(sint32 type, sint32)
 
     sint32 dx = 0;
     char strscrolltitle[64];
-    if (title) {
+    if (title)
+    {
         const sint32 glyphCount = sizeof(HudPmx::gShapes) / sizeof(HudPmx::gShapes[0]);
-        for (char *s = title; *s; ++s) {
+        for (char *s = title; *s; ++s)
+        {
             uint8 ch = (uint8)*s;
             sint32 glyph = (ch >= '0' && ch <= '9') ? ch + 110 : ch + 67;
-            if (glyph >= glyphCount && !(ch >= 0xC0 && ch <= 0xDC) && ch != 0xE5) *s = ' ';
+            if (glyph >= glyphCount && !(ch >= 0xC0 && ch <= 0xDC) && ch != 0xE5)
+                *s = ' ';
         }
 
         sint32 tx = BuildString(title, 0, 0, 0, 0, true);
-        if (gCdScrollTitle < (tx + 76)) {
-            while (gCdLastTick < ticks) {
+        if (gCdScrollTitle < (tx + 76))
+        {
+            while (gCdLastTick < ticks)
+            {
                 gCdLastTick = (gCdLastTick + 4);
                 gCdScrollTitle = (gCdScrollTitle + 1);
             }
-        } else if ((gCdLastTick + 128) < ticks) {
+        }
+        else if ((gCdLastTick + 128) < ticks)
+        {
             gCdActive = 0;
         }
         sint32 offset = (76 - gCdScrollTitle);
         char *out = strscrolltitle;
-        for (const char *s = title; *s; ++s) {
+        for (const char *s = title; *s; ++s)
+        {
             uint8 ch = (uint8)*s;
             sint32 w = 3;
-            if (ch != ' ') {
+            if (ch != ' ')
+            {
                 sint32 glyph = (ch >= '0' && ch <= '9') ? ch + 110 : ch + 67;
                 if (glyph >= glyphCount)
                     glyph = ch == 0xE5 ? 103 : ch - 118;
@@ -1459,17 +1737,21 @@ void Hud::BuildCdPlayer(sint32 type, sint32)
                 break;
             if (offset < 0)
                 dx = (dx + w);
-            else *out++ = (char)ch;
+            else
+                *out++ = (char)ch;
             offset = next;
         }
         *out = 0;
-    } else {
+    }
+    else
+    {
         sint32 now = ticks;
         keepup = 0;
         gCdLastTick = now;
     }
 
-    if (type == 0) {
+    if (type == 0)
+    {
         if (!title)
             return;
         gShowedCDPlayer = 1;
@@ -1479,15 +1761,19 @@ void Hud::BuildCdPlayer(sint32 type, sint32)
         GoTpage(0);
         BlackThinBox(g1Player[15].x + 10, g1Player[15].y + 10, 80, 18);
         FBuildF4(0, g1Player[15].x + 10, g1Player[15].y + 10, 80, 18, 0, 0, 0);
-    } else {
+    }
+    else
+    {
         gShowedCDPlayer = 1;
         Font::TextColor(4);
         Font::TextXY(strindex, x, y - 2);
-        if (title) {
+        if (title)
+        {
             Font::TextColor(3);
             BuildString(strscrolltitle, (((x + dx) + 98) - gCdScrollTitle), y + 3, 0xBEBE, 0, false);
             GoTpage(0);
-            if (index != 0) {
+            if (index != 0)
+            {
                 char strtime[18];
                 sprintf(strtime, "%1d%c%02d", time / 60000, (uint8)HudminChar[GameSetup::gData.userSetting.language], (time % 60000) / 1000);
                 Font::TextColor(4);
@@ -1579,8 +1865,9 @@ sint32 Hud::BuildRadar(sint32 player)
 void Hud::BuildReplay(void)
 {
     FUNCTION_MARKER(0x800D7250, "NFS4.EXE");
-    char hilite[5] = { 4, 0, 1, 2, 3 };
-    SPRT *sprites = 0;
+    HdUiLayout layout(HdUiLayout::Center);
+    char hilite[5] = {4, 0, 1, 2, 3};
+    HudSprite *sprites = 0;
     uint32 color = 0x66808080;
     for (sint32 i = 51; i < 63; ++i)
     {
@@ -1613,14 +1900,14 @@ void Hud::BuildReplay(void)
     memcpy(&sprites[57].rgbc, &color, 4);
     uint32 *ot = DrawC::carCache.head.cprim.LastPrim;
     sprites = gSprite0;
-    addPrim(ot, &sprites[57]);
+    HudAddPrim(ot, &sprites[57]);
     for (sint32 i = 51; i < 56; ++i)
-        addPrim(ot, &sprites[i]);
+        HudAddPrim(ot, &sprites[i]);
     sprites = gSprite0;
     ot = DrawC::carCache.head.cprim.LastPrim;
-    addPrim(ot, &sprites[56]);
-    addPrim(ot, &gTPage1[0][3]);
-    addPrim(ot, &gTPage0[0][3]);
+    HudAddPrim(ot, &sprites[56]);
+    HudAddPrim(ot, &gTPage1[0][3]);
+    HudAddPrim(ot, &gTPage0[0][3]);
 }
 
 sint32 Hud::NextPlayer(sint32 player)
@@ -1659,10 +1946,10 @@ sint32 Hud::NextPlayer(sint32 player)
     return -1;
 }
 
-char * Hud::NextPlayerNameOrCarOrTime(sint32 player)
+char *Hud::NextPlayerNameOrCarOrTime(sint32 player)
 {
     FUNCTION_MARKER(0x800D76B0, "NFS4.EXE");
-    static char emptyLabel[1] = { 0 };
+    static char emptyLabel[1] = {0};
     sint32 direction = (Input::gLookBehind[player] > 0) ^ (DashHUD::gInfo.wrongway[player] > 0);
     Car::tObj *carObj = Cars::gHumanRaceCarList[player];
     if (Cars::gNumRaceCars >= 2)
@@ -1700,18 +1987,19 @@ char * Hud::NextPlayerNameOrCarOrTime(sint32 player)
 void Hud::RenderMapView(void)
 {
     FUNCTION_MARKER(0x800D7838, "NFS4.EXE");
+    HdUiLayout layout(HdUiLayout::Right);
     for (sint32 player = 0; player <= DashHUD::gInfo.splitscreen; ++player)
     {
         GameSetup::tCarData *carInfo = &GameSetup::gData.carInfo[player];
         if (carInfo->HudMap != 0 && DashHUD::gInfo.showhud[player] != 0 && (uint8)gWingmanInterface[player] == 0)
         {
-            POLY_FT4 *HudFT4 = player == 0 ? gHudFT4 : gHudFT4 + 5;
+            HudQuad *HudFT4 = player == 0 ? gHudFT4 : gHudFT4 + 5;
             Draw::StartRenderingView(gMapView[player]);
             if (carInfo->HudMap == 1)
             {
                 BuildMapMarkers(player);
                 uint32 *ot = DrawC::carCache.head.cprim.LastPrim;
-                addPrim(ot, HudFT4);
+                HudAddPrim(ot, HudFT4);
             }
             else
             {
@@ -1719,17 +2007,17 @@ void Hud::RenderMapView(void)
                 uint32 *ot = DrawC::carCache.head.cprim.LastPrim;
                 if (radar == 1)
                 {
-                    addPrim(ot, HudFT4 + 1);
-                    addPrim(ot, HudFT4 + 2);
+                    HudAddPrim(ot, HudFT4 + 1);
+                    HudAddPrim(ot, HudFT4 + 2);
                 }
                 else
                 {
-                    addPrim(ot, HudFT4 + 3);
-                    addPrim(ot, HudFT4 + 4);
+                    HudAddPrim(ot, HudFT4 + 3);
+                    HudAddPrim(ot, HudFT4 + 4);
                 }
             }
             uint32 *ot = DrawC::carCache.head.cprim.LastPrim;
-            addPrim(ot, &gTPage1[player][1]);
+            HudAddPrim(ot, &gTPage1[player][1]);
             Draw::StopRenderingView(gMapView[player]);
         }
     }
@@ -1807,27 +2095,12 @@ void BigBTCTime(sint32 secs)
         Col2 = 0x6400;
     }
     x += w1;
-    Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
-    POLY_GT4 *prim = reinterpret_cast<POLY_GT4 *>(cprim->PrimPtr);
-    uint32 *ot = cprim->LastPrim;
-    setaddr(prim, getaddr(ot));
-    cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
-    setaddr(ot, prim);
     sint32 ten = secs / 10;
-    Hud::BuildGT4(prim, &HudPmx::gShapes[secs % 10 + 44], x - 1, y, Col);
-    memcpy(&prim->p[3].rgbc, &Col2, sizeof(Col2));
-    memcpy(&prim->p[2].rgbc, &Col2, sizeof(Col2));
+    submit_hud_gt4(&HudPmx::gShapes[secs % 10 + 44], x - 1, y, Col, Col2);
     if (ten != 0)
     {
         x -= ten == 1 ? w2 : w1;
-        prim = reinterpret_cast<POLY_GT4 *>(cprim->PrimPtr);
-        ot = cprim->LastPrim;
-        setaddr(prim, getaddr(ot));
-        cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
-        setaddr(ot, prim);
-        Hud::BuildGT4(prim, &HudPmx::gShapes[ten + 44], x, y, Col);
-        memcpy(&prim->p[3].rgbc, &Col2, sizeof(Col2));
-        memcpy(&prim->p[2].rgbc, &Col2, sizeof(Col2));
+        submit_hud_gt4(&HudPmx::gShapes[ten + 44], x, y, Col, Col2);
     }
     Hud::BlackThinBox(xx, yy, w1 * 2, 14);
     Hud::FBuildF4(0, xx, yy, w1 * 2, 14, 0, 0, 0);
@@ -1863,6 +2136,8 @@ void Hud::Draw321Num(sint32 x, sint32 y, sint32 num, sint32 flare_intensity, sin
         {
             sint32 index = (Character[num] & (1UL << k)) != 0 ? 61 : 60;
             ++k;
+            const HudPmx::tShape *shape = HudPmx::gShapes + index;
+            HdUiImage image(shape->pixmap.tpage, shape->pixmap.u0, shape->pixmap.v0, shape->width, shape->height);
             FBuildSprite(index, (sint32)(bx + 1U), (sint32)(by + 1U), 0x808080UL, 0);
             bx += 10U;
         }
@@ -1875,6 +2150,7 @@ void Hud::Draw321Num(sint32 x, sint32 y, sint32 num, sint32 flare_intensity, sin
 void Hud::Render321Go(void)
 {
     FUNCTION_MARKER(0x800D7E64, "NFS4.EXE");
+    HdUiLayout layout(HdUiLayout::Center);
     static char oldCountdown = (char)0xFF;
     static uint32 countdownTick = 0;
     sint32 view = gStatsView;
@@ -1911,12 +2187,15 @@ void Hud::Render321Go(void)
 void Hud::RenderHudView(void)
 {
     FUNCTION_MARKER(0x800D82D0, "NFS4.EXE");
+    HdUiLayout layout(HdUiLayout::Center);
     char sBuildOutput[64];
     for (sint32 j = 0; j <= DashHUD::gInfo.splitscreen; ++j)
     {
         sint32 splitY = j == 0 ? 0 : -15;
         Draw::StartRenderingView(gHudView[j]);
+#if 0
         DebugInfo();
+#endif
         DebugCrap();
         if (GameSetup::gData.raceType == 1 && PerpOverlayOn[j] != 0)
         {
@@ -1968,18 +2247,22 @@ void Hud::RenderHudView(void)
         }
         if (DashHUD::gInfo.showhud[j] != 0)
         {
-            SPRT *gSprt1 = j == 0 ? gSprite0 : gSprite1;
+            HudSprite *gSprt1 = j == 0 ? gSprite0 : gSprite1;
             DashHUD::CheckWrongWay(j);
             DashHUD::HUDCalc(j);
             BuildNumbers0(j);
             BuildNumbers(j);
             uint32 *ot = DrawC::carCache.head.cprim.LastPrim;
-            addPrim(ot, &gTPage0[j][0]);
+            HudAddPrim(ot, &gTPage0[j][0]);
             GameSetup::tCarData *carInfo = &GameSetup::gData.carInfo[j];
             if (carInfo->HudTach != 0)
-                addPrim(ot, &gSprt1[1]);
+            {
+                HdUiLayout speedLayout(DashHUD::gInfo.splitscreen != 0 ? HdUiLayout::Right : HdUiLayout::Center);
+                HudAddPrim(ot, &gSprt1[1]);
+            }
             if (carInfo->HudMap != 0)
             {
+                HdUiLayout mapLayout(HdUiLayout::Right);
                 if (carInfo->HudOpponentID != 0 && BeTheCop == 0 && GameSetup::gData.commMode != 1)
                 {
                     sint32 nextplayer = NextPlayer(j);
@@ -2007,17 +2290,17 @@ void Hud::RenderHudView(void)
                 }
                 ot = DrawC::carCache.head.cprim.LastPrim;
                 for (sint32 i = 63; i < 71; ++i)
-                    addPrim(ot, &gSprt1[i]);
+                    HudAddPrim(ot, &gSprt1[i]);
             }
         }
         if (j == 0 && Replay::ReplayMode >= 2 && Replay::ReplayInterface.statsScreen == 0)
             BuildReplay();
         uint32 *ot = DrawC::carCache.head.cprim.LastPrim;
-        addPrim(ot, &gTPage1[j][0]);
+        HudAddPrim(ot, &gTPage1[j][0]);
         if (DashHUD::gInfo.showhud[j] != 0 && (uint8)gWingmanInterface[j] != 0 && Replay::ReplayMode < 2)
             BuildWingmanInterface(j);
         ot = DrawC::carCache.head.cprim.LastPrim;
-        addPrim(ot, &gTPage0[j][1]);
+        HudAddPrim(ot, &gTPage0[j][1]);
         Draw::StopRenderingView(gHudView[j]);
     }
 }
@@ -2025,15 +2308,17 @@ void Hud::RenderHudView(void)
 void Hud::RenderTacView(void)
 {
     FUNCTION_MARKER(0x800D8C48, "NFS4.EXE");
+    HdUiLayout layout(HdUiLayout::Center);
     for (sint32 player = 0; player <= DashHUD::gInfo.splitscreen; ++player)
     {
         if (GameSetup::gData.carInfo[player].HudTach != 0 && DashHUD::gInfo.showhud[player] != 0)
         {
+            HdUiLayout speedLayout(DashHUD::gInfo.splitscreen != 0 ? HdUiLayout::Right : HdUiLayout::Center);
             Draw::StartRenderingView(gTacView[player]);
             DashHUD::HUDCalc(player);
             BuildTach(player);
             uint32 *ot = DrawC::carCache.head.cprim.LastPrim;
-            addPrim(ot, &gTPage1[player][2]);
+            HudAddPrim(ot, &gTPage1[player][2]);
             Draw::StopRenderingView(gTacView[player]);
         }
     }
@@ -2122,7 +2407,9 @@ void Hud::Render(void)
             }
             if (DashHUD::gInfo.showhud[i] != 0)
             {
+#if 0
                 DebugInfo();
+#endif
                 BuildNumbers0(i);
             }
             GoTpage(0);

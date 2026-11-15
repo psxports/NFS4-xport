@@ -26,9 +26,11 @@ Trk::AnimateInst *Anim::gInstanceFromIndex[32];
 void Anim::Restart(void)
 {
     FUNCTION_MARKER(0x80073A94, "NFS4.EXE");
-    for (sint32 i = 0; i < 32; ++i) {
+    for (sint32 i = 0; i < 32; ++i)
+    {
         AnimScript *script = animSlots[i];
-        if (script != 0) {
+        if (script != 0)
+        {
             if (script->inst != 0)
                 purgememadr(script->inst);
             purgememadr(script);
@@ -45,26 +47,32 @@ sint32 Anim::InitSystem(char *trackName)
     char fname[80];
     sprintf(fname, "%sA.viv", trackName);
     char *bigFile = static_cast<char *>(loadfileadrz(fname, 0));
-    if (bigFile == 0) {
+    if (bigFile == 0)
+    {
         for (sint32 i = 9; i >= 0; --i)
             animScripts[i] = 0;
-    } else {
+    }
+    else
+    {
         sint32 size = filesize(fname);
         static char allocationName[] = "animScripts";
         char *mem = Platform::GetDCTBuffer(size, allocationName);
         blockmove(bigFile, mem, size);
         purgememadr(bigFile);
         (void)strstr(trackName, "Tr");
-        for (sint32 i = 0; i < 10; ++i) {
+        for (sint32 i = 0; i < 10; ++i)
+        {
             sprintf(fname, "tr00a%02d.can", i);
             animScripts[i] = reinterpret_cast<Trk::AnimateInst *>(locatebig(mem, fname));
         }
     }
-    if (gPersistObjInst != 0) {
+    if (gPersistObjInst != 0)
+    {
         sint32 numParts = gPersistObjInst->m_num_elements;
         Trk::AnimateInst *objInstance = reinterpret_cast<Trk::AnimateInst *>(gPersistObjInst + 1);
         numParts = (numParts - 1);
-        while (numParts != -1) {
+        while (numParts != -1)
+        {
             if ((objInstance->type == 3 || objInstance->type == 7) && objInstance->objectIndex != 0)
                 gInstanceFromIndex[objInstance->objectIndex] = objInstance;
             sint16 size = objInstance->size;
@@ -102,7 +110,8 @@ sint32 Anim::FreeHandle(sint32 handle)
 {
     FUNCTION_MARKER(0x80073D6C, "NFS4.EXE");
     AnimScript *script = handle == 32 ? reinterpret_cast<AnimScript *>(gInstanceFromIndex[0]) : animSlots[handle];
-    if (script != 0) {
+    if (script != 0)
+    {
         if (script->inst != 0)
             purgememadr(script->inst);
         purgememadr(script);
@@ -114,7 +123,7 @@ sint32 Anim::FreeHandle(sint32 handle)
     return 0;
 }
 
-AnimScript * Anim::GetAnim(sint32 handle)
+AnimScript *Anim::GetAnim(sint32 handle)
 {
     FUNCTION_MARKER(0x80073DEC, "NFS4.EXE");
     return handle == 32 ? reinterpret_cast<AnimScript *>(gInstanceFromIndex[0]) : animSlots[handle];
@@ -140,7 +149,8 @@ sint32 Anim::GetLastAnimPosRot(sint32 animNum, sint32 flags, coorddef *pt, matri
 {
     FUNCTION_MARKER(0x80073E80, "NFS4.EXE");
     GetLastRotPos(animScripts[animNum], pt, mat);
-    if (((uint32)flags & 4) != 0) {
+    if (((uint32)flags & 4) != 0)
+    {
         sint32 r3 = mat->m[3];
         sint32 r4 = mat->m[4];
         sint32 r5 = mat->m[5];
@@ -221,13 +231,15 @@ sint32 Anim::GetPos(Trk::AnimateInst *animInst, sint32 flags, sint32 ticks, coor
     objcp1.y = animFrames[animInd1].y;
     objcp1.z = animFrames[animInd1].z;
     Quatern::VecInterpolate(&objcp0, &objcp1, weight, pt);
-    if (animTicks != 0) {
+    if (animTicks != 0)
+    {
         sint32 length = ((animInst->count - 1) * interval);
         if (length == 0 || (length == -1 && ticks == INT_MIN))
             abort();
         *animTicks = ticks % length;
     }
-    if (animLength != 0) *animLength = ((animInst->count - 1) * interval);
+    if (animLength != 0)
+        *animLength = ((animInst->count - 1) * interval);
     return 1;
 }
 
@@ -246,7 +258,8 @@ AnimScript::AnimScript(sint32 num, sint32 numParts)
     FUNCTION_MARKER(0x800743CC, "NFS4.EXE");
     sint32 bytes = (sint32)((uint32)numParts * sizeof(*inst));
     inst = static_cast<Trk::AnimateInst **>(reservememadr(0, bytes, 0));
-    for (sint32 i = 0; i < numParts; ++i) {
+    for (sint32 i = 0; i < numParts; ++i)
+    {
         sint32 scriptIndex = (num + i);
         inst[i] = animScripts[scriptIndex];
     }
@@ -264,8 +277,10 @@ AnimScript::AnimScript(Group *instanceGroup, sint32 type, sint32 boomIndex, sint
     inst = static_cast<Trk::AnimateInst **>(reservememadr(0, bytes, 0));
     sint32 i = 0;
     numElems = (numElems - 1);
-    while (numElems != -1) {
-        if (objInstance->type == type && objInstance->boomIndex == boomIndex) {
+    while (numElems != -1)
+    {
+        if (objInstance->type == type && objInstance->boomIndex == boomIndex)
+        {
             inst[i] = reinterpret_cast<Trk::AnimateInst *>(objInstance);
             i = (i + 1);
         }
@@ -305,19 +320,17 @@ sint32 AnimScript::GetTimedAnimPosRot(coorddef *pt, matrixtdef *mat)
     return GetTimedAnimPosRot(0, pt, mat);
 }
 
-sint32 AnimScript::GetTimedAnimPosRot(sint32 index, coorddef *pt, matrixtdef *mat)
+sint32 AnimScript::GetRenderPosRot(sint32 index, coorddef *pt, matrixtdef *mat)
 {
-    FUNCTION_MARKER(0x80074624, "NFS4.EXE");
     if (GetStatus() != 1)
         return -1;
     sint32 ticks = (simGlobal.gameTicks - baseTicks);
-    if (Anim::GetRotPos(inst[index], flags, ticks, pt, mat) == 0) {
-        Trk::AnimateInst **parts = inst;
-        baseTicks = -1;
-        parts[index] = 0;
+    if (Anim::GetRotPos(inst[index], flags, ticks, pt, mat) == 0)
+    {
         return 0;
     }
-    if (((uint32)flags & 4) != 0) {
+    if (((uint32)flags & 4) != 0)
+    {
         sint32 r3 = mat->m[3];
         sint32 r4 = mat->m[4];
         sint32 r5 = mat->m[5];
@@ -332,6 +345,18 @@ sint32 AnimScript::GetTimedAnimPosRot(sint32 index, coorddef *pt, matrixtdef *ma
         mat->m[8] = (-r5);
     }
     return 1;
+}
+
+sint32 AnimScript::GetTimedAnimPosRot(sint32 index, coorddef *pt, matrixtdef *mat)
+{
+    FUNCTION_MARKER(0x80074624, "NFS4.EXE");
+    sint32 status = GetRenderPosRot(index, pt, mat);
+    if (status == 0)
+    {
+        baseTicks = -1;
+        inst[index] = 0;
+    }
+    return status;
 }
 
 sint32 AnimScript::GetStatus(void)

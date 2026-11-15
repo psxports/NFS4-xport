@@ -23,8 +23,7 @@ void Clock::MasterInterruptHandler(void)
             if ((clock_realTime.time64Hz & 1) == 0)
             {
                 clock_realTime.time32Hz = (clock_realTime.time32Hz + 1);
-                if ((clock_realTime.time32Hz & 1) == 0)
-                    Input::Update();
+                Input::Update();
                 Input::Store();
             }
         }

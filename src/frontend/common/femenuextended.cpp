@@ -4,6 +4,7 @@
 #include <string.h>
 #include "xport.h"
 #include "psx.h"
+#include "hd_ui.h"
 #include "eaclib/psx/globals.h"
 #include "frontend/common/feapp.h"
 #include "frontend/common/fefades.h"
@@ -53,6 +54,7 @@ void MenuNFS4::DrawTextBox(sint32 helpText, PSX_RECT &r, sint32 initialWidth, si
         cprim->PrimPtr = reinterpret_cast<char *>(daprim + 1);
         setaddr(cprim->LastPrim, daprim);
         SetDrawArea(daprim, &temp);
+        hd_ui_area(&temp);
         FETextRender::SetFont(0);
         char buffer[64];
         sprintf(buffer, "%s", TextSys::Word(helpText));
@@ -88,6 +90,7 @@ void MenuNFS4::DrawTextBox(sint32 helpText, PSX_RECT &r, sint32 initialWidth, si
         cprim->PrimPtr = reinterpret_cast<char *>(daprim + 1);
         setaddr(cprim->LastPrim, daprim);
         SetDrawArea(daprim, &temp);
+        hd_ui_area(&temp);
     }
     temp = r;
     tTexture::ShapeInfo *shape = &gHelpShapes[30];

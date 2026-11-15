@@ -22,7 +22,7 @@ void Control::AI(Car::tObj *carObj)
 void Control::Human(Car::tObj *carObj)
 {
     FUNCTION_MARKER(0x80091FE4, "NFS4.EXE");
-    if (((uint32)simGlobal.gameTicks & 3) != 0)
+    if (((uint32)simGlobal.gameTicks & 1) != 0)
         return;
     InGame::SetRamp();
     carObj->funcReplay(carObj);

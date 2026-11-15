@@ -84,9 +84,12 @@ public:
 
     static tMaterialController *gMatController;
 
+    static sint32 GetChunkCount(void);
+    static sint32 GetMaterialCount(void);
+    static sint32 GetArtCapacity(void);
     static void SetTrackNumber(sint32 tracknum);
-    static char * MakeTrackPathName(char *ext);
-    static char * MakeTrackDataPathName(char *ext);
+    static char *MakeTrackPathName(char *ext);
+    static char *MakeTrackDataPathName(char *ext);
     static void AnimateTextures(void);
     static sint32 GetProperMultiPalShapeIndex(sint32 shapeindex, sint32 paletteindex);
     static void ProcessFlipAndUVFlags(sint32 uvFlag, Draw::tPixMap *inputPmx, Draw::tPixMap *outputPmx);
@@ -102,7 +105,7 @@ public:
 class KillFile
 {
 public:
-    static char * OpenRead(void);
+    static char *OpenRead(void);
     static void ReadEntry(char *filePtr, sint32 entryInd, sint32 &chunkInd, sint32 &objectInd);
 };
 

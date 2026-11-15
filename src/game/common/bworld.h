@@ -22,6 +22,11 @@ public:
     static tBuildEntry gChunkBuildList[36];
 
     static sint32 gChunkCount;
+    static void ResetRenderState(void);
+    static void PrepareView(DRender::tView *view, bool advanceEffects);
+    static void PrepareObjectState(DRender::tView *view);
+    static void BuildTrackEffects(DRender::tView *view, Draw::DCache *cache);
+    static bool ApplyPreparedView(DRender::tView *view, Draw::DCache *cache);
 
     static void BuildGlareEffects(DRender::tView *Vi, Draw::DCache *sd, Group *group);
     static void InitSpikeBelt(void);
@@ -29,6 +34,7 @@ public:
     static sint32 GetSpikeBelt(sint32 *slice, sint32 *x, sint32 *width);
     static sint32 CheckChunkVisible(BWorldSm::Pos *slicePosSource, BWorldSm::Pos *slicePosTest);
     static bool IsSliceInBuildList(sint32 slice);
+    static bool IsObjectChunkInBuildList(sint32 chunk);
     static void OnyxBuildFacets(DRender::tView *Vi);
     static void InitContexts(void);
     static void DeInitContexts(void);

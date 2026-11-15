@@ -2,6 +2,7 @@
 #include <string.h>
 #include "xport.h"
 #include "psx.h"
+#include "hd_ui.h"
 #include "frontend/common/fetextrender.h"
 #include "frontend/psx/drawshp.h"
 #include "frontend/psx/fetexture.h"
@@ -41,6 +42,7 @@ void DrawShape::SubtractNFS4RectEdges(PSX_RECT &rect)
         prim->p[2].xy.y = (sint16)((uint16)y2 - 2);
         prim->p[3].xy.x = x2;
         prim->p[3].xy.y = y2;
+        hd_ui_g4(prim);
         x1 = (sint16)((uint16)rect.x + (uint16)rect.w - 2);
         x2 = (sint16)((uint16)x1 - (sint32(rect.w) >> 3));
     }
@@ -50,6 +52,7 @@ void DrawShape::SubtractNFS4RectEdges(PSX_RECT &rect)
     setaddr(cprim->LastPrim, dr_mode);
     uint16 page = GetTPage(2, 2, 0, 256);
     SetDrawMode(dr_mode, 0, 0, page, 0);
+    hd_ui_page(page);
 }
 
 void DrawShape::NFS4RoundRectangle(sint32 textID, PSX_RECT &position, sint16 selected)

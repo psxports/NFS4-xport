@@ -118,7 +118,13 @@ void Chunk::InstanceGroup(SerializedGroup *chunkGroup, SimpleMem *mem)
     stripBuf = geomGroup->LocateCreateGroupType(0x1a, mem, 0);
     lorezstripBuf = geomGroup->LocateCreateGroupType(0x25, mem, 0);
     vertexBuf = geomGroup->LocateCreateGroupType(0x18, mem, 0);
+    SerializedGroup *vertices = geomGroup->LocateGroupType(0x18, 0);
+    sint32 vertexBytes = vertices != 0 ? vertices->m_length - sizeof(*vertices) : 0;
+    renderVertexCount = vertexBytes > 0 && vertexBytes % 8 == 0 ? vertexBytes / 8 : 0;
     objVertexBuf = geomGroup->LocateCreateGroupType(0x27, mem, 0);
+    SerializedGroup *objectVertices = geomGroup->LocateGroupType(0x27, 0);
+    sint32 objectVertexBytes = objectVertices != 0 ? objectVertices->m_length - sizeof(*objectVertices) : 0;
+    renderObjectVertexCount = objectVertexBytes > 0 && objectVertexBytes % 8 == 0 ? objectVertexBytes / 8 : 0;
     objQuadBuf = geomGroup->LocateCreateGroupType(0x28, mem, 0);
     objQuadInstanceBuf = geomGroup->LocateCreateGroupType(0x29, mem, 0);
 }

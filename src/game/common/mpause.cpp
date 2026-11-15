@@ -1,6 +1,8 @@
+#include <math.h>
 #include <new>
 #include <stddef.h>
 #include "xport.h"
+#include "hd_ui.h"
 #include "eaclib/psx/eaclib.h"
 #include "eaclib/psx/globals.h"
 #include "game/common/audiocmn.h"
@@ -94,8 +96,15 @@ static sint16 kMovingHighlightDir;
 static tPMenu *gPauseCurrentMenu;
 static sint32 gBackDepth;
 static tPMenu *gBackList[6];
-sint16 InGameSelectListAudioMode[4] = { 18, 17, 19, 0 };
-sint16 SelectListConfig[4] = { 23, 24, 25, 0 };
+static const tPMenu *pauseHighlightMenu;
+static uint64 pauseHighlightTick;
+static float pauseHighlightPhase;
+static float pauseHighlightFrom;
+static float pauseHighlightTo;
+static float pauseHighlightDuration;
+static float pauseHighlightDrawn = -1;
+sint16 InGameSelectListAudioMode[4] = {18, 17, 19, 0};
+sint16 SelectListConfig[4] = {23, 24, 25, 0};
 tPauseMenuDefs *gPauseMenuDefs;
 sint32 gMPauseUpdate;
 sint32 gMPauseUpdateNextTime;
@@ -110,37 +119,10 @@ void tPauseMenuDefs::operator delete(void *memory) throw()
     purgememadr(memory);
 }
 
-tPauseMenuDefs::tPauseMenuDefs(void) : itemGamePaused(0),
-      itemContinue(1, kMPause_Continue),
-      itemRestart(2, kMPause_Restart),
-      itemOptions(3, &menuOptions, 0),
-      itemQuitRace(4, kMPause_QuitToRaceSummary),
-      itemForfeitRace(5, kMPause_ForfeitToRaceSummary),
-      menuPause(&itemGamePaused, static_cast<tPMenuItem *>(&itemContinue), static_cast<tPMenuItem *>(&itemRestart), static_cast<tPMenuItem *>(&itemOptions), static_cast<tPMenuItem *>(&itemQuitRace), static_cast<tPMenuItem *>(&itemForfeitRace), static_cast<tPMenuItem *>(0)),
-      itemOptionsTitle(6),
-      itemAudioSettings(7, &menuAudioSettings, 0),
-      itemControllerSettings(8, &menuControllerConfig, 0),
-      menuOptions(&itemOptionsTitle, static_cast<tPMenuItem *>(&itemAudioSettings), static_cast<tPMenuItem *>(&itemControllerSettings), static_cast<tPMenuItem *>(0)),
-      itemAudioSettingsTitle(10),
-      iteratorAudioMode(&InGameSelectListAudioMode[0], &GameSetup::gData.userSetting.audioMode),
-      itemAudioSettingsAudioMode(11, &iteratorAudioMode),
-      itemAudioSettingsMusicVolume(12, &gMasterMusicLevel, 127),
-      itemAudioSettingsFXVolume(13, &gMasterSFXLevel, 127),
-      itemAudioSettingsSpeechVolume(14, &gMasterFENarrationLevel, 127),
-      itemAudioSettingsEngineVolume(15, &gMasterEngineLevel, 127),
-      itemAudioSettingsAmbientVolume(16, &gMasterAmbientLevel, 127),
-      menuAudioSettings(&itemAudioSettingsTitle, static_cast<tPMenuItem *>(&itemAudioSettingsAudioMode), static_cast<tPMenuItem *>(&itemAudioSettingsMusicVolume), static_cast<tPMenuItem *>(&itemAudioSettingsFXVolume), static_cast<tPMenuItem *>(&itemAudioSettingsSpeechVolume), static_cast<tPMenuItem *>(&itemAudioSettingsEngineVolume), static_cast<tPMenuItem *>(&itemAudioSettingsAmbientVolume), static_cast<tPMenuItem *>(0)),
-      iteratorConfig(&SelectListConfig[0], &GameSetup::gData.controllerData.controllerConfig[0], &Device::gPausePortIndex),
-      itemControllerSettingsTitle(20),
-      itemControllerConfig(21, &iteratorConfig),
-      itemControllerShockMode(27, &GameSetup::gData.controllerData.shockMode[0], 127, &Device::gPausePortIndex),
-      itemControllerShockImpact(28, &GameSetup::gData.controllerData.shockImpact[0], 127, &Device::gPausePortIndex),
-      menuControllerConfig(&itemControllerSettingsTitle, static_cast<tPMenuItem *>(&itemControllerConfig), static_cast<tPMenuItem *>(&itemControllerShockMode), static_cast<tPMenuItem *>(&itemControllerShockImpact), static_cast<tPMenuItem *>(0)),
-      itemConfirmTitle(4),
-      itemConfirmAreYouSure(36),
-      itemConfirmNo(38, kMPause_BackupMenu),
-      itemConfirmYes(37, kMPause_BackupMenu),
-      menuConfirmYesNo(&itemConfirmTitle, static_cast<tPMenuItem *>(&itemConfirmAreYouSure), static_cast<tPMenuItem *>(&itemConfirmNo), static_cast<tPMenuItem *>(&itemConfirmYes), static_cast<tPMenuItem *>(0))
+tPauseMenuDefs::tPauseMenuDefs(void)
+    : itemGamePaused(0), itemContinue(1, kMPause_Continue), itemRestart(2, kMPause_Restart), itemOptions(3, &menuOptions, 0), itemQuitRace(4, kMPause_QuitToRaceSummary), itemForfeitRace(5, kMPause_ForfeitToRaceSummary), menuPause(&itemGamePaused, static_cast<tPMenuItem *>(&itemContinue), static_cast<tPMenuItem *>(&itemRestart), static_cast<tPMenuItem *>(&itemOptions), static_cast<tPMenuItem *>(&itemQuitRace), static_cast<tPMenuItem *>(&itemForfeitRace), static_cast<tPMenuItem *>(0)), itemOptionsTitle(6), itemAudioSettings(7, &menuAudioSettings, 0), itemControllerSettings(8, &menuControllerConfig, 0), menuOptions(&itemOptionsTitle, static_cast<tPMenuItem *>(&itemAudioSettings), static_cast<tPMenuItem *>(&itemControllerSettings), static_cast<tPMenuItem *>(0)), itemAudioSettingsTitle(10), iteratorAudioMode(&InGameSelectListAudioMode[0], &GameSetup::gData.userSetting.audioMode), itemAudioSettingsAudioMode(11, &iteratorAudioMode), itemAudioSettingsMusicVolume(12, &gMasterMusicLevel, 127),
+      itemAudioSettingsFXVolume(13, &gMasterSFXLevel, 127), itemAudioSettingsSpeechVolume(14, &gMasterFENarrationLevel, 127), itemAudioSettingsEngineVolume(15, &gMasterEngineLevel, 127), itemAudioSettingsAmbientVolume(16, &gMasterAmbientLevel, 127), menuAudioSettings(&itemAudioSettingsTitle, static_cast<tPMenuItem *>(&itemAudioSettingsAudioMode), static_cast<tPMenuItem *>(&itemAudioSettingsMusicVolume), static_cast<tPMenuItem *>(&itemAudioSettingsFXVolume), static_cast<tPMenuItem *>(&itemAudioSettingsSpeechVolume), static_cast<tPMenuItem *>(&itemAudioSettingsEngineVolume), static_cast<tPMenuItem *>(&itemAudioSettingsAmbientVolume), static_cast<tPMenuItem *>(0)), iteratorConfig(&SelectListConfig[0], &GameSetup::gData.controllerData.controllerConfig[0], &Device::gPausePortIndex), itemControllerSettingsTitle(20), itemControllerConfig(21, &iteratorConfig), itemControllerShockMode(27, &GameSetup::gData.controllerData.shockMode[0], 127, &Device::gPausePortIndex),
+      itemControllerShockImpact(28, &GameSetup::gData.controllerData.shockImpact[0], 127, &Device::gPausePortIndex), menuControllerConfig(&itemControllerSettingsTitle, static_cast<tPMenuItem *>(&itemControllerConfig), static_cast<tPMenuItem *>(&itemControllerShockMode), static_cast<tPMenuItem *>(&itemControllerShockImpact), static_cast<tPMenuItem *>(0)), itemConfirmTitle(4), itemConfirmAreYouSure(36), itemConfirmNo(38, kMPause_BackupMenu), itemConfirmYes(37, kMPause_BackupMenu), menuConfirmYesNo(&itemConfirmTitle, static_cast<tPMenuItem *>(&itemConfirmAreYouSure), static_cast<tPMenuItem *>(&itemConfirmNo), static_cast<tPMenuItem *>(&itemConfirmYes), static_cast<tPMenuItem *>(0))
 {
     FUNCTION_MARKER(0x8009DED4, "NFS4.EXE");
 }
@@ -289,6 +271,47 @@ void MPause::ControllerLogic(void)
     }
 }
 
+static float pause_highlight_target(void)
+{
+    return gPauseCurrentMenu != 0 ? (float)(gPauseCurrentMenu->ItemEnabledNum(gPauseCurrentMenu->fCurrentItem) * 13 + 106) : 0;
+}
+
+static float pause_highlight_position(void)
+{
+    float target = pause_highlight_target();
+    if (pauseHighlightMenu != gPauseCurrentMenu || pauseHighlightTo != target || pauseHighlightDuration <= 0)
+        return target;
+    uint64 tick;
+    float phase = xport_frame_fract(&tick);
+    if (tick < pauseHighlightTick)
+        return target;
+    float elapsed = (float)(tick - pauseHighlightTick) + phase - pauseHighlightPhase;
+    if (elapsed <= 0)
+        return pauseHighlightFrom;
+    if (elapsed >= pauseHighlightDuration)
+        return target;
+    return pauseHighlightFrom + (target - pauseHighlightFrom) * (elapsed / pauseHighlightDuration);
+}
+
+bool MPause::NeedsRedraw(void)
+{
+    return pause_highlight_position() != pauseHighlightDrawn;
+}
+
+static void pause_highlight_move(float start, float finish)
+{
+    float distance = finish - start;
+    kMovingHighlightDir = (sint16)((sint32)distance / 10);
+    if (kMovingHighlightDir == 0)
+        kMovingHighlightDir = distance >= 0 ? 1 : -1;
+    pauseHighlightMenu = gPauseCurrentMenu;
+    pauseHighlightFrom = start;
+    pauseHighlightTo = finish;
+    pauseHighlightPhase = xport_frame_fract(&pauseHighlightTick);
+    pauseHighlightDuration = fabsf(distance / kMovingHighlightDir);
+    kMovingHighlight = (sint16)floorf(start - finish + 0.5f);
+}
+
 sint32 MPause::Logic(void)
 {
     FUNCTION_MARKER(0x8009E784, "NFS4.EXE");
@@ -310,35 +333,27 @@ sint32 MPause::Logic(void)
         keyVal = kInput_KeyType_Triangle;
     tPMenuCommand command;
     command.type = kMPause_NoEvent;
-    if (kMovingHighlight == 0)
+    float start = pause_highlight_position();
+    kMovingHighlight = (sint16)floorf(start - pause_highlight_target() + 0.5f);
+    if (keyVal != kInput_KeyType_NoKey)
     {
-        if (keyVal != kInput_KeyType_NoKey)
-        {
-            gMPauseUpdate = 1;
-            tPMenu *menu = gPauseCurrentMenu;
-            sint16 previous = (sint16)menu->fCurrentItem;
-            menu->ProcessInput(keyVal, command);
-            sint16 current = (sint16)gPauseCurrentMenu->fCurrentItem;
-            if (previous != current)
-            {
-                sint32 start = gPauseCurrentMenu->ItemEnabledNum(previous) * 13 + 106;
-                sint32 finish = gPauseCurrentMenu->ItemEnabledNum(current) * 13 + 106;
-                kMovingHighlight = (sint16)(start - finish);
-                kMovingHighlightDir = (sint16)((finish - start) / 10);
-            }
-        }
-        else if (ChangedEnabling != 0)
-            gMPauseUpdate = 1;
-        else if (gMPauseUpdateNextTime != 0)
-        {
-            gMPauseUpdate = 1;
-            gMPauseUpdateNextTime = 0;
-        }
-        else
-            gMPauseUpdate = 0;
+        gMPauseUpdate = 1;
+        tPMenu *menu = gPauseCurrentMenu;
+        sint16 previous = (sint16)menu->fCurrentItem;
+        menu->ProcessInput(keyVal, command);
+        sint16 current = (sint16)gPauseCurrentMenu->fCurrentItem;
+        if (previous != current)
+            pause_highlight_move(start, pause_highlight_target());
+    }
+    else if (ChangedEnabling != 0)
+        gMPauseUpdate = 1;
+    else if (gMPauseUpdateNextTime != 0)
+    {
+        gMPauseUpdate = 1;
+        gMPauseUpdateNextTime = 0;
     }
     else
-        gMPauseUpdate = 1;
+        gMPauseUpdate = NeedsRedraw();
     if (command.type != kMPause_NoEvent)
     {
         if (((uint32)command.type & 0x100U) != 0)
@@ -383,31 +398,15 @@ sint32 MPause::Logic(void)
 void MPause::Render(void)
 {
     FUNCTION_MARKER(0x8009EAA0, "NFS4.EXE");
-    sint16 previous = kMovingHighlight;
     ChangedEnabling = 0;
-    if (previous > 0)
-    {
-        kMovingHighlight = (sint16)(previous + kMovingHighlightDir);
-        if (kMovingHighlight < 0)
-            kMovingHighlight = 0;
-    }
-    else if (previous < 0)
-    {
-        kMovingHighlight = (sint16)(previous + kMovingHighlightDir);
-        if (kMovingHighlight > 0)
-            kMovingHighlight = 0;
-    }
-    gPauseCurrentMenu->fHighlight = kMovingHighlight == 0;
+    float highlight = pause_highlight_position();
+    gPauseCurrentMenu->fHighlight = highlight == pause_highlight_target();
     gPauseCurrentMenu->Draw();
     sint32 numItems = gPauseCurrentMenu->NumEnabledItems();
-    tPMenu *menu = gPauseCurrentMenu;
-    sint32 currentItem = menu->fCurrentItem;
-    bool moving = kMovingHighlight != 0;
-    sint32 enabled = menu->ItemEnabledNum(currentItem);
-    uint32 y = enabled * 13U + 106U;
-    if (moving)
-        y += (uint32)(sint32)kMovingHighlight;
+    sint32 y = (sint32)floorf(highlight + 0.5f);
     Hud::FBuildF4(1, 80, y, 160, 13, 0, 0, 0);
+    hd_ui_offset_last(0, highlight - y);
+    pauseHighlightDrawn = highlight;
     sint32 height = (((numItems + 1) * 13) + 20);
     Hud::RenderPauseBox(80, 100, 160, height);
 }
@@ -424,6 +423,9 @@ void MPause::StartPauseMenu(void)
 {
     FUNCTION_MARKER(0x8009EC80, "NFS4.EXE");
     gPauseCurrentMenu = &gPauseMenuDefs->menuPause;
+    pauseHighlightMenu = 0;
+    pauseHighlightDrawn = -1;
+    kMovingHighlight = kMovingHighlightDir = 0;
     gPauseCurrentMenu->Initialize();
     sint32 raceType = GameSetup::gData.raceType;
     gBackDepth = 0;

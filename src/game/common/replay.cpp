@@ -17,6 +17,11 @@
 #include "game/common/sim.h"
 #include "game/psx/hud.h"
 
+enum
+{
+    REPLAY_BUFFER_SIZE = 49152
+};
+
 struct ReplayCompressedStorage
 {
     char bytes[33];
@@ -35,7 +40,7 @@ struct tReplayBuffer
 {
     GameSetup::tData gameSetup;
     sint32 size;
-    char buffer[24576];
+    char buffer[REPLAY_BUFFER_SIZE];
 };
 
 static ReplayCompressedStorage replayCompressedStorage;
@@ -135,7 +140,7 @@ void Replay::ResetReplay(void)
     sint32 mode = ReplayMode;
     if ((uint32)mode < 2U)
     {
-        for (sint32 i = 24575; i >= 0; --i)
+        for (sint32 i = REPLAY_BUFFER_SIZE - 1; i >= 0; --i)
             ReplayBuffer.buffer[i] = 0;
         ReplayStorePtr = 0;
         ReplayGetPtr = 0;
@@ -179,7 +184,7 @@ void Replay::StoringReplay(void)
 void Replay::StoringControllerData(tControllerData controllerdata)
 {
     FUNCTION_MARKER(0x800B40BC, "NFS4.EXE");
-    if ((ReplayStorePtr + 128) >= 24576)
+    if ((ReplayStorePtr + 128) >= REPLAY_BUFFER_SIZE)
     {
         sint32 size = simGlobal.gameTicks;
         ReplayMode = 1;
@@ -199,7 +204,7 @@ void Replay::StoringControllerData(tControllerData controllerdata)
         char *packed = Compress(channels[i]);
         memcpy(packeddata, packed, sizeof(packeddata));
         sint32 length = (uint8)packeddata[0];
-        sint32 tail = 24576 - ReplayStorePtr;
+        sint32 tail = REPLAY_BUFFER_SIZE - ReplayStorePtr;
         if (length <= tail)
             memcpy(&ReplayBuffer.buffer[ReplayStorePtr], packeddata, length);
         else
@@ -224,7 +229,7 @@ tControllerData Replay::RetreivingControllerData(void)
         reinterpret_cast<char *>(controllerdata.states)
     };
     for (sint32 i = 0; i < 4; ++i) {
-        sint32 tail = 24576 - ReplayGetPtr;
+        sint32 tail = REPLAY_BUFFER_SIZE - ReplayGetPtr;
         const char *packet = &ReplayBuffer.buffer[ReplayGetPtr];
         sint32 length = (uint8)packet[0];
         if (length <= tail) {
@@ -269,7 +274,7 @@ void Replay::GetInput(sint32 car)
     Input::Fetch(car);
     if (ReplayCounter[car] == 0)
     {
-        if (ReplayGetPtr >= ReplayStorePtr || (uint8)(ReplayGetPtr < 24576 ? ReplayBuffer.buffer[ReplayGetPtr] : compressed_data[ReplayGetPtr - 24576]) == 0)
+        if (ReplayGetPtr >= ReplayStorePtr || (uint8)(ReplayGetPtr < REPLAY_BUFFER_SIZE ? ReplayBuffer.buffer[ReplayGetPtr] : compressed_data[ReplayGetPtr - REPLAY_BUFFER_SIZE]) == 0)
             ReplayMode = 3;
         else
         {

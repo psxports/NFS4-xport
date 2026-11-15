@@ -50,9 +50,12 @@ AudioMus::tMusicGlobals *AudioMus::g;
 void AudioMus::RefreshStatus(void)
 {
     FUNCTION_MARKER(0x80079EF4, "NFS4.EXE");
-    if (g->streamhandle < 0) {
+    if (g->streamhandle < 0)
+    {
         g->streamstatus.outstandingrequests = 0;
-    } else {
+    }
+    else
+    {
         SNDSTRM::status(g->streamhandle, &g->streamstatus);
         if (g->streamstatus.outstandingrequests > 0)
             SNDSTRM::requeststatus(g->streamstatus.currentrequest, &g->requeststatus);
@@ -65,7 +68,8 @@ sint32 AudioMus::Threshold(void)
     tMusicGlobals *state = g;
     if (state == 0 || state->bigfileheader == 0 || state->errorcode != 0)
         return 0;
-    if (state->switchsong != 2) {
+    if (state->switchsong != 2)
+    {
         if (state->streamstatus.outstandingrequests == 0)
             return 0;
         if (state->requeststatus.timetoend <= state->requeststatus.timebuffered)
@@ -83,7 +87,7 @@ sint32 AudioMus::Buffered(void)
     return state->requeststatus.timebuffered;
 }
 
-AudioMus::tCurrentSong * AudioMus::GetCurrentSong(void)
+AudioMus::tCurrentSong *AudioMus::GetCurrentSong(void)
 {
     FUNCTION_MARKER(0x8007A028, "NFS4.EXE");
     if (g == 0)
@@ -101,9 +105,12 @@ AudioMus::tCurrentSong * AudioMus::GetCurrentSong(void)
         info->title = bufferError;
     else if (g->errorcode == -3)
         info->title = streamError;
-    if (g->newswitch == 0) {
+    if (g->newswitch == 0)
+    {
         g->current.newsong = 0;
-    } else {
+    }
+    else
+    {
         g->newswitch = 0;
         g->current.newsong = 1;
     }
@@ -127,7 +134,8 @@ void AudioMus::SwitchSong(void)
     info->artist = 0;
     info->label = 0;
     info->notes = 0;
-    if (state->switchsong == 0 && state->requestsong >= 0) {
+    if (state->switchsong == 0 && state->requestsong >= 0)
+    {
         SNDSTRM::autovol(state->streamhandle, 2000, 0);
         g->fadetime = 1000;
     }
@@ -135,9 +143,12 @@ void AudioMus::SwitchSong(void)
     sint32 next = (state->requestsong + 1);
     sint32 turnOff = Hud::kTurnSongOffNext;
     state->requestsong = next;
-    if (turnOff == 0 && next < state->availablesongs) {
+    if (turnOff == 0 && next < state->availablesongs)
+    {
         state->switchsong = 1;
-    } else {
+    }
+    else
+    {
         Hud::kTurnSongOffNext = 0;
         state->firstswitch = 0;
         state->switchsong = -1;
@@ -150,7 +161,8 @@ void AudioMus::Fail(sint32 errorcode)
     FUNCTION_MARKER(0x8007A1DC, "NFS4.EXE");
     sint32 outstanding = g->streamstatus.outstandingrequests;
     g->errorcode = errorcode;
-    if (outstanding != 0) {
+    if (outstanding != 0)
+    {
         sint32 ticks = Buffered();
         SNDSTRM::autovol(g->streamhandle, ticks, 0);
         ticks = Buffered();
@@ -172,8 +184,17 @@ void AudioMus::QueueRequestedSong(void)
     sint32 entry = bytes[offsetof(tMusicGlobals, playlist) + g->requestsong];
     char *name = locatebigentry(g->bigfileheader, 0, entry, &offset, 0);
     g->songname = name;
-    if (g->streamhandle >= 0) {
+    if (g->streamhandle >= 0)
+    {
+#ifdef AP_WEB
+        char filename[80];
+        const char *bank = strstr(g->bigfilename, "amus") ? "ZZZZAMUS" : "ZZZZYMUS";
+        sprintf(filename, "MUSIC/%s_%02d.VAG", bank, entry);
+        const uint8 *patch = (const uint8 *)g->bigfileheader + sizeofbigfileheader(g->bigfileheader) + entry * 32;
+        sint32 handle = SNDSTRM::queuevag(g->streamhandle, 1000, filename, patch);
+#else
         sint32 handle = SNDSTRM::queuefile(g->streamhandle, 1000, g->bigfilename, offset);
+#endif
         g->requesthandle = handle;
     }
     g->switchsong = 2;
@@ -200,15 +221,20 @@ void AudioMus::SetEntry(AudioMus::tSongEntry *info)
     info->label = 0;
     info->date = 0;
     info->notes = 0;
-    while (*p != 0) {
-        if (*p == '-') {
-            if (havefile != 0) {
+    while (*p != 0)
+    {
+        if (*p == '-')
+        {
+            if (havefile != 0)
+            {
                 info->artist = p + 1;
                 break;
             }
             havefile = 1;
             titlechar = 0;
-        } else if (titlechar < 31) {
+        }
+        else if (titlechar < 31)
+        {
             info->strbuf[titlechar++] = *p;
         }
         ++p;
@@ -235,19 +261,23 @@ sint32 AudioMus::Server(sint32 mode, sint32 ticks)
     FUNCTION_MARKER(0x8007A3D0, "NFS4.EXE");
     if (SNDSTRM::IsPaused() || g->bigfileheader == 0)
         return 0;
-    if (g->bigfilename[0] != '.' && CdDiskReady(1) == 16) {
-        if (g->errorcode == 0) {
+    if (g->bigfilename[0] != '.' && CdDiskReady(1) == 16)
+    {
+        if (g->errorcode == 0)
+        {
             sint32 request = g->requestsong;
             g->errorcode = -2;
             g->newswitch = 1;
-            if (request >= 0) {
+            if (request >= 0)
+            {
                 sint32 buffered = Buffered();
                 SNDSTRM::autovol(g->streamhandle, buffered, 0);
             }
         }
         return 0;
     }
-    if (g->errorcode == -2) {
+    if (g->errorcode == -2)
+    {
         if (CdDiskReady(1) != 2)
             return 0;
         tMusicGlobals *state = g;
@@ -262,32 +292,45 @@ sint32 AudioMus::Server(sint32 mode, sint32 ticks)
         return 0;
     }
     RefreshStatus();
-    if (Threshold() != 0 && g->switchsong != 2) {
-        if (Buffered() < 550) {
+    if (Threshold() != 0 && g->switchsong != 2)
+    {
+        if (Buffered() < 550)
+        {
             Fail(-5);
-        } else if (Buffered() < 1500) {
-            if (g->greedy == 0) {
+        }
+        else if (Buffered() < 1500)
+        {
+            if (g->greedy == 0)
+            {
                 SNDSTRM::setgreedystate(g->streamhandle, 1);
                 g->greedy = 1;
             }
-        } else {
+        }
+        else
+        {
             sint32 buffered = Buffered();
-            if (buffered >= g->threshold && g->greedy != 0) {
+            if (buffered >= g->threshold && g->greedy != 0)
+            {
                 SNDSTRM::setgreedystate(g->streamhandle, 0);
                 g->greedy = 0;
             }
         }
     }
     tMusicGlobals *state = g;
-    if (state->switchsong == 0) {
+    if (state->switchsong == 0)
+    {
         if (state->streamstatus.outstandingrequests != 0 || state->requestsong < 0)
             return 0;
         sint32 request = state->requestsong;
         sint32 available = state->availablesongs;
-        if (available > 1) {
-            if (state->randomize == 0) {
+        if (available > 1)
+        {
+            if (state->randomize == 0)
+            {
                 state->requestsong = (request + 1) % available;
-            } else {
+            }
+            else
+            {
                 sint32 first = GetRCnt(0);
                 sint32 draw = GetRCnt(0);
                 if (first <= 0)
@@ -303,12 +346,15 @@ sint32 AudioMus::Server(sint32 mode, sint32 ticks)
         state->firstswitch = 1;
         return 0;
     }
-    if (state->switchsong == 2) {
-        if (state->streambuffer == 0) {
+    if (state->switchsong == 2)
+    {
+        if (state->streambuffer == 0)
+        {
             Fail(-4);
             return 0;
         }
-        if (state->streamhandle < 0) {
+        if (state->streamhandle < 0)
+        {
             Fail(-3);
             return 0;
         }
@@ -316,11 +362,14 @@ sint32 AudioMus::Server(sint32 mode, sint32 ticks)
             return 0;
         sint32 handle;
         sint32 volume;
-        if (state->errorcode == -5) {
+        if (state->errorcode == -5)
+        {
             handle = state->streamhandle;
             volume = state->volume;
             state->errorcode = 0;
-        } else {
+        }
+        else
+        {
             SetCurrentSongInfo();
             handle = g->streamhandle;
             volume = g->volume;
@@ -336,7 +385,8 @@ sint32 AudioMus::Server(sint32 mode, sint32 ticks)
     state = g;
     sint32 switching = state->switchsong;
     state->songname = 0;
-    if (switching != 1) {
+    if (switching != 1)
+    {
         state->switchsong = 0;
         return 0;
     }
@@ -348,17 +398,19 @@ sint32 AudioMus::Server(sint32 mode, sint32 ticks)
     return 0;
 }
 
-AudioMus::tSongList * AudioMus::GetSongList(char *pattern, sint32 memtype)
+AudioMus::tSongList *AudioMus::GetSongList(char *pattern, sint32 memtype)
 {
     FUNCTION_MARKER(0x8007A880, "NFS4.EXE");
-    if (g == 0) {
+    if (g == 0)
+    {
         tSongList *list = (tSongList *)reservememadr("Song List", sizeof(tSongList), memtype);
         list->numsongs = 0;
         list->currentsong = -1;
         return list;
     }
     sint32 numsongs = 0;
-    for (sint32 i = 0; i < g->totalsongs; ++i) {
+    for (sint32 i = 0; i < g->totalsongs; ++i)
+    {
         char *name = locatebigentry(g->bigfileheader, 0, i, 0, 0);
         if (wildcard(name, pattern) != 0)
             numsongs = (numsongs + 1);
@@ -368,10 +420,12 @@ AudioMus::tSongList * AudioMus::GetSongList(char *pattern, sint32 memtype)
     tSongEntry *song = list->song;
     list->numsongs = 0;
     list->currentsong = -1;
-    for (sint32 i = 0; i < g->totalsongs; ++i) {
+    for (sint32 i = 0; i < g->totalsongs; ++i)
+    {
         sint32 size;
         char *songname = locatebigentry(g->bigfileheader, 0, i, 0, &size);
-        if (wildcard(songname, pattern) != 0) {
+        if (wildcard(songname, pattern) != 0)
+        {
             song->filename = songname;
             SetEntry(song);
             sint32 product = (size * 10);
@@ -431,7 +485,8 @@ void AudioMus::DriverStartUp(sint32 buffersize, sint32 spusize)
     if (g->driveractive == 0)
         InitDriverGlobals();
     g->threshold = (buffersize + spusize) >> 5;
-    if (g->streamhandle < 0 && g->streambuffer != 0) {
+    if (g->streamhandle < 0 && g->streambuffer != 0)
+    {
         sint32 chunks = buffersize / 1024;
         sint32 size = (buffersize + SNDSTRM::overhead(1, chunks));
         SNDLIMITS sndlimits;
@@ -443,14 +498,16 @@ void AudioMus::DriverStartUp(sint32 buffersize, sint32 spusize)
         opts.vol = 0;
         sint32 handle = SNDSTRM::create(&opts, 1, chunks, g->streambuffer, size);
         g->streamhandle = handle;
-        if (handle >= 0) {
+        if (handle >= 0)
+        {
             SNDSTRM::setgreedylevel(handle, 0);
             SNDSTRM::setpriority(g->streamhandle, 255, 5);
         }
     }
     sint32 active = g->serveractive;
     gMusicHandle = g->streamhandle;
-    if (active == 0) {
+    if (active == 0)
+    {
         addsystemtask(Server, 25, 0);
         g->serveractive = 1;
     }
@@ -470,10 +527,16 @@ void AudioMus::SysStartUp(sint32 buffersize, sint32 spusize, char *songs)
     char *buffer = (char *)reservememadr("Music Buffer", size, 0);
     g->streambuffer = buffer;
     DriverStartUp(buffersize, spusize);
+#ifdef AP_WEB
+    sprintf(g->bigfilename, "%szzz%s.idx", Paths_Paths[27], songs);
+    char *header = (char *)loadfileadr(g->bigfilename, 0);
+#else
     sprintf(g->bigfilename, "%szzz%s.viv", Paths_Paths[27], songs);
     char *header = loadbigfileheader(g->bigfilename, 0);
+#endif
     g->bigfileheader = header;
-    if (header != 0) {
+    if (header != 0)
+    {
         sint32 count = bigcount(header);
         g->totalsongs = count;
     }
@@ -484,11 +547,13 @@ void AudioMus::DriverCleanUp(void)
     FUNCTION_MARKER(0x8007AD10, "NFS4.EXE");
     if (g == 0)
         return;
-    if (g->serveractive != 0) {
+    if (g->serveractive != 0)
+    {
         delsystemtask(Server);
         g->serveractive = 0;
     }
-    if (g->streamhandle >= 0) {
+    if (g->streamhandle >= 0)
+    {
         SNDSTRM::destroy(g->streamhandle);
         g->streamhandle = -1;
     }
@@ -519,18 +584,25 @@ void AudioMus::StopSong(sint32 fadeticks)
     FUNCTION_MARKER(0x8007AE04, "NFS4.EXE");
     if (g == 0 || g->requestsong < 0)
         return;
-    if (fadeticks == 0) {
+    if (fadeticks == 0)
+    {
         if (g->streamhandle >= 0)
             SNDSTRM::purge(g->streamhandle);
         tMusicGlobals *state = g;
         state->fadetime = 0;
         state->songname = 0;
         state->switchsong = 0;
-    } else {
-        if (g->switchsong == 0) {
-            if (g->streamhandle < 0) {
+    }
+    else
+    {
+        if (g->switchsong == 0)
+        {
+            if (g->streamhandle < 0)
+            {
                 g->fadetime = 0;
-            } else {
+            }
+            else
+            {
                 SNDSTRM::autovol(g->streamhandle, fadeticks, 0);
                 g->fadetime = fadeticks;
             }
@@ -547,9 +619,11 @@ void AudioMus::BuildPlayList(sint32 numplaylistsongs, sint32 *playlist)
     if (g == 0)
         return;
     g->availablesongs = 0;
-    for (sint32 i = 0; i < numplaylistsongs; ++i) {
+    for (sint32 i = 0; i < numplaylistsongs; ++i)
+    {
         sint32 entry = playlist[i];
-        if (entry >= 0 && entry < g->totalsongs) {
+        if (entry >= 0 && entry < g->totalsongs)
+        {
             uint8 *bytes = (uint8 *)g;
             bytes[offsetof(tMusicGlobals, playlist) + g->availablesongs] = (uint8)entry;
             g->availablesongs = (g->availablesongs + 1);
@@ -566,11 +640,13 @@ void AudioMus::BuildPattern(char *pattern)
     g->availablesongs = 0;
     if (total <= 0)
         return;
-    for (sint32 i = 0; ; ++i) {
+    for (sint32 i = 0;; ++i)
+    {
         if (g->availablesongs >= 32)
             return;
         char *name = locatebigentry(g->bigfileheader, 0, i, 0, 0);
-        if (wildcard(name, pattern) != 0) {
+        if (wildcard(name, pattern) != 0)
+        {
             g->playlist[g->availablesongs] = (char)i;
             g->availablesongs = (g->availablesongs + 1);
         }
@@ -584,9 +660,11 @@ sint32 AudioMus::PlaySong(char *pattern)
     FUNCTION_MARKER(0x8007B030, "NFS4.EXE");
     if (g == 0)
         return 0;
-    if (pattern != 0) {
+    if (pattern != 0)
+    {
         BuildPattern(pattern);
-        if (g->availablesongs == 0 && strlen(pattern) < 61) {
+        if (g->availablesongs == 0 && strlen(pattern) < 61)
+        {
             char title[128];
             sprintf(title, "*-%s", pattern);
             BuildPattern(title);
@@ -595,23 +673,30 @@ sint32 AudioMus::PlaySong(char *pattern)
     if (g->volume == 0)
         return 0;
     sint32 available = g->availablesongs;
-    if (available != 0) {
+    if (available != 0)
+    {
         g->randomize = 1;
         sint32 newsong;
-        if (available == 1) {
+        if (available == 1)
+        {
             newsong = 0;
-        } else {
+        }
+        else
+        {
             sint32 previous = g->requestsong;
             sint32 alternatives = (available - 1);
             sint32 first = GetRCnt(0);
             sint32 draw = GetRCnt(0);
             if (first <= 0)
                 draw = (-draw);
-            if (pattern != 0) {
+            if (pattern != 0)
+            {
                 if (available == -1 && draw == INT_MIN)
                     abort();
                 newsong = draw % available;
-            } else {
+            }
+            else
+            {
                 if (alternatives == 0 || (alternatives == -1 && draw == INT_MIN))
                     abort();
                 sint32 candidate = ((previous + 1) + ((draw % alternatives)));
@@ -621,15 +706,20 @@ sint32 AudioMus::PlaySong(char *pattern)
             }
         }
         tMusicGlobals *state = g;
-        if (state->switchsong != 0) {
+        if (state->switchsong != 0)
+        {
             state->switchsong = 1;
             state->requestsong = newsong;
-        } else if (state->requestsong < 0) {
+        }
+        else if (state->requestsong < 0)
+        {
             state->fadetime = 0;
             SNDSTRM::vol(state->streamhandle, 0);
             g->requestsong = newsong;
             QueueRequestedSong();
-        } else {
+        }
+        else
+        {
             SNDSTRM::autovol(state->streamhandle, 2000, 0);
             state = g;
             state->fadetime = 2000;
@@ -652,22 +742,28 @@ void AudioMus::Volume(sint32 volume)
     if (g == 0 || g->volume == volume)
         return;
     sint32 ticksleft = 0;
-    if (volume == 0) {
+    if (volume == 0)
+    {
         g->volume = 0;
         StopSong(0);
         return;
     }
-    if (g->fadetime != 0 && g->streamhandle >= 0) {
+    if (g->fadetime != 0 && g->streamhandle >= 0)
+    {
         sint32 curvol = SNDSTRM::getvol(g->streamhandle);
-        if (curvol > 0 && g->volume > 0) {
+        if (curvol > 0 && g->volume > 0)
+        {
             sint32 product = (g->fadetime * curvol);
             ticksleft = product / g->volume;
         }
     }
-    if (ticksleft == 0) {
+    if (ticksleft == 0)
+    {
         if (g->streamhandle >= 0 && g->switchsong != 2)
             SNDSTRM::vol(g->streamhandle, volume);
-    } else {
+    }
+    else
+    {
         sint32 product = (volume * ticksleft);
         sint32 fade = g->fadetime;
         if (fade == 0 || (fade == -1 && product == INT_MIN))
@@ -675,10 +771,13 @@ void AudioMus::Volume(sint32 volume)
         SNDSTRM::vol(g->streamhandle, product / fade);
         SNDSTRM::autovol(g->streamhandle, ticksleft, 0);
     }
-    if (g->volume == 0) {
+    if (g->volume == 0)
+    {
         g->volume = volume;
         PlaySong(0);
-    } else {
+    }
+    else
+    {
         g->volume = volume;
     }
 }
@@ -688,15 +787,19 @@ void AudioMus::AutoVolume(sint32 fadeticks, sint32 volume)
     FUNCTION_MARKER(0x8007B46C, "NFS4.EXE");
     if (g == 0 || g->volume == volume)
         return;
-    if (volume == 0) {
+    if (volume == 0)
+    {
         g->volume = 0;
         StopSong(0);
         return;
     }
-    if (g->volume == 0) {
+    if (g->volume == 0)
+    {
         g->volume = volume;
         PlaySong(0);
-    } else {
+    }
+    else
+    {
         g->volume = volume;
     }
     if (g->switchsong != 2 && g->fadetime == 0 && g->streamhandle >= 0)

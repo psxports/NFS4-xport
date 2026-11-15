@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include "xport.h"
+#include "hd.h"
 #include "eaclib/psx/eaclib.h"
 #include "game/common/aicop.h"
 #include "game/common/aiphysic.h"
@@ -26,9 +27,9 @@
 
 BWorldSm::Pos testSimRoadInfo;
 BWorldSm::Pos newtestSimRoadInfo;
-sint32 divTable[50] = { 65536, 66052, 66576, 67108, 67650, 68200, 68759, 69327, 69905, 70492, 71089, 71697, 72315, 72944, 73584, 74235, 74898, 75573, 76260, 76959, 77672, 78398, 79137, 79891, 80659, 81442, 82241, 83055, 83886, 84733, 85598, 86480, 87381, 88301, 89240, 90200, 91180, 92182, 93206, 94254, 95325, 96420, 97541, 98689, 99864, 101067, 102300, 103563, 104857, 106184 };
-sint16 fudgeTable[32] = { 0, 20, 36, 44, 30, 44, 52, 46, 36, 20, 6, -20, -30, -16, 0, 18, 26, 38, 52, 40, 30, 15, 0, -20, -32, -16, -8, 8, 16, 20, 16, 8 };
-sint32 swap[4] = { 0, 1, 2, 3 };
+sint32 divTable[50] = {65536, 66052, 66576, 67108, 67650, 68200, 68759, 69327, 69905, 70492, 71089, 71697, 72315, 72944, 73584, 74235, 74898, 75573, 76260, 76959, 77672, 78398, 79137, 79891, 80659, 81442, 82241, 83055, 83886, 84733, 85598, 86480, 87381, 88301, 89240, 90200, 91180, 92182, 93206, 94254, 95325, 96420, 97541, 98689, 99864, 101067, 102300, 103563, 104857, 106184};
+sint16 fudgeTable[32] = {0, 20, 36, 44, 30, 44, 52, 46, 36, 20, 6, -20, -30, -16, 0, 18, 26, 38, 52, 40, 30, 15, 0, -20, -32, -16, -8, 8, 16, 20, 16, 8};
+sint32 swap[4] = {0, 1, 2, 3};
 
 sint32 Netwon_CheckForBadQuad(BO::tNewtonObj *newtonObj, BWorldSm::Pos *testSimRoadInfo, sint32 wheel)
 {
@@ -411,7 +412,7 @@ sint32 Newton::FindGroundElevationAndNormal(BO::tNewtonObj *newtonObj, coorddef 
 {
     FUNCTION_MARKER(0x8009FF80, "NFS4.EXE");
     Car::tObj *car = reinterpret_cast<Car::tObj *>(newtonObj);
-    coorddef elevation = { 0, 0, 0 };
+    coorddef elevation = {0, 0, 0};
     coorddef carNormal;
     carNormal.x = newtonObj->orientMat.m[3];
     carNormal.y = newtonObj->orientMat.m[4];
@@ -507,7 +508,7 @@ sint32 Newton::FindGroundElevationAndNormal(BO::tNewtonObj *newtonObj, coorddef 
         car->wheel[i].currentPos = wheelHeight[i];
         car->wheel[i].roadNormal = roadNormal;
     }
-    coorddef wheelVec = { 0, 0, 0 };
+    coorddef wheelVec = {0, 0, 0};
     sint32 compressionValue[4];
     for (sint32 i = 0; i < 4; ++i)
     {
@@ -858,7 +859,8 @@ void Newton::CopyRoadMatrixToOrientMat(BO::tNewtonObj *n, sint32 backwards)
     FUNCTION_MARKER(0x800A15F4, "NFS4.EXE");
     matrixtdef *ori = &n->orientMat;
     matrixtdef *road = &n->roadMatrix;
-    if (backwards == 0) *ori = *road;
+    if (backwards == 0)
+        *ori = *road;
     else
     {
         ori->m[0] = (-road->m[0]);
@@ -878,7 +880,8 @@ void Newton::CopyRoadMatrixToShadowMat(BO::tNewtonObj *n, sint32 backwards)
     FUNCTION_MARKER(0x800A16C8, "NFS4.EXE");
     matrixtdef *shad = &n->shadowMat;
     matrixtdef *road = &n->roadMatrix;
-    if (backwards == 0) *shad = *road;
+    if (backwards == 0)
+        *shad = *road;
     else
     {
         shad->m[0] = (-road->m[0]);
@@ -896,6 +899,7 @@ void Newton::CopyRoadMatrixToShadowMat(BO::tNewtonObj *n, sint32 backwards)
 void Newton::SetInitialSlicePositionOrientationEtc(BO::tNewtonObj *n, sint32 slice, coorddef *offset, sint32 direction)
 {
     FUNCTION_MARKER(0x800A179C, "NFS4.EXE");
+    hd_reset_object(n);
     sint32 backwards = direction != 1;
     BWorldSm::SetSlice(slice, &n->simRoadInfo);
     Trk::NewSlice *roadSlice = &BWorldSm::slices[slice];
@@ -909,8 +913,9 @@ void Newton::SetInitialSlicePositionOrientationEtc(BO::tNewtonObj *n, sint32 sli
     n->roadMatrix.m[6] = (sint8)roadSlice->forward[0] * 512;
     n->roadMatrix.m[7] = (sint8)roadSlice->forward[1] * 512;
     n->roadMatrix.m[8] = (sint8)roadSlice->forward[2] * 512;
-    for (sint32 row = 0; row < 9; row += 3) {
-        coorddef basis = { n->roadMatrix.m[row], n->roadMatrix.m[row + 1], n->roadMatrix.m[row + 2] };
+    for (sint32 row = 0; row < 9; row += 3)
+    {
+        coorddef basis = {n->roadMatrix.m[row], n->roadMatrix.m[row + 1], n->roadMatrix.m[row + 2]};
         Math::NormalizeShortVector(&basis);
         n->roadMatrix.m[row] = basis.x;
         n->roadMatrix.m[row + 1] = basis.y;
@@ -944,15 +949,22 @@ void Newton::SetInitialSlicePositionOrientationEtc(BO::tNewtonObj *n, sint32 sli
     UpdateRoadGeometry(n);
     CopyRoadMatrixToOrientMat(n, backwards);
     CopyRoadMatrixToShadowMat(n, backwards);
-    if (n->simOptz == 2) {
+    if (n->simOptz == 2)
+    {
         n->groundElevation = BWorldSm::slices[slice].center[1];
-    } else if (n->simOptz == 1) {
+    }
+    else if (n->simOptz == 1)
+    {
         uint32 sum = 0;
-        for (sint32 i = 0; i < 4; ++i) {
+        for (sint32 i = 0; i < 4; ++i)
+        {
             coorddef temp;
-            if (n->simRoadInfo.simQuad != 0) {
+            if (n->simRoadInfo.simQuad != 0)
+            {
                 temp = n->simRoadInfo.quadPts[i];
-            } else {
+            }
+            else
+            {
                 Trk::NewSlice *quadSlice = &BWorldSm::slices[n->simRoadInfo.slice];
                 temp.x = quadSlice->center[0];
                 temp.y = quadSlice->center[1];
@@ -964,28 +976,36 @@ void Newton::SetInitialSlicePositionOrientationEtc(BO::tNewtonObj *n, sint32 sli
         if (quadCenterY < 0)
             quadCenterY += 3;
         n->groundElevation = quadCenterY >> 2;
-    } else {
+    }
+    else
+    {
         static coorddef dummy;
-        if (stackSpeedUpEnbabledFlag != 0) {
+        if (stackSpeedUpEnbabledFlag != 0)
+        {
             stackSpeedUpEnbabledFlag = 0;
             n->groundElevation = FindGroundElevationAndNormal(n, &dummy);
             stackSpeedUpEnbabledFlag = 1;
-        } else {
+        }
+        else
+        {
             n->groundElevation = FindGroundElevationAndNormal(n, &dummy);
         }
         n->position.y = (n->groundElevation + n->dimension.y);
     }
-    coorddef normal = { n->roadMatrix.m[3], n->roadMatrix.m[4], n->roadMatrix.m[5] };
+    coorddef normal = {n->roadMatrix.m[3], n->roadMatrix.m[4], n->roadMatrix.m[5]};
     sint32 altitude = CalcPerpenHeightOfLowestPointFromGround(n, &normal, &n->roadCenterPoint);
     sint32 oldY = n->position.y;
     uint8 simOptz = n->simOptz;
     n->objAltitude = altitude;
     n->objAltitude = 0;
     n->position.y = (oldY - altitude);
-    if (simOptz == 0) {
+    if (simOptz == 0)
+    {
         Trk::NewSimQuad *simQuad = n->simRoadInfo.simQuad;
         n->groundSurfaceType = simQuad != 0 ? simQuad->surface : 14;
-    } else {
+    }
+    else
+    {
         n->groundSurfaceType = 1;
     }
     n->driveSurfaceType = n->groundSurfaceType & 15;
@@ -1006,7 +1026,8 @@ void Newton::InitBaseNewtonObj(BO::tNewtonObj *newtonObj, sint32 index, sint32 m
     newtonObj->mass = mass;
     if ((GameSetup::gData.sgge & 2) != 0 && CollisionHumanFlag(newtonObj))
         newtonObj->mass = (mass * 5);
-    if (CollisionCopFlag(newtonObj)) {
+    if (CollisionCopFlag(newtonObj))
+    {
         if (GameSetup::gData.commMode == 1 && (Cars::gHumanRaceCarList[0]->carInfo->carType < 22 || Cars::gHumanRaceCarList[1]->carInfo->carType < 22))
             newtonObj->mass = ((uint32)newtonObj->mass << 1);
         else
@@ -1100,7 +1121,8 @@ sint32 Newton::OptzRotxform(matrixtdef *m, sint32 ax, sint32 ay, sint32 az, sint
         Math::fasttransmult(&mx, &my, &mt);
         changed = 1;
     }
-    if (absz < 14) *m = mt;
+    if (absz < 14)
+        *m = mt;
     else
     {
         fixedxformz(&mz, az);
@@ -1183,12 +1205,14 @@ void Newton::CalculateGroundShadowMatrix(BO::tNewtonObj *newtonObj, coorddef *no
     sint32 rightFirst = 0;
     if (orientToGround < 0x8000)
     {
-        sint32 dot = ( ((((newtonObj->orientMat.m[0] / 256)) * (normal->x / 256)) + (((newtonObj->orientMat.m[1] / 256)) * (normal->y / 256))) + (((newtonObj->orientMat.m[2] / 256)) * (normal->z / 256)));
+        sint32 dot = (((((newtonObj->orientMat.m[0] / 256)) * (normal->x / 256)) + (((newtonObj->orientMat.m[1] / 256)) * (normal->y / 256))) + (((newtonObj->orientMat.m[2] / 256)) * (normal->z / 256)));
         if (dot < 0)
             dot = (-dot);
         if (dot == (-2147483647 - 1))
         {
-            for (;;) {}
+            for (;;)
+            {
+            }
         }
         rightFirst = (double)dot > 0.5;
     }
@@ -1268,9 +1292,8 @@ void Newton::CalculateGroundShadowMatrix(BO::tNewtonObj *newtonObj, coorddef *no
     }
 }
 
-void Newton::CalcRealShadowCoordinates(Car::tObj *carObj, sint32 currentTick)
+void Newton::CalculateRenderShadow(Car::tObj *carObj, sint32 currentTick, coorddef *output)
 {
-    FUNCTION_MARKER(0x800A268C, "NFS4.EXE");
     sint32 diff = (currentTick - carObj->N.lastUpdated);
     coorddef dimension = carObj->N.dimension;
     dimension.x = (dimension.x + 0xccc);
@@ -1314,28 +1337,34 @@ void Newton::CalcRealShadowCoordinates(Car::tObj *carObj, sint32 currentTick)
     temp.x = (carGroundCoord.x + lengthVector.x);
     temp.y = (carGroundCoord.y + lengthVector.y);
     temp.z = (carGroundCoord.z + lengthVector.z);
-    carObj->N.shadowCoord[0].x = (temp.x - frontWidthVector.x);
-    carObj->N.shadowCoord[0].y = (temp.y - frontWidthVector.y);
-    carObj->N.shadowCoord[0].z = (temp.z - frontWidthVector.z);
-    carObj->N.shadowCoord[1].x = (temp.x + frontWidthVector.x);
-    carObj->N.shadowCoord[1].y = (temp.y + frontWidthVector.y);
-    carObj->N.shadowCoord[1].z = (temp.z + frontWidthVector.z);
+    output[0].x = (temp.x - frontWidthVector.x);
+    output[0].y = (temp.y - frontWidthVector.y);
+    output[0].z = (temp.z - frontWidthVector.z);
+    output[1].x = (temp.x + frontWidthVector.x);
+    output[1].y = (temp.y + frontWidthVector.y);
+    output[1].z = (temp.z + frontWidthVector.z);
     temp.x = (carGroundCoord.x - lengthVector.x);
     temp.y = (carGroundCoord.y - lengthVector.y);
     temp.z = (carGroundCoord.z - lengthVector.z);
-    carObj->N.shadowCoord[2].x = (temp.x - widthVector.x);
-    carObj->N.shadowCoord[2].y = (temp.y - widthVector.y);
-    carObj->N.shadowCoord[2].z = (temp.z - widthVector.z);
-    carObj->N.shadowCoord[3].x = (temp.x + widthVector.x);
-    carObj->N.shadowCoord[3].y = (temp.y + widthVector.y);
-    carObj->N.shadowCoord[3].z = (temp.z + widthVector.z);
+    output[2].x = (temp.x - widthVector.x);
+    output[2].y = (temp.y - widthVector.y);
+    output[2].z = (temp.z - widthVector.z);
+    output[3].x = (temp.x + widthVector.x);
+    output[3].y = (temp.y + widthVector.y);
+    output[3].z = (temp.z + widthVector.z);
     for (sint32 i = 0; i < 4; ++i)
     {
         sint32 wheelHeight = carObj->wheel[i].currentPos.y;
-        carObj->N.shadowCoord[i].y = wheelHeight;
+        output[i].y = wheelHeight;
         sint32 verticalVelocity = carObj->N.linearVel.y / 64;
-        carObj->N.shadowCoord[i].y = (wheelHeight + (verticalVelocity * diff));
+        output[i].y = (wheelHeight + (verticalVelocity * diff));
     }
+}
+
+void Newton::CalcRealShadowCoordinates(Car::tObj *carObj, sint32 currentTick)
+{
+    FUNCTION_MARKER(0x800A268C, "NFS4.EXE");
+    CalculateRenderShadow(carObj, currentTick, carObj->N.shadowCoord);
 }
 
 void Newton::CheckForSpikeBelts(BO::tNewtonObj *newtonObj)
@@ -1380,9 +1409,7 @@ void Newton::DoPostBarrierCollisionHandling(BO::tNewtonObj *newtonObj, coorddef 
     if (distRetreat >= -0x7ad)
         distRetreat = -0x7ae;
     coorddef upVec = {0, 0x10000, 0};
-    matrixtdef islandMatrix = {{normal.x, normal.y, normal.z,
-                               upVec.x, upVec.y, upVec.z,
-                               barrierVec.x, barrierVec.y, barrierVec.z}};
+    matrixtdef islandMatrix = {{normal.x, normal.y, normal.z, upVec.x, upVec.y, upVec.z, barrierVec.x, barrierVec.y, barrierVec.z}};
     Car::tObj *carObj = reinterpret_cast<Car::tObj *>(newtonObj);
     impactVel = Physics::AttenuateVelocity(carObj, distRetreat, &islandMatrix);
     Physics::SetCurrentWallType(4);
@@ -1431,11 +1458,7 @@ void Newton::GenerateVector(sint32 type, coorddef *vector, BWorldSm::Pos *testSi
 
 static coorddef OffsetUndrivableProbe(const coorddef &point, const coorddef &offset)
 {
-    coorddef result = {
-        (point.x + offset.x),
-        (point.y + offset.y),
-        (point.z + offset.z)
-    };
+    coorddef result = {(point.x + offset.x), (point.y + offset.y), (point.z + offset.z)};
     return result;
 }
 
@@ -1457,11 +1480,7 @@ static coorddef UndrivableCenterNormal(const coorddef &origin, const BWorldSm::P
             z += (uint32)slice.center[2];
         }
     }
-    coorddef normal = {
-        (origin.x - ((sint32)x / 4)),
-        0,
-        (origin.z - ((sint32)z / 4))
-    };
+    coorddef normal = {(origin.x - ((sint32)x / 4)), 0, (origin.z - ((sint32)z / 4))};
     return normal;
 }
 
@@ -1472,7 +1491,7 @@ void Newton::TestForUndrivableSurfaces(BO::tNewtonObj *newtonObj)
     Car::tObj *car = reinterpret_cast<Car::tObj *>(newtonObj);
     const coorddef cautionaryCenter = newtonObj->roadCenterPoint;
     sint32 newHeight = 0;
-    coorddef speedVec = { 0, 0, 0 };
+    coorddef speedVec = {0, 0, 0};
     testSimRoadInfo = newtonObj->simRoadInfo;
     if (newtonObj->speedXZ > 0x280000)
     {
@@ -1546,7 +1565,7 @@ void Newton::TestForUndrivableSurfaces(BO::tNewtonObj *newtonObj)
         sint32 impulse = newtonObj->collision.impulse;
         if (impulse > 0xA0000)
         {
-            const sint32 damageZones[4] = { 0, 2, 6, 4 };
+            const sint32 damageZones[4] = {0, 2, 6, 4};
             AddDamageZone(newtonObj, impulse, damageZones[i], 1);
         }
         return;
@@ -1706,7 +1725,7 @@ sint32 Newton::CalculateRoadPositionFromSliceAndPosition(sint32 slice, coorddef 
     carRelative.x = (position->x - centerBack.x);
     carRelative.y = (position->y - centerBack.y);
     carRelative.z = (position->z - centerBack.z);
-    return ( ((((matrix->m[0] / 256)) * (carRelative.x / 256)) + (((matrix->m[1] / 256)) * (carRelative.y / 256))) + (((matrix->m[2] / 256)) * (carRelative.z / 256)));
+    return (((((matrix->m[0] / 256)) * (carRelative.x / 256)) + (((matrix->m[1] / 256)) * (carRelative.y / 256))) + (((matrix->m[2] / 256)) * (carRelative.z / 256)));
 }
 
 sint32 Newton::CalculateRoadPosition(BO::tNewtonObj *newtonObj)
@@ -1724,5 +1743,5 @@ sint32 Newton::CalculateRoadPosition(BO::tNewtonObj *newtonObj)
     carRelative.x = (position->x - centerBack.x);
     carRelative.y = (position->y - centerBack.y);
     carRelative.z = (position->z - centerBack.z);
-    return ( ((((matrix->m[0] / 256)) * (carRelative.x / 256)) + (((matrix->m[1] / 256)) * (carRelative.y / 256))) + (((matrix->m[2] / 256)) * (carRelative.z / 256)));
+    return (((((matrix->m[0] / 256)) * (carRelative.x / 256)) + (((matrix->m[1] / 256)) * (carRelative.y / 256))) + (((matrix->m[2] / 256)) * (carRelative.z / 256)));
 }

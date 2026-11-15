@@ -16,6 +16,7 @@ struct dflip
 };
 
 extern sint32 gFlip;
+extern sint32 gTotalMem;
 
 class Draw
 {
@@ -99,7 +100,7 @@ public:
     static void InitViewOTInGame(void);
     static void DeInitViews(void);
     static void DeInitViewsInGame(void);
-    static DRAWENV * GetDRAWENV(sint32 viewid, sint32 page);
+    static DRAWENV *GetDRAWENV(sint32 viewid, sint32 page);
     static void SetViewMemBudget(sint32 viewid, sint32 totalmem);
     static void SetViewColor(sint32 viewid, sint32 r, sint32 g, sint32 b);
     static void StartRenderingView(sint32 viewid);

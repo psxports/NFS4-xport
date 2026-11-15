@@ -4,6 +4,7 @@
 #include "xport.h"
 #include "psx.h"
 #include "psx_mdec.h"
+#include "hd_ui.h"
 #include "eaclib/psx/eaclib.h"
 #include "eaclib/psx/globals.h"
 #include "frontend/common/feapp.h"
@@ -48,82 +49,55 @@ struct tVideoWallConfig
     tVideo *videos[4];
 };
 
-static tVideo video11a = { 0, 0, 1, 1, 1, 1, 0, 0 };
-static tVideo video11b = { 1, 0, 1, 1, 1, 1, 0, 0 };
-static tVideo video11c = { 2, 0, 1, 1, 1, 1, 0, 0 };
-static tVideo video11d = { 3, 0, 1, 1, 1, 1, 0, 0 };
-static tVideo video11e = { 0, 1, 1, 1, 1, 1, 0, 0 };
-static tVideo video11h = { 3, 1, 1, 1, 1, 1, 0, 0 };
-static tVideo video11i = { 0, 2, 1, 1, 1, 1, 0, 0 };
-static tVideo video11l = { 3, 2, 1, 1, 1, 1, 0, 0 };
-static tVideo video11m = { 0, 3, 1, 1, 1, 1, 0, 0 };
-static tVideo video11n = { 1, 3, 1, 1, 1, 1, 0, 0 };
-static tVideo video11o = { 2, 3, 1, 1, 1, 1, 0, 0 };
-static tVideo video11p = { 3, 3, 1, 1, 1, 1, 0, 0 };
-static tVideo video21a = { 0, 0, 2, 1, 1, 1, 0, 0 };
-static tVideo video21c = { 2, 0, 2, 1, 1, 1, 0, 0 };
-static tVideo video21j = { 0, 3, 2, 1, 1, 1, 0, 0 };
-static tVideo video21l = { 2, 3, 2, 1, 1, 1, 0, 0 };
-static tVideo video31a = { 0, 0, 3, 1, 1, 1, 0, 0 };
-static tVideo video31b = { 1, 0, 3, 1, 1, 1, 0, 0 };
-static tVideo video31g = { 0, 3, 3, 1, 1, 1, 0, 0 };
-static tVideo video31h = { 1, 3, 3, 1, 1, 1, 0, 0 };
-static tVideo video22a = { 0, 0, 2, 2, 1, 1, 0, 0 };
-static tVideo video22b = { 1, 0, 2, 2, 1, 1, 0, 0 };
-static tVideo video22c = { 2, 0, 2, 2, 1, 1, 0, 0 };
-static tVideo video22d = { 0, 1, 2, 2, 1, 1, 0, 0 };
-static tVideo video22f = { 2, 1, 2, 2, 1, 1, 0, 0 };
-static tVideo video22g = { 0, 2, 2, 2, 1, 1, 0, 0 };
-static tVideo video22h = { 1, 2, 2, 2, 1, 1, 0, 0 };
-static tVideo video22i = { 2, 2, 2, 2, 1, 1, 0, 0 };
-static tVideo video32a = { 0, 0, 3, 2, 1, 1, 0, 0 };
-static tVideo video32b = { 1, 0, 3, 2, 1, 1, 0, 0 };
-static tVideo video32e = { 0, 2, 3, 2, 1, 1, 0, 0 };
-static tVideo video32f = { 1, 2, 3, 2, 1, 1, 0, 0 };
+static tVideo video11a = {0, 0, 1, 1, 1, 1, 0, 0};
+static tVideo video11b = {1, 0, 1, 1, 1, 1, 0, 0};
+static tVideo video11c = {2, 0, 1, 1, 1, 1, 0, 0};
+static tVideo video11d = {3, 0, 1, 1, 1, 1, 0, 0};
+static tVideo video11e = {0, 1, 1, 1, 1, 1, 0, 0};
+static tVideo video11h = {3, 1, 1, 1, 1, 1, 0, 0};
+static tVideo video11i = {0, 2, 1, 1, 1, 1, 0, 0};
+static tVideo video11l = {3, 2, 1, 1, 1, 1, 0, 0};
+static tVideo video11m = {0, 3, 1, 1, 1, 1, 0, 0};
+static tVideo video11n = {1, 3, 1, 1, 1, 1, 0, 0};
+static tVideo video11o = {2, 3, 1, 1, 1, 1, 0, 0};
+static tVideo video11p = {3, 3, 1, 1, 1, 1, 0, 0};
+static tVideo video21a = {0, 0, 2, 1, 1, 1, 0, 0};
+static tVideo video21c = {2, 0, 2, 1, 1, 1, 0, 0};
+static tVideo video21j = {0, 3, 2, 1, 1, 1, 0, 0};
+static tVideo video21l = {2, 3, 2, 1, 1, 1, 0, 0};
+static tVideo video31a = {0, 0, 3, 1, 1, 1, 0, 0};
+static tVideo video31b = {1, 0, 3, 1, 1, 1, 0, 0};
+static tVideo video31g = {0, 3, 3, 1, 1, 1, 0, 0};
+static tVideo video31h = {1, 3, 3, 1, 1, 1, 0, 0};
+static tVideo video22a = {0, 0, 2, 2, 1, 1, 0, 0};
+static tVideo video22b = {1, 0, 2, 2, 1, 1, 0, 0};
+static tVideo video22c = {2, 0, 2, 2, 1, 1, 0, 0};
+static tVideo video22d = {0, 1, 2, 2, 1, 1, 0, 0};
+static tVideo video22f = {2, 1, 2, 2, 1, 1, 0, 0};
+static tVideo video22g = {0, 2, 2, 2, 1, 1, 0, 0};
+static tVideo video22h = {1, 2, 2, 2, 1, 1, 0, 0};
+static tVideo video22i = {2, 2, 2, 2, 1, 1, 0, 0};
+static tVideo video32a = {0, 0, 3, 2, 1, 1, 0, 0};
+static tVideo video32b = {1, 0, 3, 2, 1, 1, 0, 0};
+static tVideo video32e = {0, 2, 3, 2, 1, 1, 0, 0};
+static tVideo video32f = {1, 2, 3, 2, 1, 1, 0, 0};
 
-static tVertex dropShadow[4][4] =
-{
-    { { 163, 42 }, { 163, 210 }, { 183, 52 }, { 183, 200 } },
-    { { 163, 42 }, { 483, 42 }, { 183, 52 }, { 463, 52 } },
-    { { 483, 42 }, { 483, 210 }, { 463, 52 }, { 463, 200 } },
-    { { 163, 210 }, { 483, 210 }, { 183, 200 }, { 463, 200 } },
+static tVertex dropShadow[4][4] = {
+    {{163, 42}, {163, 210}, {183, 52}, {183, 200}},
+    {{163, 42}, {483, 42}, {183, 52}, {463, 52}},
+    {{483, 42}, {483, 210}, {463, 52}, {463, 200}},
+    {{163, 210}, {483, 210}, {183, 200}, {463, 200}},
 };
 
-static tVertex animLocations[4] =
-{
-    { 163, 42 }, { 403, 42 }, { 163, 168 }, { 403, 168 }
+static tVertex animLocations[4] = {{163, 42}, {403, 42}, {163, 168}, {403, 168}};
+
+static tVideoWallConfig videoWallConfigs[24] = {
+    {2, 0, {&video32a, &video21l, 0, 0}},         {2, 0, {&video32b, &video21j, 0, 0}},         {2, 0, {&video32e, &video21c, 0, 0}},         {2, 0, {&video32f, &video21a, 0, 0}},         {3, 0, {&video22a, &video11l, &video11p, 0}}, {3, 0, {&video22c, &video11i, &video11m, 0}}, {3, 0, {&video22g, &video11d, &video11h, 0}}, {3, 0, {&video22i, &video11a, &video11e, 0}}, {3, 0, {&video11b, &video21c, &video22h, 0}}, {3, 0, {&video11c, &video21a, &video22h, 0}}, {3, 0, {&video11n, &video21l, &video22b, 0}}, {3, 0, {&video11o, &video21j, &video22b, 0}},
+    {3, 0, {&video11d, &video22d, &video21j, 0}}, {3, 0, {&video11a, &video22f, &video21l, 0}}, {3, 0, {&video11p, &video22d, &video21a, 0}}, {3, 0, {&video11m, &video22f, &video21c, 0}}, {3, 0, {&video22d, &video11d, &video11p, 0}}, {3, 0, {&video22f, &video11a, &video11m, 0}}, {3, 0, {&video22b, &video11m, &video11p, 0}}, {3, 0, {&video22h, &video11a, &video11d, 0}}, {3, 0, {&video22a, &video31h, &video11m, 0}}, {3, 0, {&video22c, &video31g, &video11p, 0}}, {3, 0, {&video22i, &video31a, &video11d, 0}}, {3, 0, {&video22g, &video31b, &video11a, 0}},
 };
 
-static tVideoWallConfig videoWallConfigs[24] =
-{
-    { 2, 0, { &video32a, &video21l, 0, 0 } },
-    { 2, 0, { &video32b, &video21j, 0, 0 } },
-    { 2, 0, { &video32e, &video21c, 0, 0 } },
-    { 2, 0, { &video32f, &video21a, 0, 0 } },
-    { 3, 0, { &video22a, &video11l, &video11p, 0 } },
-    { 3, 0, { &video22c, &video11i, &video11m, 0 } },
-    { 3, 0, { &video22g, &video11d, &video11h, 0 } },
-    { 3, 0, { &video22i, &video11a, &video11e, 0 } },
-    { 3, 0, { &video11b, &video21c, &video22h, 0 } },
-    { 3, 0, { &video11c, &video21a, &video22h, 0 } },
-    { 3, 0, { &video11n, &video21l, &video22b, 0 } },
-    { 3, 0, { &video11o, &video21j, &video22b, 0 } },
-    { 3, 0, { &video11d, &video22d, &video21j, 0 } },
-    { 3, 0, { &video11a, &video22f, &video21l, 0 } },
-    { 3, 0, { &video11p, &video22d, &video21a, 0 } },
-    { 3, 0, { &video11m, &video22f, &video21c, 0 } },
-    { 3, 0, { &video22d, &video11d, &video11p, 0 } },
-    { 3, 0, { &video22f, &video11a, &video11m, 0 } },
-    { 3, 0, { &video22b, &video11m, &video11p, 0 } },
-    { 3, 0, { &video22h, &video11a, &video11d, 0 } },
-    { 3, 0, { &video22a, &video31h, &video11m, 0 } },
-    { 3, 0, { &video22c, &video31g, &video11p, 0 } },
-    { 3, 0, { &video22i, &video31a, &video11d, 0 } },
-    { 3, 0, { &video22g, &video31b, &video11a, 0 } },
-};
-
-static char tvOrder[16] = { 5, 14, 3, 8, 6, 0, 11, 13, 2, 15, 4, 10, 1, 12, 7, 9 };
-static sint32 tintColors[28] = { 2190222, 2190222, 2701056, 2701056, 6040088, 6040088, 6040088, 6040088, 2190222, 2190222, 6040088, 6040088, 789581, 789581, 789581, 789581, 2701056, 2701056, 6901054, 6901054, 6040088, 6040088, 789581, 789581, 6901054, 6901054, 6243377, 6243377 };
+static char tvOrder[16] = {5, 14, 3, 8, 6, 0, 11, 13, 2, 15, 4, 10, 1, 12, 7, 9};
+static sint32 tintColors[28] = {2190222, 2190222, 2701056, 2701056, 6040088, 6040088, 6040088, 6040088, 2190222, 2190222, 6040088, 6040088, 789581, 789581, 789581, 789581, 2701056, 2701056, 6901054, 6901054, 6040088, 6040088, 789581, 789581, 6901054, 6901054, 6243377, 6243377};
 static char numberValues[25];
 static char gNameBuffer[32];
 static char gPermBuffer[32];
@@ -317,6 +291,7 @@ void tScreenMain::DrawDropShadow(void)
             prim->p[j].xy.x = dropShadow[i][j].x;
             prim->p[j].xy.y = dropShadow[i][j].y;
         }
+        hd_ui_g4(prim);
     }
     FeDraw_SetABRMode(2);
 }
@@ -393,7 +368,7 @@ void tScreenMain::DrawBackground(void)
         ScaleShapeExtended((gettick() / 21) % 6 + 250, 1, 0, 0, 96 - fWarningFade, 3, 0);
         FETextRender::SetABR(1, true);
         sint32 TextCol = CalcFadeVal(0xBEBE, 96 - fWarningFade);
-        PSX_RECT r = { 181, 129, 284, 42 };
+        PSX_RECT r = {181, 129, 284, 42};
         FETextRender::WordWrapTextRGB(TextSys::Word(626), r, TextCol);
         FETextRender::SetABR(0, false);
         FeDraw_SetABRMode(0);
@@ -426,7 +401,7 @@ void tScreenMain::DrawBackground(void)
     }
     else if (uint32(ticks) - fStartTicks > 640U && fState == kScreenMain_StaticImage)
     {
-        PSX_RECT r = { 512, 0, 80, 160 };
+        PSX_RECT r = {512, 0, 80, 160};
         ClearImage(&r, 0, 0, 0);
         DrawSync(0);
         do

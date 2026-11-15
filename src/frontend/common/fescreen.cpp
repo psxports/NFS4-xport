@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "xport.h"
+#include "hd_ui.h"
 #include "eaclib/psx/eaclib.h"
 #include "eaclib/psx/globals.h"
 #include "frontend/common/feaudio.h"
@@ -85,6 +86,8 @@ void tScreen::DrawBackgroundImage(sint32 startShape, sint32 numShapes, tTexture:
     sint32 endShape = (startShape + numShapes);
     for (sint32 i = startShape; i < endShape; ++i)
     {
+        const tTexture::ShapeInfo *shape = shapes + i;
+        HdUiImage image(shape->tpage, shape->depth > 0 ? (shape->shapex & 63) * 16 / shape->depth : -1, shape->shapey & 255, shape->width, shape->height);
         DrawShapeExtended(i, 0x200, 0, 0, fScreenFadeVal, 0, &drawFlags);
         if (flip_axis > 0)
             DrawShapeExtended(i, 0x260, 0, 0, fScreenFadeVal, 0, &drawFlags);

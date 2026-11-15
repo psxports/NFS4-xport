@@ -11,6 +11,7 @@ public:
     static void ControllerLogic(void);
     static sint32 Logic(void);
     static void Render(void);
+    static bool NeedsRedraw(void);
     static void InitMPause(void);
     static void StartPauseMenu(void);
     static void EndPauseMenu(void);

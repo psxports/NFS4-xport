@@ -4,11 +4,13 @@
 #include "xport.h"
 #include "psx.h"
 #include "psx_gte.h"
+#include "hd_frontend.h"
 #include "eaclib/psx/eaclib.h"
 #include "game/common/bworld.h"
 #include "game/common/car.h"
 #include "game/common/carobj.h"
 #include "game/common/color.h"
+#include "game/common/frame.h"
 #include "game/common/genericpmx.h"
 #include "game/common/matrixtdef.h"
 #include "game/common/paths.h"
@@ -27,6 +29,17 @@
 #include "game/psx/texture.h"
 #include "game/psx/trsproj.h"
 
+struct PreparedFrontendTextured
+{
+    RGBC rgbc;
+    POINT_T p[4];
+};
+
+struct PreparedFrontendGouraud
+{
+    POINT_C p[3];
+};
+
 struct PCOORD16
 {
     sint16 x;
@@ -40,8 +53,9 @@ struct Draw::tVertex
     PCOORD16 sv;
 };
 
+uint32 hd_frontend_original_deferred;
 NativeRenderCache gNativeRenderCache;
-static uint32 hilight_colors[5] = { 0x00700A00, 0x00400A00, 0x00300300, 0x00180300, 0x00180300 };
+static uint32 hilight_colors[5] = {0x00700A00, 0x00400A00, 0x00300300, 0x00180300, 0x00180300};
 Draw::CarCache &DrawC::carCache = gNativeRenderCache.car;
 sint32 DrawC::gEnvMapMax;
 sint32 DrawC::gShadowMax;
@@ -54,11 +68,11 @@ DrawC::tEnvMap *DrawC::gShadow;
 MATRIX DrawC::gScreenMat;
 MATRIX DrawC::gMatA;
 sint16 DrawC::gOverlay[51];
-sint16 DrawC::SirenFlash[16] = { 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1 };
-sint16 DrawC::HeadLightFlash[16] = { 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0 };
-sint16 DrawC::TailLightFlash[16] = { 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0 };
+sint16 DrawC::SirenFlash[16] = {0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1};
+sint16 DrawC::HeadLightFlash[16] = {0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0};
+sint16 DrawC::TailLightFlash[16] = {0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0};
 sint32 DrawC::gMenuColor[2];
-sint16 DrawC::gEnvMapOffset[4] = { 128, 64, 0, 192 };
+sint16 DrawC::gEnvMapOffset[4] = {128, 64, 0, 192};
 
 void ChangeTPage(uint16 *tpage, sint32 nabr)
 {
@@ -175,9 +189,12 @@ void DrawC::NightHeadlight(Car::tObj *carObj)
         sint32 newR = pointerBytes[0] + weather[0];
         sint32 newG = pointerBytes[1] + weather[1];
         sint32 newB = pointerBytes[2] + weather[2];
-        if (newR > 255) newR = 255;
-        if (newG > 255) newG = 255;
-        if (newB > 255) newB = 255;
+        if (newR > 255)
+            newR = 255;
+        if (newG > 255)
+            newG = 255;
+        if (newB > 255)
+            newB = 255;
         pointerBytes[0] = (uint8)newR;
         pointerBytes[1] = (uint8)newG;
         pointerBytes[2] = (uint8)newB;
@@ -238,12 +255,274 @@ void DrawC::MenuColorData(sint32 color, Car::tObj *carObj, sint32 player)
     carObj->render.colorIndex = (sint16)color;
 }
 
+void DrawC::BuildRenderOverlays(Car::tObj *carObj, sint32 inMenu, sint32 mirror, sint16 *overlays)
+{
+    sint32 carType = carObj->render.currentCarType;
+    bool cop_flag = carType - 22U < 6U;
+    for (sint32 i = 50; i >= 0; --i)
+        overlays[i] = 0;
+    if (inMenu == 0)
+    {
+        sint32 damage = carObj->N.damage[0];
+        sint32 flag = damage > 0x1E0000 ? 1 : (damage > 0xA0000 ? 2 : 0);
+        if (flag != 0)
+        {
+            overlays[0] = (sint16)(overlays[0] | flag);
+            overlays[2] = (sint16)(overlays[2] | flag);
+        }
+        damage = carObj->N.damage[2];
+        flag = damage > 0x1E0000 ? 0x100 : (damage > 0xA0000 ? 0x200 : 0);
+        if (flag != 0)
+        {
+            overlays[0] = (sint16)(overlays[0] | flag);
+            overlays[2] = (sint16)(overlays[2] | flag);
+        }
+        damage = carObj->N.damage[3];
+        flag = damage > 0x1E0000 ? 0x400 : (damage > 0xA0000 ? 0x800 : 0);
+        if (flag != 0)
+            overlays[2] = (sint16)(overlays[2] | flag);
+        damage = carObj->N.damage[4];
+        if (damage > 0xA0000)
+        {
+            overlays[1] = (sint16)(overlays[1] | (damage > 0x1E0000 ? 0x100 : 0x200));
+            overlays[2] = (sint16)(overlays[2] | (damage > 0x1E0000 ? 0x1000 : 0x2000));
+        }
+        damage = carObj->N.damage[6];
+        if (damage > 0xA0000)
+        {
+            overlays[1] = (sint16)(overlays[1] | (damage > 0x1E0000 ? 1 : 2));
+            overlays[2] = (sint16)(overlays[2] | (damage > 0x1E0000 ? 0x10 : 0x20));
+        }
+        damage = carObj->N.damage[7];
+        flag = damage > 0x1E0000 ? 4 : (damage > 0xA0000 ? 8 : 0);
+        if (flag != 0)
+            overlays[2] = (sint16)(overlays[2] | flag);
+        if (carObj->N.damage[8] > 0x30000)
+            overlays[4] = (sint16)(overlays[4] | 0x101);
+        if ((carObj->render.brakeLight & 1) != 0)
+        {
+            if ((overlays[1] & 1) == 0)
+            {
+                overlays[24] = (sint16)(overlays[24] | 0x81);
+                overlays[25] = (sint16)(overlays[25] | 0x81);
+            }
+            if ((overlays[1] & 0x100) == 0)
+            {
+                overlays[24] = (sint16)(overlays[24] | 0x8100);
+                overlays[25] = (sint16)(overlays[25] | 0x8100);
+            }
+        }
+        if (carObj->control.gear == 0)
+        {
+            if ((overlays[1] & 1) == 0)
+                overlays[26] = (sint16)(overlays[26] | 0x80);
+            if ((overlays[1] & 0x100) == 0)
+                overlays[26] = (sint16)(overlays[26] | 0x8000);
+        }
+        if ((carObj->render.headLight & 0x11) != 0)
+        {
+            if ((carObj->render.headLight & 0x40) != 0 || (overlays[0] & 1) == 0)
+                overlays[29] = (sint16)(overlays[29] | 0x81);
+            if ((carObj->render.headLight & 4) != 0 || (overlays[0] & 0x100) == 0)
+                overlays[29] = (sint16)(overlays[29] | 0x8100);
+        }
+        if ((carObj->render.brakeLight & 2) != 0)
+        {
+            if ((overlays[1] & 1) == 0)
+            {
+                overlays[24] = (sint16)(overlays[24] | 0x80);
+                overlays[25] = (sint16)(overlays[25] | 0x80);
+            }
+            if ((overlays[1] & 0x100) == 0)
+            {
+                overlays[24] = (sint16)(overlays[24] | 0x8000);
+                overlays[25] = (sint16)(overlays[25] | 0x8000);
+            }
+        }
+        if (!cop_flag)
+        {
+            if ((carObj->render.signalLight[mirror] & 0x80) != 0)
+                overlays[28] = (sint16)(overlays[28] | 0x40);
+            if ((carObj->render.signalLight[mirror] & 8) != 0)
+            {
+                if ((overlays[0] & 1) == 0)
+                    overlays[27] = (sint16)(overlays[27] | 0x80);
+                if ((overlays[1] & 1) == 0)
+                    overlays[28] = (sint16)(overlays[28] | 0x81);
+            }
+            if ((carObj->render.signalLight[mirror ^ 1] & 0x80) != 0)
+                overlays[28] = (sint16)(overlays[28] | 0x4000);
+            if ((carObj->render.signalLight[mirror ^ 1] & 8) != 0)
+            {
+                if ((overlays[0] & 0x100) == 0)
+                    overlays[27] = (sint16)(overlays[27] | 0x8000);
+                if ((overlays[1] & 0x100) == 0)
+                    overlays[28] = (sint16)(overlays[28] | 0x8100);
+            }
+            uint8 signalBrakeFlare = carType < 28 ? (uint8)R3DCar::SignalBrakeFlare[carType] : (uint8)R3DCar::RecessedLight[carType - 28];
+            if (signalBrakeFlare > 1)
+            {
+                if ((overlays[28] & 0x40) == 0)
+                    overlays[28] = (sint16)(overlays[28] | (overlays[24] & 0xFF));
+                if ((overlays[28] & 0x4000) == 0)
+                    overlays[28] = (sint16)(overlays[28] | (overlays[24] & 0xFF00));
+            }
+            if (signalBrakeFlare == 3)
+            {
+                sint16 overlay = overlays[24];
+                overlays[24] = overlays[28];
+                overlays[28] = overlay;
+            }
+        }
+    }
+    if (cop_flag)
+    {
+        overlays[27] = (sint16)(overlays[27] | 2);
+        overlays[28] = (sint16)(overlays[28] | 0x200);
+        if (overlays[4] == 0)
+        {
+            if (SirenFlash[(uint16)carObj->render.signalLight[0] & 15] != 0)
+            {
+                overlays[27] = (sint16)(overlays[27] | 0x81);
+                overlays[28] = (sint16)(overlays[28] | 0x81);
+            }
+            if (SirenFlash[(uint16)carObj->render.signalLight[1] & 15] != 0)
+            {
+                overlays[27] = (sint16)(overlays[27] | 0x8100);
+                overlays[28] = (sint16)(overlays[28] | 0x8100);
+            }
+        }
+        if (inMenu != 0 || (carObj->AIFlags & 2) != 0)
+        {
+            overlays[29] = (sint16)(overlays[29] & 0x7E7E);
+            if ((carObj->render.brakeLight & 1) == 0)
+            {
+                overlays[24] = (sint16)(overlays[24] & 0x7F7F);
+                overlays[25] = (sint16)(overlays[25] & 0x7F7F);
+            }
+            if (HeadLightFlash[(uint16)carObj->render.signalLight[0] & 15] != 0 && ((carObj->render.headLight & 0x40) != 0 || (overlays[0] & 1) == 0))
+                overlays[29] = (sint16)(overlays[29] | 0x81);
+            if (HeadLightFlash[(uint16)carObj->render.signalLight[1] & 15] != 0 && ((carObj->render.headLight & 4) != 0 || (overlays[0] & 0x100) == 0))
+                overlays[29] = (sint16)(overlays[29] | 0x8100);
+            if ((overlays[1] & 1) == 0)
+            {
+                if (TailLightFlash[(uint16)carObj->render.signalLight[0] & 15] != 0)
+                {
+                    overlays[24] = (sint16)(overlays[24] | 0x80);
+                    overlays[25] = (sint16)(overlays[25] | 0x80);
+                }
+                if (HeadLightFlash[(uint16)carObj->render.signalLight[0] & 15] != 0)
+                    overlays[26] = (sint16)(overlays[26] | 0x80);
+            }
+            if ((overlays[1] & 0x100) == 0)
+            {
+                if (TailLightFlash[(uint16)carObj->render.signalLight[1] & 15] != 0)
+                {
+                    overlays[24] = (sint16)(overlays[24] | 0x8000);
+                    overlays[25] = (sint16)(overlays[25] | 0x8000);
+                }
+                if (HeadLightFlash[(uint16)carObj->render.signalLight[1] & 15] != 0)
+                    overlays[26] = (sint16)(overlays[26] | 0x8000);
+            }
+        }
+    }
+}
+
+void DrawC::ReadRenderEnvironment(Car::tObj *carObj, sint32 inMenu, sint32 lightAvg, RenderEnvironment *state, sint32 mapIndex, sint32 roadMapIndex)
+{
+    memset(state, 0, sizeof(*state));
+    sint32 half = 0;
+    state->wetRoad = 0;
+    if (inMenu == 0)
+    {
+        sint32 eSpeed = 3;
+        sint32 quad = (sint8)carObj->N.simRoadInfo.quad;
+        uint32 envMap = (uint16)gEnvMap[mapIndex >= 0 ? mapIndex : carObj->N.eIndexEnvMap].tex;
+        uint32 extraEnvMap = (uint16)gEnvMap[mapIndex >= 0 ? mapIndex : carObj->N.eIndexEnvMap].extra;
+        uint32 shadow = (uint16)gShadow[roadMapIndex >= 0 ? roadMapIndex : carObj->N.eIndexShadow].tex;
+        uint32 extraShadow = (uint16)gShadow[roadMapIndex >= 0 ? roadMapIndex : carObj->N.eIndexShadow].extra;
+        sint32 tpageShadow = 2;
+        if (quad < (sint32)(extraEnvMap & 255U))
+            envMap = (sint8)(extraEnvMap >> 8);
+        if (quad < (sint32)(extraShadow & 255U))
+            shadow = (sint8)(extraShadow >> 8);
+        if ((sint16)envMap > 10)
+        {
+            envMap -= 10U;
+            half = 1;
+        }
+        if ((sint16)shadow < 0)
+        {
+            eSpeed = 0;
+            shadow = (~(shadow) + 1);
+        }
+        if ((sint16)shadow > 10)
+        {
+            shadow -= 10U;
+            tpageShadow = 1;
+        }
+        sint32 envIndex = (sint16)(envMap - 1);
+        if (envIndex < 0)
+        {
+            state->environment[0].u0 = 0;
+            state->environment[0].v0 = 0;
+            state->environment[0].clut = 0;
+        }
+        else
+        {
+            Draw::tPixMap map = Track::gReflectionMaps[envIndex];
+            state->environment[0] = map;
+        }
+        sint32 shadowIndex = (sint16)(shadow - 1);
+        state->roadMapSet = shadowIndex >= 0;
+        if (shadowIndex < 0)
+        {
+            state->environment[1].u0 = 0;
+            state->environment[1].v0 = 0;
+            state->environment[1].clut = 0;
+        }
+        else
+        {
+            Draw::tPixMap *map = &Track::gReflectionMaps[shadowIndex];
+            state->roadTpage = map->tpage;
+            Draw::tPixMap copy = *map;
+            state->environment[1] = copy;
+            ChangeTPage(&state->environment[1].tpage, tpageShadow);
+        }
+        state->scroll = ((carObj->N.positionXZ >> (eSpeed + 3)) & 63) + gEnvMapOffset[state->environment[1].v0 >> 6];
+        if (GameSetup::gData.Weather != 0 && BWorldSm::TunnelFlagSm(&carObj->N.simRoadInfo) != 1 && Cars::kSkidMarkSurface[carObj->N.driveSurfaceType] == 1)
+            state->wetRoad = 1;
+        sint32 height = (carObj->N.dimension.y * 3) >> 1;
+        state->reflectOffset = (sint16)((height + (uint32)carObj->N.objAltitude) >> 8);
+    }
+    else
+    {
+        Draw::tPixMap map = *gMenuPixmap[0];
+        state->environment[0] = map;
+    }
+    ChangeTPage(&state->environment[0].tpage, 1);
+    sint32 eColor;
+    if (inMenu == 0)
+    {
+        eColor = ((lightAvg >> 2) * R3DCar::eMapColour.r) >> 7;
+        if (half != 0)
+            eColor = (sint32)((uint32)eColor << 1) / 3;
+        sint32 eColor2 = (eColor * 3) >> 2;
+        state->colors[2] = (eColor2 * 0x10101);
+    }
+    else
+        eColor = lightAvg >> 1;
+    state->colors[0] = (eColor * 0x10101);
+    if (carObj->render.currentCarType == 1)
+        eColor >>= 2;
+    else
+        eColor = (eColor * 3) >> 2;
+    state->colors[1] = (eColor * 0x10101);
+}
+
 sint32 DrawC::PrimStart(Draw::tVertex *center, Car::tObj *carObj, sint32 lightAvg, Draw::CarCache *sd)
 {
     FUNCTION_MARKER(0x800BED44, "NFS4.EXE");
-    sint32 carType = carObj->render.currentCarType;
-    bool cop_flag = carType - 22U < 6U;
-    sint32 half = 0;
     gte_SetRotMatrix(&gScreenMat);
     gte_SetTransMatrix(&gScreenMat);
     gte_ldv0(center);
@@ -288,160 +567,7 @@ sint32 DrawC::PrimStart(Draw::tVertex *center, Car::tObj *carObj, sint32 lightAv
     sd->offsetV1 = carObj->render.licenseOffsetV[0];
     sd->offsetU2 = carObj->render.licenseOffsetU[1];
     sd->offsetV2 = carObj->render.licenseOffsetV[1];
-    for (sint32 i = 50; i >= 0; --i)
-        gOverlay[i] = 0;
-    if (R3DCar::InMenu == 0)
-    {
-        sint32 damage = carObj->N.damage[0];
-        sint32 flag = damage > 0x1E0000 ? 1 : (damage > 0xA0000 ? 2 : 0);
-        if (flag != 0)
-        {
-            gOverlay[0] = (sint16)(gOverlay[0] | flag);
-            gOverlay[2] = (sint16)(gOverlay[2] | flag);
-        }
-        damage = carObj->N.damage[2];
-        flag = damage > 0x1E0000 ? 0x100 : (damage > 0xA0000 ? 0x200 : 0);
-        if (flag != 0)
-        {
-            gOverlay[0] = (sint16)(gOverlay[0] | flag);
-            gOverlay[2] = (sint16)(gOverlay[2] | flag);
-        }
-        damage = carObj->N.damage[3];
-        flag = damage > 0x1E0000 ? 0x400 : (damage > 0xA0000 ? 0x800 : 0);
-        if (flag != 0) gOverlay[2] = (sint16)(gOverlay[2] | flag);
-        damage = carObj->N.damage[4];
-        if (damage > 0xA0000)
-        {
-            gOverlay[1] = (sint16)(gOverlay[1] | (damage > 0x1E0000 ? 0x100 : 0x200));
-            gOverlay[2] = (sint16)(gOverlay[2] | (damage > 0x1E0000 ? 0x1000 : 0x2000));
-        }
-        damage = carObj->N.damage[6];
-        if (damage > 0xA0000)
-        {
-            gOverlay[1] = (sint16)(gOverlay[1] | (damage > 0x1E0000 ? 1 : 2));
-            gOverlay[2] = (sint16)(gOverlay[2] | (damage > 0x1E0000 ? 0x10 : 0x20));
-        }
-        damage = carObj->N.damage[7];
-        flag = damage > 0x1E0000 ? 4 : (damage > 0xA0000 ? 8 : 0);
-        if (flag != 0) gOverlay[2] = (sint16)(gOverlay[2] | flag);
-        if (carObj->N.damage[8] > 0x30000)
-            gOverlay[4] = (sint16)(gOverlay[4] | 0x101);
-        if ((carObj->render.brakeLight & 1) != 0)
-        {
-            if ((gOverlay[1] & 1) == 0)
-            {
-                gOverlay[24] = (sint16)(gOverlay[24] | 0x81);
-                gOverlay[25] = (sint16)(gOverlay[25] | 0x81);
-            }
-            if ((gOverlay[1] & 0x100) == 0)
-            {
-                gOverlay[24] = (sint16)(gOverlay[24] | 0x8100);
-                gOverlay[25] = (sint16)(gOverlay[25] | 0x8100);
-            }
-        }
-        if (carObj->control.gear == 0)
-        {
-            if ((gOverlay[1] & 1) == 0) gOverlay[26] = (sint16)(gOverlay[26] | 0x80);
-            if ((gOverlay[1] & 0x100) == 0) gOverlay[26] = (sint16)(gOverlay[26] | 0x8000);
-        }
-        if ((carObj->render.headLight & 0x11) != 0)
-        {
-            if ((carObj->render.headLight & 0x40) != 0 || (gOverlay[0] & 1) == 0)
-                gOverlay[29] = (sint16)(gOverlay[29] | 0x81);
-            if ((carObj->render.headLight & 4) != 0 || (gOverlay[0] & 0x100) == 0)
-                gOverlay[29] = (sint16)(gOverlay[29] | 0x8100);
-        }
-        if ((carObj->render.brakeLight & 2) != 0)
-        {
-            if ((gOverlay[1] & 1) == 0)
-            {
-                gOverlay[24] = (sint16)(gOverlay[24] | 0x80);
-                gOverlay[25] = (sint16)(gOverlay[25] | 0x80);
-            }
-            if ((gOverlay[1] & 0x100) == 0)
-            {
-                gOverlay[24] = (sint16)(gOverlay[24] | 0x8000);
-                gOverlay[25] = (sint16)(gOverlay[25] | 0x8000);
-            }
-        }
-        if (!cop_flag)
-        {
-            sint32 mirror = sd->head.mirror;
-            if ((carObj->render.signalLight[mirror] & 0x80) != 0) gOverlay[28] = (sint16)(gOverlay[28] | 0x40);
-            if ((carObj->render.signalLight[mirror] & 8) != 0)
-            {
-                if ((gOverlay[0] & 1) == 0) gOverlay[27] = (sint16)(gOverlay[27] | 0x80);
-                if ((gOverlay[1] & 1) == 0) gOverlay[28] = (sint16)(gOverlay[28] | 0x81);
-            }
-            if ((carObj->render.signalLight[mirror ^ 1] & 0x80) != 0) gOverlay[28] = (sint16)(gOverlay[28] | 0x4000);
-            if ((carObj->render.signalLight[mirror ^ 1] & 8) != 0)
-            {
-                if ((gOverlay[0] & 0x100) == 0) gOverlay[27] = (sint16)(gOverlay[27] | 0x8000);
-                if ((gOverlay[1] & 0x100) == 0) gOverlay[28] = (sint16)(gOverlay[28] | 0x8100);
-            }
-            uint8 signalBrakeFlare = carType < 28 ? (uint8)R3DCar::SignalBrakeFlare[carType] : (uint8)R3DCar::RecessedLight[carType - 28];
-            if (signalBrakeFlare > 1)
-            {
-                if ((gOverlay[28] & 0x40) == 0) gOverlay[28] = (sint16)(gOverlay[28] | (gOverlay[24] & 0xFF));
-                if ((gOverlay[28] & 0x4000) == 0) gOverlay[28] = (sint16)(gOverlay[28] | (gOverlay[24] & 0xFF00));
-            }
-            if (signalBrakeFlare == 3)
-            {
-                sint16 overlay = gOverlay[24];
-                gOverlay[24] = gOverlay[28];
-                gOverlay[28] = overlay;
-            }
-        }
-    }
-    if (cop_flag)
-    {
-        gOverlay[27] = (sint16)(gOverlay[27] | 2);
-        gOverlay[28] = (sint16)(gOverlay[28] | 0x200);
-        if (gOverlay[4] == 0)
-        {
-            if (SirenFlash[(uint16)carObj->render.signalLight[0] & 15] != 0)
-            {
-                gOverlay[27] = (sint16)(gOverlay[27] | 0x81);
-                gOverlay[28] = (sint16)(gOverlay[28] | 0x81);
-            }
-            if (SirenFlash[(uint16)carObj->render.signalLight[1] & 15] != 0)
-            {
-                gOverlay[27] = (sint16)(gOverlay[27] | 0x8100);
-                gOverlay[28] = (sint16)(gOverlay[28] | 0x8100);
-            }
-        }
-        if (R3DCar::InMenu != 0 || (carObj->AIFlags & 2) != 0)
-        {
-            gOverlay[29] = (sint16)(gOverlay[29] & 0x7E7E);
-            if ((carObj->render.brakeLight & 1) == 0)
-            {
-                gOverlay[24] = (sint16)(gOverlay[24] & 0x7F7F);
-                gOverlay[25] = (sint16)(gOverlay[25] & 0x7F7F);
-            }
-            if (HeadLightFlash[(uint16)carObj->render.signalLight[0] & 15] != 0 && ((carObj->render.headLight & 0x40) != 0 || (gOverlay[0] & 1) == 0))
-                gOverlay[29] = (sint16)(gOverlay[29] | 0x81);
-            if (HeadLightFlash[(uint16)carObj->render.signalLight[1] & 15] != 0 && ((carObj->render.headLight & 4) != 0 || (gOverlay[0] & 0x100) == 0))
-                gOverlay[29] = (sint16)(gOverlay[29] | 0x8100);
-            if ((gOverlay[1] & 1) == 0)
-            {
-                if (TailLightFlash[(uint16)carObj->render.signalLight[0] & 15] != 0)
-                {
-                    gOverlay[24] = (sint16)(gOverlay[24] | 0x80);
-                    gOverlay[25] = (sint16)(gOverlay[25] | 0x80);
-                }
-                if (HeadLightFlash[(uint16)carObj->render.signalLight[0] & 15] != 0) gOverlay[26] = (sint16)(gOverlay[26] | 0x80);
-            }
-            if ((gOverlay[1] & 0x100) == 0)
-            {
-                if (TailLightFlash[(uint16)carObj->render.signalLight[1] & 15] != 0)
-                {
-                    gOverlay[24] = (sint16)(gOverlay[24] | 0x8000);
-                    gOverlay[25] = (sint16)(gOverlay[25] | 0x8000);
-                }
-                if (HeadLightFlash[(uint16)carObj->render.signalLight[1] & 15] != 0) gOverlay[26] = (sint16)(gOverlay[26] | 0x8000);
-            }
-        }
-    }
+    BuildRenderOverlays(carObj, R3DCar::InMenu, sd->head.mirror, gOverlay);
     SVECTOR r;
     r.vx = 0;
     r.vz = 0;
@@ -450,103 +576,36 @@ sint32 DrawC::PrimStart(Draw::tVertex *center, Car::tObj *carObj, sint32 lightAv
     gMatA.t[2] = 0;
     gMatA.t[1] = 0;
     gMatA.t[0] = 0;
-    gWetRoad = 0;
+    RenderEnvironment state;
+    ReadRenderEnvironment(carObj, R3DCar::InMenu, lightAvg, &state);
+    sd->ePmx0 = state.environment[0];
+    sd->eColor0 = state.colors[0];
+    sd->eColor1 = state.colors[1];
+    gWetRoad = state.wetRoad;
+    DRAWENV *LEnv = Draw::GetDRAWENV(gCView.id, gFlip);
     if (R3DCar::InMenu == 0)
     {
-        sint32 eSpeed = 3;
-        DRAWENV *LEnv = Draw::GetDRAWENV(gCView.id, gFlip);
-        sint32 quad = (sint8)carObj->N.simRoadInfo.quad;
-        uint32 envMap = (uint16)gEnvMap[carObj->N.eIndexEnvMap].tex;
-        uint32 extraEnvMap = (uint16)gEnvMap[carObj->N.eIndexEnvMap].extra;
-        uint32 shadow = (uint16)gShadow[carObj->N.eIndexShadow].tex;
-        uint32 extraShadow = (uint16)gShadow[carObj->N.eIndexShadow].extra;
-        sint32 tpageShadow = 2;
-        if (quad < (sint32)(extraEnvMap & 255U)) envMap = (sint8)(extraEnvMap >> 8);
-        if (quad < (sint32)(extraShadow & 255U)) shadow = (sint8)(extraShadow >> 8);
-        if ((sint16)envMap > 10)
+        sd->ePmx1 = state.environment[1];
+        sd->eColor2 = state.colors[2];
+        sd->eAddZ = state.scroll;
+        gReflectOffset = state.reflectOffset;
+        if (state.roadMapSet)
         {
-            envMap -= 10U;
-            half = 1;
-        }
-        if ((sint16)shadow < 0)
-        {
-            eSpeed = 0;
-            shadow = (~(shadow) + 1);
-        }
-        if ((sint16)shadow > 10)
-        {
-            shadow -= 10U;
-            tpageShadow = 1;
-        }
-        sint32 envIndex = (sint16)(envMap - 1);
-        if (envIndex < 0)
-        {
-            sd->ePmx0.u0 = 0;
-            sd->ePmx0.v0 = 0;
-            sd->ePmx0.clut = 0;
-        }
-        else
-        {
-            Draw::tPixMap map = Track::gReflectionMaps[envIndex];
-            sd->ePmx0 = map;
-        }
-        sint32 shadowIndex = (sint16)(shadow - 1);
-        if (shadowIndex < 0)
-        {
-            sd->ePmx1.u0 = 0;
-            sd->ePmx1.v0 = 0;
-            sd->ePmx1.clut = 0;
-        }
-        else
-        {
-            Draw::tPixMap *map = &Track::gReflectionMaps[shadowIndex];
             PSX_RECT tw;
-            tw.x = map->u0;
-            tw.y = map->v0;
+            tw.x = sd->ePmx1.u0;
+            tw.y = sd->ePmx1.v0;
             tw.w = 128;
             tw.h = 64;
-            SetDrawMode(&sd->drawModeOn, LEnv->dfe, 0, map->tpage, &tw);
-            tw.h = 0;
-            tw.w = 0;
-            tw.y = 0;
-            tw.x = 0;
+            SetDrawMode(&sd->drawModeOn, LEnv->dfe, 0, state.roadTpage, &tw);
+            tw.x = tw.y = tw.w = tw.h = 0;
             SetDrawMode(&sd->drawModeOff, LEnv->dfe, 0, LEnv->tpage, &tw);
-            Draw::tPixMap copy = *map;
-            sd->ePmx1 = copy;
-            ChangeTPage(&sd->ePmx1.tpage, tpageShadow);
         }
-        sd->eAddZ = ((carObj->N.positionXZ >> (eSpeed + 3)) & 63) + gEnvMapOffset[sd->ePmx1.v0 >> 6];
-        if (GameSetup::gData.Weather != 0 && BWorldSm::TunnelFlagSm(&carObj->N.simRoadInfo) != 1 && Cars::kSkidMarkSurface[carObj->N.driveSurfaceType] == 1)
-            gWetRoad = 1;
-        sint32 height = (carObj->N.dimension.y * 3) >> 1;
-        gReflectOffset = (sint16)((height + (uint32)carObj->N.objAltitude) >> 8);
     }
     else
     {
-        DRAWENV *LEnv = Draw::GetDRAWENV(gCView.id, gFlip);
         SetDrawMode(&sd->drawModeOn, LEnv->dfe, 1, LEnv->tpage, 0);
         SetDrawMode(&sd->drawModeOff, LEnv->dfe, 0, LEnv->tpage, 0);
-        Draw::tPixMap map = *gMenuPixmap[0];
-        sd->ePmx0 = map;
     }
-    ChangeTPage(&sd->ePmx0.tpage, 1);
-    sint32 eColor;
-    if (R3DCar::InMenu == 0)
-    {
-        eColor = ((lightAvg >> 2) * R3DCar::eMapColour.r) >> 7;
-        if (half != 0)
-            eColor = (sint32)((uint32)eColor << 1) / 3;
-        sint32 eColor2 = (eColor * 3) >> 2;
-        sd->eColor2 = (eColor2 * 0x10101);
-    }
-    else
-        eColor = lightAvg >> 1;
-    sd->eColor0 = (eColor * 0x10101);
-    if (carObj->render.currentCarType == 1)
-        eColor >>= 2;
-    else
-        eColor = (eColor * 3) >> 2;
-    sd->eColor1 = (eColor * 0x10101);
     return carObj->render.world_otz;
 }
 
@@ -1311,6 +1370,67 @@ void DrawC::PrimClip(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transfo
     }
 }
 
+static uint32 *reserve_frontend_polygon(Draw::CarCache *sd, uint32 *ot, size_t bytes)
+{
+    uint32 *marker = (uint32 *)sd->head.cprim.PrimPtr;
+    *marker = getaddr(ot);
+    setaddr(ot, marker);
+    sd->head.cprim.PrimPtr += bytes;
+    return marker;
+}
+
+static void submit_frontend_polygon(uint32 *marker, const uint32 position[4], const uint32 color[4], uint8 code, const uint32 texture[4], sint32 count)
+{
+    if (FramePresentation::DeferOriginalPolygon(marker, position, color, code, texture))
+    {
+        ++hd_frontend_original_deferred;
+        return;
+    }
+    uint32 length = texture != 0 ? 1 + count * 2 : count * 2;
+    *marker = (*marker & 0xFFFFFF) | (length << 24);
+    if (texture != 0)
+    {
+        marker[1] = color[0];
+        for (sint32 i = 0; i < count; ++i)
+        {
+            marker[2 + i * 2] = position[i];
+            marker[3 + i * 2] = texture[i];
+        }
+    }
+    else
+        for (sint32 i = 0; i < count; ++i)
+        {
+            marker[1 + i * 2] = color[i];
+            marker[2 + i * 2] = position[i];
+        }
+    marker[1] = (marker[1] & 0xFFFFFF) | ((uint32)code << 24);
+}
+
+static void submit_frontend_textured(uint32 *marker, const PreparedFrontendTextured *source, sint32 count)
+{
+    uint32 position[4] = {0, 0, 0, 0};
+    uint32 texture[4] = {0, 0, 0, 0};
+    uint32 colors[4] = {source->rgbc.rgbc, 0, 0, 0};
+    for (sint32 i = 0; i < count; ++i)
+    {
+        memcpy(position + i, &source->p[i].xy, sizeof(uint32));
+        texture[i] = source->p[i].uv_attr;
+    }
+    submit_frontend_polygon(marker, position, colors, source->rgbc.code, texture, count);
+}
+
+static void submit_frontend_gouraud(uint32 *marker, const PreparedFrontendGouraud *source)
+{
+    uint32 position[4] = {0, 0, 0, 0};
+    uint32 color[4] = {0, 0, 0, 0};
+    for (sint32 i = 0; i < 3; ++i)
+    {
+        memcpy(position + i, &source->p[i].xy, sizeof(uint32));
+        color[i] = source->p[i].rgbc.rgbc;
+    }
+    submit_frontend_polygon(marker, position, color, source->p[0].rgbc.code, 0, 3);
+}
+
 void DrawC::PrimMenu(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transformer::zOverlay *overlay, sint32 envmap, Draw::CarCache *sd)
 {
     FUNCTION_MARKER(0x800C32B0, "NFS4.EXE");
@@ -1403,11 +1523,10 @@ void DrawC::PrimMenu(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transfo
             *mode = modeCopy;
             setaddr(mode, getaddr(ot));
             setaddr(ot, mode);
-            POLY_FT3 *environmentPrim = (POLY_FT3 *)sd->head.cprim.PrimPtr;
+            PreparedFrontendTextured environment = {};
+            PreparedFrontendTextured *environmentPrim = &environment;
             ot = sd->sub_ot + sd->otz;
-            sd->head.cprim.PrimPtr = (char *)(environmentPrim + 1);
-            environmentPrim->tag = 0x07000000 | getaddr(ot);
-            setaddr(ot, environmentPrim);
+            uint32 *environmentMarker = reserve_frontend_polygon(sd, ot, sizeof(POLY_FT3));
             mode = (DR_MODE *)sd->head.cprim.PrimPtr;
             ot = sd->sub_ot + sd->otz;
             sd->head.cprim.PrimPtr = (char *)(mode + 1);
@@ -1423,7 +1542,7 @@ void DrawC::PrimMenu(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transfo
             environmentPrim->p[1].xy.xy = xy1;
             environmentPrim->p[2].xy.xy = xy2;
             environmentPrim->rgbc.rgbc = (facetFlag & 4) != 0 ? sd->eColor1 : sd->eColor0;
-            setcode(environmentPrim, 0x26);
+            environmentPrim->rgbc.code = 0x26;
             uint16 clut = sd->ePmx0.clut;
             uint16 tpage = sd->ePmx0.tpage;
             environmentPrim->p[0].attr = clut;
@@ -1436,14 +1555,14 @@ void DrawC::PrimMenu(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transfo
             environmentPrim->p[1].uv.v = (uint8)(sd->tV[id1].v + v);
             environmentPrim->p[2].uv.u = (uint8)(sd->tV[id2].u + u);
             environmentPrim->p[2].uv.v = (uint8)(sd->tV[id2].v + v);
+            submit_frontend_textured(environmentMarker, environmentPrim, 3);
         }
         sint32 which = overlayFlag & 3;
         Transformer::zOverlay *facetOverlay = which != 0 ? overlay + textureIndex * 3 + which - 1 : 0;
-        POLY_FT3 *prim = (POLY_FT3 *)sd->head.cprim.PrimPtr;
+        PreparedFrontendTextured polygon = {};
+        PreparedFrontendTextured *prim = &polygon;
         uint32 *ot = sd->sub_ot + sd->otz;
-        sd->head.cprim.PrimPtr = (char *)(prim + 1);
-        prim->tag = 0x07000000 | getaddr(ot);
-        setaddr(ot, prim);
+        uint32 *marker = reserve_frontend_polygon(sd, ot, sizeof(POLY_FT3));
         uint32 xy0, xy1, xy2;
         memcpy(&xy0, &sd->dvx0, sizeof(xy0));
         memcpy(&xy1, &sd->dvx1, sizeof(xy1));
@@ -1460,7 +1579,7 @@ void DrawC::PrimMenu(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transfo
         }
         prim->p[2].xy.xy = xy2;
         prim->rgbc.rgbc = sd->color;
-        setcode(prim, (facetFlag & 1) != 0 ? 0x26 : 0x24);
+        prim->rgbc.code = (facetFlag & 1) != 0 ? 0x26 : 0x24;
         if (which != 0)
         {
             sint32 index = facet->textureIndex + facetOverlay->offset;
@@ -1507,6 +1626,7 @@ void DrawC::PrimMenu(matrixtdef *m, coorddef *t, Transformer::zObj *obj, Transfo
                 prim->p[2].uv.uv = uv2;
             }
         }
+        submit_frontend_textured(marker, prim, 3);
     }
 }
 
@@ -1634,11 +1754,12 @@ void DrawC::DivideShadowPrim(COORD16 *vt0, COORD16 *vt1, COORD16 *vt2, COORD16 *
         return;
     gte_ldv0(vt0);
     xport_gte_execute(0x180001);
-    POLY_FT4 *projected = (POLY_FT4 *)carCache.head.cprim.PrimPtr;
-    gte_stsxy(&projected->p[0].xy);
+    PreparedFrontendTextured polygon = {};
+    POINT_T *projected = R3DCar::InMenu != 0 ? polygon.p : ((POLY_FT4 *)carCache.head.cprim.PrimPtr)->p;
+    gte_stsxy(&projected[0].xy);
     gte_ldv3(vt1, vt2, vt3);
     xport_gte_execute(0x280030);
-    gte_stsxy3(&projected->p[1].xy, &projected->p[3].xy, &projected->p[2].xy);
+    gte_stsxy3(&projected[1].xy, &projected[3].xy, &projected[2].xy);
     if (R3DCar::InMenu == 0)
     {
         gte_avsz4();
@@ -1651,6 +1772,20 @@ void DrawC::DivideShadowPrim(COORD16 *vt0, COORD16 *vt1, COORD16 *vt2, COORD16 *
         sd->otz = 0;
     if (vt0->z < 0 && vt1->z < 0 && vt2->z < 0 && vt3->z < 0)
         return;
+    if (R3DCar::InMenu != 0)
+    {
+        polygon.rgbc.rgbc = sd->color;
+        polygon.rgbc.code = 0x2E;
+        polygon.p[0].attr = pmx->clut;
+        polygon.p[1].attr = pmx->tpage;
+        memcpy(&polygon.p[0].uv, u0, sizeof(uint16));
+        memcpy(&polygon.p[1].uv, u1, sizeof(uint16));
+        memcpy(&polygon.p[2].uv, u3, sizeof(uint16));
+        memcpy(&polygon.p[3].uv, u2, sizeof(uint16));
+        uint32 *marker = reserve_frontend_polygon(sd, sd->head.cprim.LastPrim + sd->otz, sizeof(POLY_FT4));
+        submit_frontend_textured(marker, &polygon, 4);
+        return;
+    }
     POLY_FT4 *prim = (POLY_FT4 *)sd->head.cprim.PrimPtr;
     uint32 *last = sd->head.cprim.LastPrim;
     sd->head.cprim.PrimPtr = (char *)(prim + 1);
@@ -1684,8 +1819,8 @@ void DrawC::ShadowPrimClip(Draw::tVertex *shadowVT, Draw::CarCache *sd)
     ChangeTPage(&shadowPmx->tpage, 2);
     gte_SetRotMatrix(&gScreenMat);
     gte_SetTransMatrix(&gScreenMat);
-    COORD16 *corner[4] = { &sd->vt0, &sd->vt1, &sd->vt2, &sd->vt3 };
-    const sint32 order[4] = { 0, 1, 3, 2 };
+    COORD16 *corner[4] = {&sd->vt0, &sd->vt1, &sd->vt2, &sd->vt3};
+    const sint32 order[4] = {0, 1, 3, 2};
     for (sint32 i = 0; i < 4; ++i)
     {
         corner[i]->x = shadowVT[order[i]].sv.x;
@@ -1698,9 +1833,9 @@ void DrawC::ShadowPrimClip(Draw::tVertex *shadowVT, Draw::CarCache *sd)
         corner[i]->y = (sint16)((uint16)corner[i]->y * 4);
         corner[i]->z = (sint16)((uint16)corner[i]->z * 4);
     }
-    COORD16 *middle[5] = { &sd->vt4, &sd->vt5, &sd->vt6, &sd->vt7, &sd->vt8 };
-    const sint32 left[5] = { 0, 1, 2, 3, 0 };
-    const sint32 right[5] = { 1, 2, 3, 0, 2 };
+    COORD16 *middle[5] = {&sd->vt4, &sd->vt5, &sd->vt6, &sd->vt7, &sd->vt8};
+    const sint32 left[5] = {0, 1, 2, 3, 0};
+    const sint32 right[5] = {1, 2, 3, 0, 2};
     for (sint32 i = 0; i < 5; ++i)
     {
         middle[i]->x = (sint16)((corner[left[i]]->x + corner[right[i]]->x + 1) >> 1);
@@ -1738,6 +1873,7 @@ void DrawC::ShadowPrimClip(Draw::tVertex *shadowVT, Draw::CarCache *sd)
 void DrawC::SpotPrims(matrixtdef *m, coorddef *t, Draw::CarCache *sd)
 {
     FUNCTION_MARKER(0x800C4800, "NFS4.EXE");
+    hd_frontend_capture_spot(m, t, Fe3D::spotVertex, sd->color);
     TrsProj::SetTransPrecision(8);
     for (sint32 row = 0; row < 3; ++row)
     {
@@ -1775,17 +1911,17 @@ void DrawC::SpotPrims(matrixtdef *m, coorddef *t, Draw::CarCache *sd)
             sd->vt2 = Fe3D::spotVertex[iPlus];
             gte_ldv3(&sd->vt0, &sd->vt1, &sd->vt2);
             xport_gte_execute(0x280030);
-            POLY_G3 *prim = (POLY_G3 *)sd->head.cprim.PrimPtr;
+            PreparedFrontendGouraud polygon = {};
+            PreparedFrontendGouraud *prim = &polygon;
             last = sd->head.cprim.LastPrim;
-            sd->head.cprim.PrimPtr = (char *)(prim + 1);
-            addPrim(last + sd->otz, prim);
+            uint32 *marker = reserve_frontend_polygon(sd, last + sd->otz, sizeof(POLY_G3));
             gte_stsxy3(&prim->p[0].xy, &prim->p[1].xy, &prim->p[2].xy);
             uint32 color = sd->color;
-            setlen(prim, 6);
             prim->p[1].rgbc.rgbc = 0;
             prim->p[2].rgbc.rgbc = 0;
             prim->p[0].rgbc.rgbc = color;
-            setcode(prim, 0x32);
+            prim->p[0].rgbc.code = 0x32;
+            submit_frontend_gouraud(marker, prim);
         }
     }
     mode = (DR_MODE *)sd->head.cprim.PrimPtr;
@@ -1830,6 +1966,7 @@ void DrawC::ShowroomPrims(matrixtdef *m, coorddef *t, Draw::CarCache *sd)
                 hilight_state[index] = (sint8)j;
         }
     ChangeTPage(&lightPmx->tpage, 1);
+    hd_frontend_capture_ring(m, t, Fe3D::lightsVertex, lightPmx, hilight_state, hilight_colors);
     TrsProj::SetTransPrecision(8);
     for (sint32 row = 0; row < 3; ++row)
     {
@@ -1867,17 +2004,16 @@ void DrawC::ShowroomPrims(matrixtdef *m, coorddef *t, Draw::CarCache *sd)
                 continue;
             gte_ldv0(&sd->vt0);
             xport_gte_execute(0x180001);
-            POLY_FT4 *prim = (POLY_FT4 *)sd->head.cprim.PrimPtr;
-            sd->head.cprim.PrimPtr = (char *)(prim + 1);
-            addPrim(sd->head.cprim.LastPrim + sd->otz, prim);
+            PreparedFrontendTextured polygon = {};
+            PreparedFrontendTextured *prim = &polygon;
+            uint32 *marker = reserve_frontend_polygon(sd, sd->head.cprim.LastPrim + sd->otz, sizeof(POLY_FT4));
             gte_stsxy(&prim->p[0].xy);
             gte_ldv3(&sd->vt1, &sd->vt3, &sd->vt2);
             xport_gte_execute(0x280030);
             gte_stsxy3(&prim->p[1].xy, &prim->p[3].xy, &prim->p[2].xy);
             uint32 color = j == 0 ? 0x300A00 : hilight_colors[hilight_state[i]];
             prim->rgbc.rgbc = color;
-            setcode(prim, 0x2E);
-            setlen(prim, 9);
+            prim->rgbc.code = 0x2E;
             Draw::tPixMap map = *lightPmx;
             prim->p[0].uv.u = map.u0;
             prim->p[0].uv.v = map.v0;
@@ -1891,6 +2027,7 @@ void DrawC::ShowroomPrims(matrixtdef *m, coorddef *t, Draw::CarCache *sd)
             prim->p[3].uv.u = map.u3;
             prim->p[3].uv.v = map.v3;
             prim->p[3].attr = map.flag;
+            submit_frontend_textured(marker, prim, 4);
         }
     }
 }

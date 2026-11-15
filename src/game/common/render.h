@@ -17,6 +17,11 @@ public:
     static void CreatePlayerViews(void);
     static void CreatePauseMenuViews(void);
     static void CreateViews(void);
+    static void ResetState(void);
+    static bool RestoreOriginalObservation(void);
+    static uint32 DeferredWorldViews(void);
+    static bool RestoreWorld(void);
+    static void UpdateState(bool advanceEffects);
     static void StartRenderingWorldView(sint32 viewid);
     static void StopRenderingWorldView(sint32 viewid);
     static void RenderWorld(DRender::tView *Vi);

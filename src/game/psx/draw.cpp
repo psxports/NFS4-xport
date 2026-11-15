@@ -1,8 +1,10 @@
 #include <stddef.h>
 #include "xport.h"
+#include "hd_ui.h"
 #include "psx.h"
 #include "eaclib/psx/eaclib.h"
 #include "eaclib/psx/globals.h"
+#include "game/common/frame.h"
 #include "game/common/gmesetup.h"
 #include "game/psx/draw.h"
 #include "game/psx/drawc.h"
@@ -50,6 +52,7 @@ sint32 Draw::SetView(sint32 x0, sint32 y0, sint32 x1, sint32 y1, sint32 w, sint3
 
 void Draw::InitViews(void)
 {
+    hd_ui_invalidate();
     FUNCTION_MARKER(0x800BDBD4, "NFS4.EXE");
 
     gNumView = 0;
@@ -108,6 +111,7 @@ void AllocatePrimitivesBuffer(void)
 
 void Draw::DeInitViews(void)
 {
+    hd_ui_invalidate();
     FUNCTION_MARKER(0x800BDCE0, "NFS4.EXE");
 
     for (sint32 i = 0; i < gNumView; ++i)
@@ -159,7 +163,7 @@ void ClearPlatformPrimitivesBuffer(void)
         Draw::DeInitViewsInGame();
 }
 
-DRAWENV * Draw::GetDRAWENV(sint32 viewid, sint32 page)
+DRAWENV *Draw::GetDRAWENV(sint32 viewid, sint32 page)
 {
     FUNCTION_MARKER(0x800BDD9C, "NFS4.EXE");
 
@@ -197,6 +201,7 @@ void Draw::StartRenderingView(sint32 viewid)
     FUNCTION_MARKER(0x800BE060, "NFS4.EXE");
     Draw::tCacheHeader *head = &DrawC::carCache.head;
     Draw::tView *view = &gView[viewid];
+    hd_ui_set_view(viewid);
     gViewOtSize = view->otsize;
     sint32 midGround = (view->otsize * 7);
     if (midGround < 0)
@@ -247,6 +252,7 @@ void Draw::StartFrameRender(void)
         ClearOTagR(gView[i].ot[gFlip], gView[i].otsize);
     DrawC::carCache.head.cprim.PrimPtr = gEnviro[gFlip].server;
     gMaxPrim = gEnviro[gFlip].server + gTotalMem;
+    hd_ui_begin_frame();
 }
 
 void Draw::SetDrawSyncCallback(void (*p)(void))
@@ -264,11 +270,11 @@ void Draw::StopFrameRender(void)
     gLoop = (gLoop + 1);
     if (gSyncCallback != 0)
         gSyncCallback();
-    if (gDoVSync != 0)
+    if (gDoVSync != 0 && !FramePresentation::Active())
         VSync(0);
     PutDispEnv(&gEnviro[gFlip].disp);
-    for (sint32 i = 0; i < gNumView; ++i)
-        DrawOTag(gView[i].ot[gFlip] + gView[i].otsize - 1);
+    hd_ui_end_frame();
+    FramePresentation::SubmitOriginal(gFlip);
     gFlip = (1 - gFlip);
 }
 

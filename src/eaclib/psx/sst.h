@@ -55,9 +55,10 @@ struct SoundStreamState
 };
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
-extern SoundStreamState sndss;
+    extern SoundStreamState sndss;
 #ifdef __cplusplus
 }
 #endif
@@ -76,6 +77,9 @@ public:
     static sint32 create(SNDPLAYOPTS *options, sint32 streams, sint32 chunks, void *buffer, sint32 size);
     static sint32 destroy(sint32 handle);
     static sint32 queuefile(sint32 handle, sint32 delay, const char *filename, sint32 offset);
+    #ifdef AP_WEB
+    static sint32 queuevag(sint32 handle, sint32 delay, const char *filename, const uint8 *patch);
+    #endif
     static sint32 purge(sint32 handle);
     static sint32 setgreedylevel(sint32 handle, sint32 level);
     static sint32 setgreedystate(sint32 handle, sint32 enabled);

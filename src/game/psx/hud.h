@@ -47,7 +47,9 @@ public:
 
     static void CreateHudViews(void);
     static void GoTpage(sint32 page);
+#if 0
     static void DebugInfo(void);
+#endif
     static void DebugCrap(void);
     static void BuildSprite(SPRT *sprt, sint32 shapeIdx, sint32 x, sint32 y, uint32 color, sint32 trans);
     static void BuildSprite2(SPRT *sprt, sint32 shapeIdx, sint32 x, sint32 y);
@@ -86,7 +88,7 @@ public:
     static sint32 BuildRadar(sint32 player);
     static void BuildReplay(void);
     static sint32 NextPlayer(sint32 player);
-    static char * NextPlayerNameOrCarOrTime(sint32 player);
+    static char *NextPlayerNameOrCarOrTime(sint32 player);
     static void RenderMapView(void);
     static void BlackThinBox(sint32 x, sint32 y, sint32 w, sint32 h);
     static void Draw321Num(sint32 x, sint32 y, sint32 num, sint32 flare_intensity, sint32, sint32);

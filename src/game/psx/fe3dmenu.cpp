@@ -1,5 +1,7 @@
 #include "xport.h"
 #include "psx.h"
+#include "hd_frontend.h"
+#include "hd_ui.h"
 #include "eaclib/psx/eaclib.h"
 #include "game/common/car.h"
 #include "game/common/carobj.h"
@@ -25,7 +27,7 @@ void CameraLookAt(matrixtdef *mat, coorddef *camPoint)
     FUNCTION_MARKER(0x80012AE4, "FRONT.BIN");
     coorddef fwdVec;
     coorddef rightVec;
-    coorddef upVec = { 0, 65536, 0 };
+    coorddef upVec = {0, 65536, 0};
     fwdVec.x = (-camPoint->x);
     fwdVec.y = (-camPoint->y);
     fwdVec.z = (-camPoint->z);
@@ -76,9 +78,11 @@ void Fe3D::InitShowroom(void)
 void Draw::MenuRenderingView(Car::tObj *carObj, DRender::tView *Vi, sint32 posX, sint32 posY, sint32 player, uint32 rotation, sint32 camRot, float camY, float camZ, sint32 light, sint32 reflection)
 {
     FUNCTION_MARKER(0x80012BF8, "FRONT.BIN");
+    hd_ui_frontend_3d();
     TrsProj::ResetTransPrecision();
     if (showRoomFlag != 0)
         posY = 140;
+    hd_frontend_begin(player, posX, posY);
     TrsProj::SetMenuProjection((posX - 256), (posY - 128), 512, 256);
     sint32 showroom = showRoomFlag;
     gMenuRotate[player] = (gMenuRotate[player] + rotation);
@@ -104,7 +108,7 @@ void Draw::MenuRenderingView(Car::tObj *carObj, DRender::tView *Vi, sint32 posX,
     }
     else
         fixedxformy(&temp, ((uint32)camRot << 6));
-    matrixtdef correct = { { 65536, 0, 0, 0, 0x8980, 0, 0, 0, 65536 } };
+    matrixtdef correct = {{65536, 0, 0, 0, 0x8980, 0, 0, 0, 65536}};
     Math::fasttransmult(&correct, &temp, &Vi->cview.mrotation);
     transpose(&Vi->cview.mrotation, &Vi->cview.mrotationInv);
     coorddef pos;
@@ -143,6 +147,7 @@ void Draw::MenuRenderingView(Car::tObj *carObj, DRender::tView *Vi, sint32 posX,
     Texture::LoadMenuTexture();
     R3DCar::InsertCarFacetMenu(carObj, Vi);
     R3DCar::InsertCarFacetMenuII(carObj, light);
+    hd_frontend_capture_shadow(carObj, Vi, gMenuPixmap[1], DrawC::carCache.color);
     R3DCar::Showroom(Vi);
     if (reflection != 0)
     {

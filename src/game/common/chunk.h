@@ -43,6 +43,8 @@ public:
     sint16 firstSimSliceInd;
     sint16 chunkInd;
     Group *vertexBuf;
+    uint32 renderVertexCount;
+    uint32 renderObjectVertexCount;
 };
 
 #endif

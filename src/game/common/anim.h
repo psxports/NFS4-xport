@@ -24,6 +24,7 @@ public:
 
     sint32 GetTimedAnimPosRot(coorddef *pt, matrixtdef *mat);
 
+    sint32 GetRenderPosRot(sint32 index, coorddef *pt, matrixtdef *mat);
     sint32 GetTimedAnimPosRot(sint32 index, coorddef *pt, matrixtdef *mat);
 
     sint32 GetStatus(void);
@@ -54,7 +55,7 @@ public:
     static void DeInitSystem(void);
     static sint32 Handle(sint32 num);
     static sint32 FreeHandle(sint32 handle);
-    static AnimScript * GetAnim(sint32 handle);
+    static AnimScript *GetAnim(sint32 handle);
     static void GetLastRotPos(Trk::AnimateInst *animInst, coorddef *pt, matrixtdef *mat);
     static sint32 GetLastAnimPosRot(sint32 animNum, sint32 flags, coorddef *pt, matrixtdef *mat);
     static sint32 GetRotPos(Trk::AnimateInst *animInst, sint32 flags, sint32 ticks, coorddef *pt, matrixtdef *mat);

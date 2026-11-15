@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "xport.h"
+#include "hd_frontend.h"
+#include "hd_ui.h"
 #include "psx.h"
 #include "eaclib/psx/eaclib.h"
 #include "eaclib/psx/globals.h"
@@ -16,6 +18,7 @@
 #include "game/common/audiocmn.h"
 #include "game/common/car.h"
 #include "game/common/carobj.h"
+#include "game/common/frame.h"
 #include "game/common/nfs3.h"
 #include "game/common/paths.h"
 #include "game/common/r3dcar.h"
@@ -101,6 +104,7 @@ void PSXFront::AllocateDrawMemory(void)
 void PSXFront::FreeDrawMemory(void)
 {
     FUNCTION_MARKER(0x8004D830, "FRONT.BIN");
+    hd_ui_invalidate();
     ClearPrimitivesBuffer();
 }
 
@@ -110,6 +114,7 @@ void CleanupSpinningCars(void)
     if ((uint8)rendering3DEnvironmentInitialized == 0)
         return;
 
+    hd_frontend_release();
     DrawSync(0);
     for (sint32 i = 0; i < 2; ++i)
     {
@@ -139,6 +144,7 @@ void CleanupSpinningCarsMenu(void)
     FUNCTION_MARKER(0x8004DAC4, "FRONT.BIN");
     if ((uint8)rendering3DEnvironmentInitialized != 0)
     {
+        hd_frontend_release();
         DrawSync(0);
         for (sint32 i = 0; i < 2; ++i)
             R3DCar::DeInstantiate3DCarMenu(gCarObj[i]);
@@ -231,8 +237,10 @@ void Init_PSX_FrontEnd(void)
     screenbpp = 16;
     if (firstTime != 0)
     {
+#if !defined(AP_WEB)
         sint32 movieResult = play_movie(4);
         if (movieResult != 1)
+#endif
             play_movie(0);
         initlinkmode(0, 1, 1);
         Init_RenderingEnvironment();
@@ -329,6 +337,39 @@ static void AdjustShapeDrawing(tTexture::ShapeInfo *tShp, sint32 &x, sint32 &y, 
     color[0] = (((uint32)bright << 16) | ((uint32)bright << 8) | bright);
 }
 
+static void submit_frontend_shape(Draw::PrimStruct *cprim, const sint16 x[4], const sint16 y[4], const uint8 u[4], const uint8 v[4], const sint32 colors[4], uint16 clut, uint16 page, uint8 code)
+{
+    uint32 position[4];
+    uint32 texture[4];
+    uint32 color[4];
+    for (sint32 i = 0; i < 4; ++i)
+    {
+        position[i] = (uint16)x[i] | ((uint32)(uint16)y[i] << 16);
+        texture[i] = u[i] | ((uint32)v[i] << 8);
+        color[i] = (uint32)colors[i];
+    }
+    texture[0] |= (uint32)clut << 16;
+    texture[1] |= (uint32)page << 16;
+    uint32 *marker = (uint32 *)cprim->PrimPtr;
+    if (FramePresentation::DeferQuad(marker, position, color, code, texture))
+        *marker = getaddr(cprim->LastPrim);
+    else
+    {
+        POLY_GT4 *prim = (POLY_GT4 *)marker;
+        prim->tag = 0x0C000000 | getaddr(cprim->LastPrim);
+        for (sint32 i = 0; i < 4; ++i)
+        {
+            memcpy(&prim->p[i].rgbc, color + i, sizeof(uint32));
+            memcpy(&prim->p[i].xy, position + i, sizeof(uint32));
+            prim->p[i].uv_attr = texture[i];
+        }
+        prim->p[0].rgbc.code = code;
+        hd_ui_gt4(prim);
+    }
+    setaddr(cprim->LastPrim, marker);
+    cprim->PrimPtr += sizeof(POLY_GT4);
+}
+
 static void DrawGouraudShape(tTexture::ShapeInfo *shp, sint32 flags, sint32 x, sint32 y, sint32 *color, sint32 abr)
 {
     FUNCTION_MARKER(0x8004E264, "FRONT.BIN");
@@ -368,70 +409,59 @@ static void DrawGouraudShape(tTexture::ShapeInfo *shp, sint32 flags, sint32 x, s
         if (remaining < w)
             w = remaining;
         Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
-        POLY_GT4 *prim = reinterpret_cast<POLY_GT4 *>(cprim->PrimPtr);
-        uint32 *ot = cprim->LastPrim;
-        setaddr(prim, getaddr(ot));
-        cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
-        setaddr(ot, prim);
-        uint32 rgb = color[0];
-        memcpy(&prim->p[0].rgbc, &rgb, sizeof(rgb));
-        rgb = color[1];
-        memcpy(&prim->p[1].rgbc, &rgb, sizeof(rgb));
-        rgb = color[2];
-        memcpy(&prim->p[2].rgbc, &rgb, sizeof(rgb));
-        rgb = color[3];
-        setcode(prim, 0x3C + ((flags & 1) << 1));
-        setlen(prim, 12);
-        memcpy(&prim->p[3].rgbc, &rgb, sizeof(rgb));
+        sint16 vertexX[4], vertexY[4];
+        uint8 textureU[4], textureV[4];
+        uint16 clut, page;
         sint32 clutID = shp->clutID;
-        prim->p[0].attr = GetClut((clutID & 63) << 4, clutID >> 6);
+        clut = GetClut((clutID & 63) << 4, clutID >> 6);
         uint32 pageY = (uint16)shp->shapey;
-        prim->p[1].attr = (uint16)(((shp->type & 3U) << 7) | ((abr & 3U) << 5) | ((pageY & 0x100U) >> 4) | ((pageX & 0x3C0U) >> 6) | ((pageY & 0x200U) << 2));
+        page = (uint16)(((shp->type & 3U) << 7) | ((abr & 3U) << 5) | ((pageY & 0x100U) >> 4) | ((pageX & 0x3C0U) >> 6) | ((pageY & 0x200U) << 2));
         sint32 addw = 0;
         if ((flags & 4) != 0 && shp->width < 255)
         {
             u = (u - 1);
             addw = 1;
         }
-        prim->p[0].uv.u = (uint8)u;
-        prim->p[0].uv.v = (uint8)v;
-        prim->p[1].uv.u = (uint8)(u + (uint32)w);
-        prim->p[1].uv.v = (uint8)v;
-        prim->p[2].uv.u = (uint8)u;
-        prim->p[3].uv.u = (uint8)(u + (uint32)w);
-        prim->p[2].uv.v = (uint8)(vh + baseV);
-        prim->p[3].uv.v = (uint8)(vh + baseV);
+        textureU[0] = (uint8)u;
+        textureV[0] = (uint8)v;
+        textureU[1] = (uint8)(u + (uint32)w);
+        textureV[1] = (uint8)v;
+        textureU[2] = (uint8)u;
+        textureU[3] = (uint8)(u + (uint32)w);
+        textureV[2] = (uint8)(vh + baseV);
+        textureV[3] = (uint8)(vh + baseV);
         if ((sint16)w <= 0)
             w = 1;
         uint32 adjust = addw - 1U;
         if ((flags & 4) != 0)
         {
-            prim->p[0].xy.x = (sint16)(width + x - i + adjust);
-            prim->p[0].xy.y = (sint16)y;
+            vertexX[0] = (sint16)(width + x - i + adjust);
+            vertexY[0] = (sint16)y;
             uint32 shapeWidth = (uint16)shp->width;
             uint32 next = i + (uint32)w;
-            prim->p[1].xy.y = (sint16)y;
-            prim->p[1].xy.x = (sint16)(shapeWidth + x - next + adjust);
+            vertexY[1] = (sint16)y;
+            vertexX[1] = (sint16)(shapeWidth + x - next + adjust);
             shapeWidth = (uint16)shp->width;
-            prim->p[2].xy.y = (sint16)bottom;
-            prim->p[2].xy.x = (sint16)(shapeWidth + x - i + adjust);
+            vertexY[2] = (sint16)bottom;
+            vertexX[2] = (sint16)(shapeWidth + x - i + adjust);
             shapeWidth = (uint16)shp->width;
-            prim->p[3].xy.y = (sint16)bottom;
-            prim->p[3].xy.x = (sint16)(shapeWidth + x - next + adjust);
+            vertexY[3] = (sint16)bottom;
+            vertexX[3] = (sint16)(shapeWidth + x - next + adjust);
         }
         else
         {
             uint32 left = i + (uint32)x;
             uint32 right = left + w;
-            prim->p[0].xy.x = (sint16)left;
-            prim->p[0].xy.y = (sint16)y;
-            prim->p[1].xy.x = (sint16)right;
-            prim->p[1].xy.y = (sint16)y;
-            prim->p[2].xy.x = (sint16)left;
-            prim->p[2].xy.y = (sint16)bottom;
-            prim->p[3].xy.x = (sint16)right;
-            prim->p[3].xy.y = (sint16)bottom;
+            vertexX[0] = (sint16)left;
+            vertexY[0] = (sint16)y;
+            vertexX[1] = (sint16)right;
+            vertexY[1] = (sint16)y;
+            vertexX[2] = (sint16)left;
+            vertexY[2] = (sint16)bottom;
+            vertexX[3] = (sint16)right;
+            vertexY[3] = (sint16)bottom;
         }
+        submit_frontend_shape(cprim, vertexX, vertexY, textureU, textureV, color, clut, page, (uint8)(0x3C + ((flags & 1) << 1)));
         i = (i + w);
     }
 }
@@ -467,28 +497,16 @@ static void ScaleGouraudShape(tTexture::ShapeInfo *shp, sint32 flags, sint32 x, 
     FUNCTION_MARKER(0x8004E77C, "FRONT.BIN");
     sint32 width = (uint16)shp->width;
     sint32 height = (uint16)shp->height;
-    Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
-    POLY_GT4 *prim = reinterpret_cast<POLY_GT4 *>(cprim->PrimPtr);
-    uint32 *ot = cprim->LastPrim;
     sint32 bpp = (uint8)shp->depth;
-    setaddr(prim, getaddr(ot));
-    cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
-    setaddr(ot, prim);
-    uint32 rgb = color[0];
-    memcpy(&prim->p[0].rgbc, &rgb, sizeof(rgb));
-    rgb = color[1];
-    memcpy(&prim->p[1].rgbc, &rgb, sizeof(rgb));
-    rgb = color[2];
-    memcpy(&prim->p[2].rgbc, &rgb, sizeof(rgb));
-    rgb = color[3];
-    memcpy(&prim->p[3].rgbc, &rgb, sizeof(rgb));
-    SetPolyGT4(prim);
-    SetSemiTrans(prim, flags & 1);
+    Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
+    sint16 vertexX[4], vertexY[4];
+    uint8 textureU[4], textureV[4];
+    uint16 clut, page;
     sint32 clutID = shp->clutID;
-    prim->p[0].attr = GetClut((clutID & 63) << 4, clutID >> 6);
+    clut = GetClut((clutID & 63) << 4, clutID >> 6);
     uint32 pageY = (uint16)shp->shapey;
     uint32 pageX = (uint16)shp->shapex;
-    prim->p[1].attr = (uint16)(((shp->type & 3U) << 7) | ((abr & 3U) << 5) | ((pageY & 0x100U) >> 4) | ((pageX & 0x3C0U) >> 6) | ((pageY & 0x200U) << 2));
+    page = (uint16)(((shp->type & 3U) << 7) | ((abr & 3U) << 5) | ((pageY & 0x100U) >> 4) | ((pageX & 0x3C0U) >> 6) | ((pageY & 0x200U) << 2));
     if ((flags & 4) != 0)
     {
         x = (x + fixedmult(scalex, (sint16)width));
@@ -500,21 +518,21 @@ static void ScaleGouraudShape(tTexture::ShapeInfo *shp, sint32 flags, sint32 x, 
         height = -height;
     }
     width = (sint16)width;
-    prim->p[0].xy.x = (sint16)x;
-    prim->p[0].xy.y = (sint16)y;
+    vertexX[0] = (sint16)x;
+    vertexY[0] = (sint16)y;
     sint32 scaled = fixedmult(scalex, width);
     height = (sint16)height;
     uint32 right = x - 1U;
-    prim->p[1].xy.x = (sint16)(right + scaled);
-    prim->p[1].xy.y = (sint16)y;
-    prim->p[2].xy.x = (sint16)x;
+    vertexX[1] = (sint16)(right + scaled);
+    vertexY[1] = (sint16)y;
+    vertexX[2] = (sint16)x;
     scaled = fixedmult(scaley, height);
-    prim->p[2].xy.y = (sint16)(y + (uint32)scaled);
+    vertexY[2] = (sint16)(y + (uint32)scaled);
     scaled = fixedmult(scalex, width);
     right += (uint32)scaled;
-    prim->p[3].xy.x = (sint16)right;
+    vertexX[3] = (sint16)right;
     scaled = fixedmult(scaley, height);
-    prim->p[3].xy.y = (sint16)(y + (uint32)scaled);
+    vertexY[3] = (sint16)(y + (uint32)scaled);
     sint32 numerator = ((uint16)shp->shapex & 63) << 4;
     if (bpp == 0)
         abort();
@@ -526,14 +544,15 @@ static void ScaleGouraudShape(tTexture::ShapeInfo *shp, sint32 flags, sint32 x, 
         --u;
     if ((flags & 2) != 0)
         --v;
-    prim->p[0].uv.v = (uint8)v;
-    prim->p[1].uv.v = (uint8)v;
-    prim->p[0].uv.u = (uint8)u;
-    prim->p[1].uv.u = (uint8)(u + uw);
-    prim->p[2].uv.u = (uint8)u;
-    prim->p[2].uv.v = (uint8)(v + vh);
-    prim->p[3].uv.u = (uint8)(u + uw);
-    prim->p[3].uv.v = (uint8)(v + vh);
+    textureV[0] = (uint8)v;
+    textureV[1] = (uint8)v;
+    textureU[0] = (uint8)u;
+    textureU[1] = (uint8)(u + uw);
+    textureU[2] = (uint8)u;
+    textureV[2] = (uint8)(v + vh);
+    textureU[3] = (uint8)(u + uw);
+    textureV[3] = (uint8)(v + vh);
+    submit_frontend_shape(cprim, vertexX, vertexY, textureU, textureV, color, clut, page, (uint8)(0x3C + ((flags & 1) << 1)));
 }
 
 static void ScaleFlatShape(tTexture::ShapeInfo *shp, sint32 flags, sint32 x, sint32 y, sint32 scalex, sint32 scaley, sint32 *color, sint32 abr)
@@ -578,10 +597,36 @@ void LoadAllHelpShapes(void)
     }
 }
 
+static bool defer_frontend_quad(Draw::PrimStruct *cprim, const uint32 position[4], const uint32 color[4], uint8 code)
+{
+    uint32 *marker = (uint32 *)cprim->PrimPtr;
+    if (!FramePresentation::DeferQuad(marker, position, color, code))
+        return false;
+    *marker = getaddr(cprim->LastPrim);
+    setaddr(cprim->LastPrim, marker);
+    cprim->PrimPtr += (code & 16) != 0 ? sizeof(POLY_G4) : sizeof(POLY_F4);
+    return true;
+}
+
+static void frontend_square_positions(uint32 position[4], sint32 x, sint32 y, sint32 w, sint32 h)
+{
+    uint32 right = x + (uint32)w;
+    uint32 bottom = y + (uint32)h;
+    position[0] = (uint16)x | ((uint32)(uint16)y << 16);
+    position[1] = (uint16)right | ((uint32)(uint16)y << 16);
+    position[2] = (uint16)x | ((uint32)(uint16)bottom << 16);
+    position[3] = (uint16)right | ((uint32)(uint16)bottom << 16);
+}
+
 void PSXDrawSquare(sint32 col, sint32 x, sint32 y, sint32 w, sint32 h)
 {
     FUNCTION_MARKER(0x8004EC44, "FRONT.BIN");
+    uint32 position[4];
+    frontend_square_positions(position, x, y, w, h);
+    uint32 colors[4] = {(uint32)col, (uint32)col, (uint32)col, (uint32)col};
     Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
+    if (defer_frontend_quad(cprim, position, colors, 0x28))
+        return;
     POLY_F4 *prim = reinterpret_cast<POLY_F4 *>(cprim->PrimPtr);
     uint32 *ot = cprim->LastPrim;
     setaddr(prim, getaddr(ot));
@@ -601,12 +646,18 @@ void PSXDrawSquare(sint32 col, sint32 x, sint32 y, sint32 w, sint32 h)
     prim->p[2].y = (sint16)bottom;
     prim->p[3].x = (sint16)right;
     prim->p[3].y = (sint16)bottom;
+    hd_ui_f4(prim);
 }
 
 void PSXDrawGouraudSquare(sint32 x, sint32 y, sint32 w, sint32 h, sint32 c1, sint32 c2, sint32 c3, sint32 c4)
 {
     FUNCTION_MARKER(0x8004ECDC, "FRONT.BIN");
+    uint32 position[4];
+    frontend_square_positions(position, x, y, w, h);
+    uint32 colors[4] = {(uint32)c1, (uint32)c2, (uint32)c3, (uint32)c4};
     Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
+    if (defer_frontend_quad(cprim, position, colors, 0x38))
+        return;
     POLY_G4 *prim = reinterpret_cast<POLY_G4 *>(cprim->PrimPtr);
     uint32 *ot = cprim->LastPrim;
     setaddr(prim, getaddr(ot));
@@ -631,6 +682,7 @@ void PSXDrawGouraudSquare(sint32 x, sint32 y, sint32 w, sint32 h, sint32 c1, sin
     prim->p[2].xy.y = (sint16)bottom;
     prim->p[3].xy.x = (sint16)right;
     prim->p[3].xy.y = (sint16)bottom;
+    hd_ui_g4(prim);
 }
 
 void PSXDrawTransGouraudSquare(sint32 x, sint32 y, sint32 w, sint32 h, sint32 opacity, sint32 c1, sint32 c2, sint32 c3, sint32 c4)
@@ -645,9 +697,13 @@ void PSXDrawTransGouraudSquare(sint32 x, sint32 y, sint32 w, sint32 h, sint32 op
     uint32 xy1 = top | right;
     uint32 xy2 = bottom | x;
     uint32 xy3 = bottom | right;
+    uint32 position[4] = {xy0, xy1, xy2, xy3};
+    uint32 colors[4] = {(uint32)c1, (uint32)c2, (uint32)c3, (uint32)c4};
     for (sint32 i = 0; i < opacity; ++i)
     {
         Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
+        if (defer_frontend_quad(cprim, position, colors, 0x39))
+            continue;
         POLY_G4 *prim = reinterpret_cast<POLY_G4 *>(cprim->PrimPtr);
         uint32 *ot = cprim->LastPrim;
         setaddr(prim, getaddr(ot));
@@ -667,6 +723,7 @@ void PSXDrawTransGouraudSquare(sint32 x, sint32 y, sint32 w, sint32 h, sint32 op
         setlen(prim, 8);
         memcpy(&prim->p[1].xy, &xy1, sizeof(xy1));
         memcpy(&prim->p[3].xy, &xy3, sizeof(xy3));
+        hd_ui_g4(prim);
     }
 }
 
@@ -677,9 +734,14 @@ void PSXDrawTransSquare(sint32 col, sint32 x, sint32 y, sint32 w, sint32 h, sint
         return;
     uint32 right = x + (uint32)w;
     uint32 bottom = y + (uint32)h;
+    uint32 position[4];
+    frontend_square_positions(position, x, y, w, h);
+    uint32 colors[4] = {(uint32)col, (uint32)col, (uint32)col, (uint32)col};
     for (sint32 i = 0; i < opacity; ++i)
     {
         Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
+        if (defer_frontend_quad(cprim, position, colors, 0x2a))
+            continue;
         POLY_F4 *prim = reinterpret_cast<POLY_F4 *>(cprim->PrimPtr);
         uint32 *ot = cprim->LastPrim;
         setaddr(prim, getaddr(ot));
@@ -697,6 +759,7 @@ void PSXDrawTransSquare(sint32 col, sint32 x, sint32 y, sint32 w, sint32 h, sint
         prim->p[2].y = (sint16)bottom;
         prim->p[3].x = (sint16)right;
         prim->p[3].y = (sint16)bottom;
+        hd_ui_f4(prim);
     }
 }
 
@@ -743,6 +806,7 @@ void FontUpsideDownBlit(sint32 x, sint32 y, void *src, sint32 u, sint32 v, chara
     prim->p[2].xy.y = (sint16)upper;
     prim->p[3].xy.x = (sint16)right;
     prim->p[3].xy.y = (sint16)upper;
+    hd_ui_ft4(prim);
 }
 
 void PSXFront::ResetOverlayGraphics(void)

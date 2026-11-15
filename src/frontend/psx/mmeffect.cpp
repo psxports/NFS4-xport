@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include "xport.h"
 #include "psx.h"
+#include "hd_ui.h"
 #include "frontend/psx/mmeffect.h"
 #include "game/psx/rendercache.h"
 
@@ -15,4 +16,5 @@ void FeDraw_SetABRMode(sint32 abr)
     setaddr(ot, dr_mode);
     uint16 tpage = GetTPage(2, abr, 0, 256);
     SetDrawMode(dr_mode, 0, 0, tpage, 0);
+    hd_ui_page(tpage);
 }

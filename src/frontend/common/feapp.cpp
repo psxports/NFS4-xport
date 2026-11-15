@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "xport.h"
+#include "hd_frontend.h"
+#include "hd_ui.h"
 #include "psx.h"
 #include "eaclib/psx/eaclib.h"
 #include "eaclib/psx/globals.h"
@@ -26,6 +28,8 @@
 #include "game/common/car.h"
 #include "game/common/cars.h"
 #include "game/common/clock.h"
+#include "game/common/frame.h"
+#include "game/common/frameclock.h"
 #include "game/common/gmesetup.h"
 #include "game/common/nfs3.h"
 #include "game/common/textsys.h"
@@ -86,7 +90,7 @@ tFEApplication *FEApp;
 tFEApplication::tFEApplication(void)
 {
     FUNCTION_MARKER(0x80012FA0, "FRONT.BIN");
-    tDialogBase *dialogs[3] = { &messagePopup, &helpPopup, &MemCardDialog };
+    tDialogBase *dialogs[3] = {&messagePopup, &helpPopup, &MemCardDialog};
     for (sint32 i = 0; i < 3; ++i)
     {
         tDialogBase *dialog = dialogs[i];
@@ -220,9 +224,11 @@ void tFEApplication::DrawHelpIcons(void)
 void tFEApplication::Redraw(void)
 {
     FUNCTION_MARKER(0x8001373C, "FRONT.BIN");
+    FramePresentation presentation;
     char saveFPlayer = fPlayer;
     FeAudio::systemtask(0);
     Draw::StartFrameRender();
+    hd_ui_frontend_frame(true);
     Draw::StartRenderingView(Draw::gPlayer1View);
 #if 0
     char buffer[32];
@@ -269,6 +275,7 @@ void tFEApplication::Redraw(void)
     cprim->PrimPtr = reinterpret_cast<char *>(daprim + 1);
     setaddr(cprim->LastPrim, daprim);
     SetDrawArea(daprim, &r);
+    hd_ui_area(&r);
     for (sint16 i = 1; i >= 0; --i)
     {
         fPlayer = (char)i;
@@ -304,6 +311,7 @@ void tFEApplication::Redraw(void)
         cprim->PrimPtr = reinterpret_cast<char *>(daprim + 1);
         setaddr(cprim->LastPrim, daprim);
         SetDrawArea(daprim, &r);
+        hd_ui_area(&r);
     }
     fPlayer = saveFPlayer;
     Draw::StopRenderingView(Draw::gPlayer1View);
@@ -379,6 +387,7 @@ void tFEApplication::SetScreen(sint16 i, tScreen *screen)
     tScreen *currentScreen = fCurrentScreen[i];
     if (screen != currentScreen)
     {
+        hd_frontend_reset_history();
         fTransitionToScreen[i] = screen;
         if (currentScreen != 0 && screen != 0)
             currentScreen->TransitionOff(tScreen::kScreen_TransitionTypeScreen, 0);
@@ -442,7 +451,7 @@ tAppCommand tFEApplication::MainLoop(tMenu *newMenu)
     FUNCTION_MARKER(0x800142A4, "FRONT.BIN");
     sint16 stackBackupPin = -1;
     bool needToSetChildMenu = false;
-    uint32 ticksAtLastInput[2] = { 0, 0 };
+    uint32 ticksAtLastInput[2] = {0, 0};
     tMenuCommand command[2];
     tInputKeyType keyVal[2];
     tCarInfo carInfo;
@@ -464,285 +473,322 @@ tAppCommand tFEApplication::MainLoop(tMenu *newMenu)
         fPlayer = (char)((uint8)fPlayer + 1);
     } while ((uint8)fPlayer < 2);
     SetMenu(0, newMenu);
+    FrameClock menuClock;
+    menuClock.Reset(xport_frame());
+    bool firstMenuFrame = true;
     for (;;)
     {
-        uint32 tick = ticks;
-        bool doRedraw = true;
-        for (fPlayer = 0; (uint8)fPlayer < 2;
-            fPlayer = (char)((uint8)fPlayer + 1))
+        FramePresentation presentation;
+        if (FramePresentation::Handoff())
+            menuClock.Reset(xport_frame());
+        FeAudio::systemtask(0);
+        bool reseeded;
+        uint32 due = menuClock.Pending(xport_frame(), 1, 4, 16, &reseeded);
+        if (firstMenuFrame)
+            due = 1;
+        if (reseeded)
+            hd_frontend_reset_history();
+        for (uint32 menuStep = 0; menuStep < due; ++menuStep)
         {
-            if (fTransitionToMenu[(uint8)fPlayer] != 0)
+            uint32 tick = ticks;
+            bool doRedraw = true;
+            for (fPlayer = 0; (uint8)fPlayer < 2; fPlayer = (char)((uint8)fPlayer + 1))
             {
-                bool wasSubMenu = false;
-                tMenu *menu = fCurrentMenu[(uint8)fPlayer];
-                if (menu != 0)
+                if (fTransitionToMenu[(uint8)fPlayer] != 0)
                 {
-                    bool finished = false;
-                    if (menu->TransitionIsFinished())
-                    {
-                        tScreen *screen = fCurrentScreen[(uint8)fPlayer];
-                        if (screen != 0)
-                            finished = screen->TransitionIsFinished();
-                    }
-                    if (!finished)
-                        goto checkSecondPlayer;
-                    menu = fCurrentMenu[(uint8)fPlayer];
+                    bool wasSubMenu = false;
+                    tMenu *menu = fCurrentMenu[(uint8)fPlayer];
                     if (menu != 0)
-                        wasSubMenu = menu->IsSubMenu();
-                }
-                if (fTransitionToMenu[(uint8)fPlayer]->IsSubMenu())
-                    fParentMenu[(uint8)fPlayer] = fCurrentMenu[(uint8)fPlayer];
-                else
-                    fParentMenu[(uint8)fPlayer] = 0;
-                fCurrentMenu[(uint8)fPlayer] = fTransitionToMenu[(uint8)fPlayer];
-                fCurrentMenu[(uint8)fPlayer]->Initialize();
-                fTransitionToMenu[(uint8)fPlayer] = 0;
-                if (!wasSubMenu || fTransitionToScreen[0] != 0)
-                {
-                    fCurrentMenu[(uint8)fPlayer]->TransitionOn();
-                    if (needToSetChildMenu)
                     {
-                        needToSetChildMenu = false;
-                        SetMenu(1, fCurrentMenu[(uint8)fPlayer]->fChildMenu);
+                        bool finished = false;
+                        if (menu->TransitionIsFinished())
+                        {
+                            tScreen *screen = fCurrentScreen[(uint8)fPlayer];
+                            if (screen != 0)
+                                finished = screen->TransitionIsFinished();
+                        }
+                        if (!finished)
+                            goto checkSecondPlayer;
+                        menu = fCurrentMenu[(uint8)fPlayer];
+                        if (menu != 0)
+                            wasSubMenu = menu->IsSubMenu();
+                    }
+                    if (fTransitionToMenu[(uint8)fPlayer]->IsSubMenu())
+                        fParentMenu[(uint8)fPlayer] = fCurrentMenu[(uint8)fPlayer];
+                    else
+                        fParentMenu[(uint8)fPlayer] = 0;
+                    fCurrentMenu[(uint8)fPlayer] = fTransitionToMenu[(uint8)fPlayer];
+                    fCurrentMenu[(uint8)fPlayer]->Initialize();
+                    fTransitionToMenu[(uint8)fPlayer] = 0;
+                    if (!wasSubMenu || fTransitionToScreen[0] != 0)
+                    {
+                        fCurrentMenu[(uint8)fPlayer]->TransitionOn();
+                        if (needToSetChildMenu)
+                        {
+                            needToSetChildMenu = false;
+                            SetMenu(1, fCurrentMenu[(uint8)fPlayer]->fChildMenu);
+                        }
+                    }
+                    else
+                    {
+                        doRedraw = false;
+                        backDepth[(uint8)fPlayer] = (backDepth[(uint8)fPlayer] - 1);
+                    }
+                    demoLoopLastInputTick = ticks;
+                }
+            checkSecondPlayer:
+                if ((uint8)fPlayer == 1)
+                {
+                    tMenu *menu = fCurrentMenu[(uint8)fPlayer];
+                    if (menu != 0 && menu->TransitionIsFinished() && stackBackupPin < 0)
+                    {
+                        menu = fParentMenu[(uint8)fPlayer];
+                        if (menu == 0 || menu->TransitionIsFinished())
+                        {
+                            fCurrentMenu[(uint8)fPlayer] = 0;
+                            tScreen *screen = fCurrentScreen[(uint8)fPlayer];
+                            if (screen != 0)
+                                screen->Cleanup();
+                            fCurrentScreen[(uint8)fPlayer] = 0;
+                        }
                     }
                 }
-                else
+                if (fTransitionToScreen[(uint8)fPlayer] != 0)
                 {
-                    doRedraw = false;
-                    backDepth[(uint8)fPlayer] = (backDepth[(uint8)fPlayer] - 1);
-                }
-                demoLoopLastInputTick = ticks;
-            }
-        checkSecondPlayer:
-            if ((uint8)fPlayer == 1)
-            {
-                tMenu *menu = fCurrentMenu[(uint8)fPlayer];
-                if (menu != 0 && menu->TransitionIsFinished() && stackBackupPin < 0)
-                {
-                    menu = fParentMenu[(uint8)fPlayer];
-                    if (menu == 0 || menu->TransitionIsFinished())
-                    {
-                        fCurrentMenu[(uint8)fPlayer] = 0;
-                        tScreen *screen = fCurrentScreen[(uint8)fPlayer];
-                        if (screen != 0)
-                            screen->Cleanup();
-                        fCurrentScreen[(uint8)fPlayer] = 0;
-                    }
-                }
-            }
-            if (fTransitionToScreen[(uint8)fPlayer] != 0)
-            {
-                tScreen *screen = fCurrentScreen[(uint8)fPlayer];
-                if (screen != 0)
-                {
-                    if (!screen->TransitionIsFinished() || fTransitionToMenu[(uint8)fPlayer] != 0)
-                        goto processMenuInput;
-                    screen = fCurrentScreen[(uint8)fPlayer];
-                    if (screen != 0)
-                        screen->Cleanup();
-                }
-                fCurrentScreen[(uint8)fPlayer] = fTransitionToScreen[(uint8)fPlayer];
-                gLargestUnused = largestunused();
-                fCurrentScreen[(uint8)fPlayer]->Initialize();
-                fTransitionToScreen[(uint8)fPlayer] = 0;
-                fCurrentScreen[(uint8)fPlayer]->TransitionOn(tScreen::kScreen_TransitionTypeScreen, 0);
-            }
-        processMenuInput:
-            if (fCurrentMenu[(uint8)fPlayer] == 0)
-                continue;
-            sint32 inputStartPlayer = (uint8)fPlayer;
-            sint32 inputEndPlayer = inputStartPlayer;
-            uint32 flags = fCurrentMenu[(uint8)fPlayer]->fFlags;
-            if ((flags & 0x10) != 0 || (frontEnd.gameMode == 1 && (flags & 8) == 0))
-            {
-                inputStartPlayer = 0;
-                inputEndPlayer = 1;
-            }
-            flags = fCurrentMenu[(uint8)fPlayer]->fFlags;
-            if ((flags & 0x20) != 0)
-                inputStartPlayer = inputEndPlayer = (uint8)fInputPlayer;
-            if ((flags & 0x40) != 0)
-                inputStartPlayer = inputEndPlayer = 0;
-            if ((flags & 0x80) != 0)
-                inputStartPlayer = inputEndPlayer = 1;
-            bool ready = false;
-            tMenu *menu = fCurrentMenu[(uint8)fPlayer];
-            if (menu != 0 && menu->TransitionIsFinished())
-            {
-                tScreen *screen = fCurrentScreen[(uint8)fPlayer];
-                if (screen != 0)
-                    ready = screen->TransitionIsFinished();
-            }
-            if (!ready)
-                continue;
-            sint32 debounce = fCurrentMenu[(uint8)fPlayer]->DebounceKeys();
-            for (sint32 input = inputStartPlayer; (sint16)input <= inputEndPlayer;
-                input = (input + 1))
-            {
-                sint16 player = (sint16)input;
-                command[player].type = kMenu_Command_None;
-                keyVal[player] = FEInput::GetKeyFromPlayer((tPlayer)player, debounce);
-                if (keyVal[player] != kInput_KeyType_NoKey)
-                    fInputPlayer = (char)input;
-                if ((uint32)ticks - ticksAtLastInput[player] > 15 || (debounce & keyVal[player]) == 0)
-                    fLastKeyPressed[player] = keyVal[player];
-                if (keyVal[player] != kInput_KeyType_NoKey)
-                {
-                    tDialogBase *dialog = tDialogBase::GetTopMostDialog();
-                    demoLoopLastInputTick = tick;
-                    ticksAtLastInput[player] = tick;
-                    if (keyVal[player] == kInput_KeyType_Circle && helpPopup.currentlyOn != 0)
-                    {
-                        keyVal[player] = kInput_KeyType_AlreadyProcessed;
-                        helpPopup.Hide();
-                    }
-                    if (dialog != 0 && keyVal[player] != kInput_KeyType_Circle)
-                        dialog->ProcessInput((tPlayer)player, keyVal[player], command[player]);
                     tScreen *screen = fCurrentScreen[(uint8)fPlayer];
                     if (screen != 0)
-                        screen->ProcessInput((tPlayer)player, keyVal[player], command[player]);
-                    if (keyVal[player] != kInput_KeyType_AlreadyProcessed)
-                        fCurrentMenu[(uint8)fPlayer]->ProcessInput((tPlayer)player, keyVal[player], command[player]);
+                    {
+                        if (!screen->TransitionIsFinished() || fTransitionToMenu[(uint8)fPlayer] != 0)
+                            goto processMenuInput;
+                        screen = fCurrentScreen[(uint8)fPlayer];
+                        if (screen != 0)
+                            screen->Cleanup();
+                    }
+                    fCurrentScreen[(uint8)fPlayer] = fTransitionToScreen[(uint8)fPlayer];
+                    gLargestUnused = largestunused();
+                    fCurrentScreen[(uint8)fPlayer]->Initialize();
+                    fTransitionToScreen[(uint8)fPlayer] = 0;
+                    fCurrentScreen[(uint8)fPlayer]->TransitionOn(tScreen::kScreen_TransitionTypeScreen, 0);
                 }
-                switch (command[player].type)
+            processMenuInput:
+                if (fCurrentMenu[(uint8)fPlayer] == 0)
+                    continue;
+                sint32 inputStartPlayer = (uint8)fPlayer;
+                sint32 inputEndPlayer = inputStartPlayer;
+                uint32 flags = fCurrentMenu[(uint8)fPlayer]->fFlags;
+                if ((flags & 0x10) != 0 || (frontEnd.gameMode == 1 && (flags & 8) == 0))
                 {
-                case kMenu_Command_GoToMenu:
-                    AudioCmn::PlayFESFX(0);
-                    backList[(uint8)fPlayer][backDepth[(uint8)fPlayer]] = fCurrentMenu[(uint8)fPlayer];
-                    backDepth[(uint8)fPlayer] = (backDepth[(uint8)fPlayer] + 1);
-                    SetMenu((uint8)fPlayer, command[player].nextMenu);
-                    break;
-                case kMenu_Command_GoToMenuOneWay:
-                    AudioCmn::PlayFESFX(0);
-                    backDepth[(uint8)fPlayer] = 0;
-                    SetMenu((uint8)fPlayer, command[player].nextMenu);
-                    break;
-                case kMenu_Command_GoToMenuTwoPlayer:
-                    AudioCmn::PlayFESFX(0);
-                    backList[(uint8)fPlayer][backDepth[(uint8)fPlayer]] = fCurrentMenu[(uint8)fPlayer];
-                    needToSetChildMenu = true;
-                    backDepth[(uint8)fPlayer] = (backDepth[(uint8)fPlayer] + 1);
-                    stackBackupPin = (sint16)backDepth[(uint8)fPlayer];
-                    SetMenu((uint8)fPlayer, command[player].nextMenu);
-                    backDepth[1] = 0;
-                    break;
-                case kMenu_Command_BackupMenu:
-                    if (((uint8)fPlayer != 0 || backDepth[0] <= stackBackupPin) && ((uint8)fPlayer != 1 || backDepth[(uint8)fPlayer] <= 0))
+                    inputStartPlayer = 0;
+                    inputEndPlayer = 1;
+                }
+                flags = fCurrentMenu[(uint8)fPlayer]->fFlags;
+                if ((flags & 0x20) != 0)
+                    inputStartPlayer = inputEndPlayer = (uint8)fInputPlayer;
+                if ((flags & 0x40) != 0)
+                    inputStartPlayer = inputEndPlayer = 0;
+                if ((flags & 0x80) != 0)
+                    inputStartPlayer = inputEndPlayer = 1;
+                bool ready = false;
+                tMenu *menu = fCurrentMenu[(uint8)fPlayer];
+                if (menu != 0 && menu->TransitionIsFinished())
+                {
+                    tScreen *screen = fCurrentScreen[(uint8)fPlayer];
+                    if (screen != 0)
+                        ready = screen->TransitionIsFinished();
+                }
+                if (!ready)
+                    continue;
+                sint32 debounce = fCurrentMenu[(uint8)fPlayer]->DebounceKeys();
+                for (sint32 input = inputStartPlayer; (sint16)input <= inputEndPlayer; input = (input + 1))
+                {
+                    sint16 player = (sint16)input;
+                    command[player].type = kMenu_Command_None;
+                    keyVal[player] = FEInput::GetKeyFromPlayer((tPlayer)player, debounce);
+                    if (keyVal[player] != kInput_KeyType_NoKey)
+                        fInputPlayer = (char)input;
+                    if ((uint32)ticks - ticksAtLastInput[player] > 15 || (debounce & keyVal[player]) == 0)
+                        fLastKeyPressed[player] = keyVal[player];
+                    if (keyVal[player] != kInput_KeyType_NoKey)
                     {
-                        if (waitingForOtherPlayer[(uint8)fPlayer] != 0)
+                        tDialogBase *dialog = tDialogBase::GetTopMostDialog();
+                        demoLoopLastInputTick = tick;
+                        ticksAtLastInput[player] = tick;
+                        if (keyVal[player] == kInput_KeyType_Circle && helpPopup.currentlyOn != 0)
                         {
-                            waitingForOtherPlayer[(uint8)fPlayer] = 0;
-                            break;
+                            keyVal[player] = kInput_KeyType_AlreadyProcessed;
+                            helpPopup.Hide();
                         }
-                        waitingForOtherPlayer[1 - (uint8)fPlayer] = 0;
-                        waitingForOtherPlayer[(uint8)fPlayer] = 0;
+                        if (dialog != 0 && keyVal[player] != kInput_KeyType_Circle)
+                            dialog->ProcessInput((tPlayer)player, keyVal[player], command[player]);
+                        tScreen *screen = fCurrentScreen[(uint8)fPlayer];
+                        if (screen != 0)
+                            screen->ProcessInput((tPlayer)player, keyVal[player], command[player]);
+                        if (keyVal[player] != kInput_KeyType_AlreadyProcessed)
+                            fCurrentMenu[(uint8)fPlayer]->ProcessInput((tPlayer)player, keyVal[player], command[player]);
                     }
-                    if ((uint8)fPlayer == 0 && backDepth[0] == stackBackupPin && fCurrentMenu[1] != 0)
+                    switch (command[player].type)
                     {
-                        if (fParentMenu[0] != 0)
-                            fParentMenu[0]->TransitionOff();
-                        if (fParentMenu[1] != 0)
-                            fParentMenu[1]->TransitionOff();
-                        stackBackupPin = -1;
-                        fCurrentMenu[1]->TransitionOff();
-                        fCurrentScreen[1]->TransitionOff(tScreen::kScreen_TransitionTypeScreen, 0);
-                        backDepth[1] = 0;
-                    }
-                    else if ((uint8)fPlayer == 1 && backDepth[1] <= 0 && fCurrentMenu[1] != 0)
-                    {
-                        backDepth[0] = stackBackupPin - 1;
-                        fCurrentMenu[1]->TransitionOff();
-                        if (fParentMenu[0] != 0)
-                            fParentMenu[0]->TransitionOff();
-                        if (fParentMenu[1] != 0)
-                            fParentMenu[1]->TransitionOff();
-                        stackBackupPin = -1;
-                        fCurrentScreen[1]->TransitionOff(tScreen::kScreen_TransitionTypeScreen, 0);
-                        SetMenu(0, backList[0][backDepth[0]]);
-                    }
-                    if (backDepth[(uint8)fPlayer] > 0)
-                    {
-                        AudioCmn::PlayFESFX(1);
-                        backDepth[(uint8)fPlayer] = (backDepth[(uint8)fPlayer] - 1);
-                        SetMenu((uint8)fPlayer, backList[(uint8)fPlayer][backDepth[(uint8)fPlayer]]);
-                        if (fCurrentMenu[(uint8)fPlayer]->IsSubMenu())
+                        case kMenu_Command_GoToMenu:
+                            AudioCmn::PlayFESFX(0);
+                            backList[(uint8)fPlayer][backDepth[(uint8)fPlayer]] = fCurrentMenu[(uint8)fPlayer];
                             backDepth[(uint8)fPlayer] = (backDepth[(uint8)fPlayer] + 1);
-                    }
-                    else if ((uint8)fPlayer == 1)
-                        AudioCmn::PlayFESFX(1);
-                    break;
-                case kMenu_Command_StartRace:
-                case kMenu_Command_ReStartRace:
-                    goto selectRaceCar;
-                case kMenu_Command_Start2PlayerRace:
-                    if (waitingForOtherPlayer[1 - (uint8)fPlayer] == 0)
-                    {
-                        waitingForOtherPlayer[(uint8)fPlayer] = 1;
-                        break;
-                    }
-                    waitingForOtherPlayer[1 - (uint8)fPlayer] = 0;
-                    if (frontEnd.raceType != 6)
-                        goto selectStockCar;
-                    {
-                        AudioMus::StopSong(400);
-                        PinkSlipsErrorCode err = PinkSlipsNoError;
-                        for (sint16 savePlayer = 0; savePlayer < 2 && err == PinkSlipsNoError; ++savePlayer)
-                        {
-                            err = SavePinkSlipsCars(savePlayer, (uint8)frontEnd.pinkSlipsCar[savePlayer]);
-                            if (err != PinkSlipsNoError && savePlayer == 1)
-                                SavePinkSlipsCars(0, -1);
-                        }
-                        if (err != PinkSlipsNoError)
-                        {
-#ifdef _DEBUG
-                            fprintf(stderr, "pink slips save failed: %d\n", sint32(err));
-#endif
-                            UpdateMusic();
-                            AudioMus::Volume(((uint8)frontEnd.musicVolume * 35) >> 6);
+                            SetMenu((uint8)fPlayer, command[player].nextMenu);
                             break;
-                        }
+                        case kMenu_Command_GoToMenuOneWay:
+                            AudioCmn::PlayFESFX(0);
+                            backDepth[(uint8)fPlayer] = 0;
+                            SetMenu((uint8)fPlayer, command[player].nextMenu);
+                            break;
+                        case kMenu_Command_GoToMenuTwoPlayer:
+                            AudioCmn::PlayFESFX(0);
+                            backList[(uint8)fPlayer][backDepth[(uint8)fPlayer]] = fCurrentMenu[(uint8)fPlayer];
+                            needToSetChildMenu = true;
+                            backDepth[(uint8)fPlayer] = (backDepth[(uint8)fPlayer] + 1);
+                            stackBackupPin = (sint16)backDepth[(uint8)fPlayer];
+                            SetMenu((uint8)fPlayer, command[player].nextMenu);
+                            backDepth[1] = 0;
+                            break;
+                        case kMenu_Command_BackupMenu:
+                            if (((uint8)fPlayer != 0 || backDepth[0] <= stackBackupPin) && ((uint8)fPlayer != 1 || backDepth[(uint8)fPlayer] <= 0))
+                            {
+                                if (waitingForOtherPlayer[(uint8)fPlayer] != 0)
+                                {
+                                    waitingForOtherPlayer[(uint8)fPlayer] = 0;
+                                    break;
+                                }
+                                waitingForOtherPlayer[1 - (uint8)fPlayer] = 0;
+                                waitingForOtherPlayer[(uint8)fPlayer] = 0;
+                            }
+                            if ((uint8)fPlayer == 0 && backDepth[0] == stackBackupPin && fCurrentMenu[1] != 0)
+                            {
+                                if (fParentMenu[0] != 0)
+                                    fParentMenu[0]->TransitionOff();
+                                if (fParentMenu[1] != 0)
+                                    fParentMenu[1]->TransitionOff();
+                                stackBackupPin = -1;
+                                fCurrentMenu[1]->TransitionOff();
+                                fCurrentScreen[1]->TransitionOff(tScreen::kScreen_TransitionTypeScreen, 0);
+                                backDepth[1] = 0;
+                            }
+                            else if ((uint8)fPlayer == 1 && backDepth[1] <= 0 && fCurrentMenu[1] != 0)
+                            {
+                                backDepth[0] = stackBackupPin - 1;
+                                fCurrentMenu[1]->TransitionOff();
+                                if (fParentMenu[0] != 0)
+                                    fParentMenu[0]->TransitionOff();
+                                if (fParentMenu[1] != 0)
+                                    fParentMenu[1]->TransitionOff();
+                                stackBackupPin = -1;
+                                fCurrentScreen[1]->TransitionOff(tScreen::kScreen_TransitionTypeScreen, 0);
+                                SetMenu(0, backList[0][backDepth[0]]);
+                            }
+                            if (backDepth[(uint8)fPlayer] > 0)
+                            {
+                                AudioCmn::PlayFESFX(1);
+                                backDepth[(uint8)fPlayer] = (backDepth[(uint8)fPlayer] - 1);
+                                SetMenu((uint8)fPlayer, backList[(uint8)fPlayer][backDepth[(uint8)fPlayer]]);
+                                if (fCurrentMenu[(uint8)fPlayer]->IsSubMenu())
+                                    backDepth[(uint8)fPlayer] = (backDepth[(uint8)fPlayer] + 1);
+                            }
+                            else if ((uint8)fPlayer == 1)
+                                AudioCmn::PlayFESFX(1);
+                            break;
+                        case kMenu_Command_StartRace:
+                        case kMenu_Command_ReStartRace:
+                            goto selectRaceCar;
+                        case kMenu_Command_Start2PlayerRace:
+                            if (waitingForOtherPlayer[1 - (uint8)fPlayer] == 0)
+                            {
+                                waitingForOtherPlayer[(uint8)fPlayer] = 1;
+                                break;
+                            }
+                            waitingForOtherPlayer[1 - (uint8)fPlayer] = 0;
+                            if (frontEnd.raceType != 6)
+                                goto selectStockCar;
+                            {
+                                AudioMus::StopSong(400);
+                                PinkSlipsErrorCode err = PinkSlipsNoError;
+                                for (sint16 savePlayer = 0; savePlayer < 2 && err == PinkSlipsNoError; ++savePlayer)
+                                {
+                                    err = SavePinkSlipsCars(savePlayer, (uint8)frontEnd.pinkSlipsCar[savePlayer]);
+                                    if (err != PinkSlipsNoError && savePlayer == 1)
+                                        SavePinkSlipsCars(0, -1);
+                                }
+                                if (err != PinkSlipsNoError)
+                                {
+#ifdef _DEBUG
+                                    fprintf(stderr, "pink slips save failed: %d\n", sint32(err));
+#endif
+                                    UpdateMusic();
+                                    AudioMus::Volume(((uint8)frontEnd.musicVolume * 35) >> 6);
+                                    break;
+                                }
+                            }
+                            goto selectRaceCar;
+                        case kMenu_Command_StartReplay:
+                            GameSetup::gData.replayMode = 2;
+                            presentation.Finish();
+                            PerformMenuDestruction();
+                            return kApp_Command_StartReplay;
+                        default:
+                            break;
                     }
-                    goto selectRaceCar;
-                case kMenu_Command_StartReplay:
-                    GameSetup::gData.replayMode = 2;
+                    continue;
+                selectRaceCar:
+                    if (frontEnd.raceType == 6)
+                    {
+                        carManager.GetPinkSlipsCar((uint8)frontEnd.pinkSlipsCar[(uint8)fPlayer], carInfo, (uint8)fPlayer);
+                        goto raceCarSelected;
+                    }
+                selectStockCar:
+                    if (frontEnd.carListType == 0)
+                        carManager.GetStockCar((uint8)frontEnd.playerCar[(uint8)fPlayer], carInfo);
+                    else
+                        carManager.GetGarageCar((uint8)frontEnd.garageCar[(uint8)fPlayer], carInfo, (uint8)fPlayer);
+                raceCarSelected:
+                    if (carInfo.fEnginePatch != 0)
+                        AudioCmn::PlayFESFX(carInfo.fEnginePatch);
+                    uint32 startTicks = ticks;
+                    while ((uint32)ticks - startTicks < 256)
+                    {
+                        psx_root_counter_poll();
+                        FeAudio::systemtask(0);
+                    }
+                    GameSetup::gData.replayMode = 0;
+                    presentation.Finish();
                     PerformMenuDestruction();
-                    return kApp_Command_StartReplay;
-                default:
-                    break;
+                    return kApp_Command_StartRace;
                 }
-                continue;
-            selectRaceCar:
-                if (frontEnd.raceType == 6)
-                {
-                    carManager.GetPinkSlipsCar((uint8)frontEnd.pinkSlipsCar[(uint8)fPlayer], carInfo, (uint8)fPlayer);
-                    goto raceCarSelected;
-                }
-            selectStockCar:
-                if (frontEnd.carListType == 0)
-                    carManager.GetStockCar((uint8)frontEnd.playerCar[(uint8)fPlayer], carInfo);
-                else
-                    carManager.GetGarageCar((uint8)frontEnd.garageCar[(uint8)fPlayer], carInfo, (uint8)fPlayer);
-            raceCarSelected:
-                if (carInfo.fEnginePatch != 0)
-                    AudioCmn::PlayFESFX(carInfo.fEnginePatch);
-                uint32 startTicks = ticks;
-                while ((uint32)ticks - startTicks < 256)
-                {
-                    psx_root_counter_poll();
-                    FeAudio::systemtask(0);
-                }
-                GameSetup::gData.replayMode = 0;
-                PerformMenuDestruction();
-                return kApp_Command_StartRace;
+            }
+            if (!FramePresentation::Active())
+                break;
+            if (doRedraw)
+                Redraw();
+            if (!firstMenuFrame)
+                menuClock.Consume(1);
+            if ((sint32)(tick - demoLoopLastInputTick) > 0xf00)
+            {
+                presentation.Finish();
+                RunDemoVideo();
+                demoLoopLastInputTick = ticks;
+                menuClock.Reset(xport_frame());
+                hd_frontend_reset_history();
+                break;
             }
         }
-        if (doRedraw)
-            Redraw();
-        if ((sint32)(tick - demoLoopLastInputTick) > 0xf00)
+        if (firstMenuFrame)
         {
-            RunDemoVideo();
-            demoLoopLastInputTick = ticks;
+            menuClock.Reset(xport_frame());
+            firstMenuFrame = false;
         }
+        if (!FramePresentation::Active())
+        {
+            menuClock.Reset(xport_frame());
+            hd_frontend_reset_history();
+        }
+        uint64 menuFrame;
+        float menuPhase = xport_frame_fract(&menuFrame);
+        FramePresentation::SetPhase(menuClock.Phase(menuFrame, menuPhase, 1));
     }
 }
 

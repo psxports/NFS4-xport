@@ -12,6 +12,8 @@
 #include "game/common/trk.h"
 #include "game/psx/draw.h"
 
+struct HdRoadSource;
+
 struct tBuildEntry;
 
 struct ChunkObjectInfo;
@@ -106,6 +108,8 @@ struct tBoundingSphere
 class DrawW
 {
 public:
+    static bool ReadRenderOrderOffset(uint8 index, sint32 *offset);
+    static void CaptureRoadSource(HdRoadSource *source);
     static void AddSubdividPrimGT4(POLY_GT4 *prim, Draw::SVertex *v0, Draw::SVertex *v1, Draw::SVertex *v2, Draw::SVertex *v3, Draw::tGiveShelbyMoreCache *sd);
     static void AddSubdividPrimGT3(POLY_GT3 *prim, Draw::SVertex *v0, Draw::SVertex *v1, Draw::SVertex *v2, Draw::tGiveShelbyMoreCache *sd);
     static void DivVertice(Draw::SVertex *v0, Draw::SVertex *v1, Draw::SVertex *v2);

@@ -76,6 +76,27 @@ public:
 class Object
 {
 public:
+    struct RenderPart
+    {
+        matrixtdef matrix;
+        coorddef position;
+        Trk::ObjectDef *definition;
+        sint16 light;
+        bool groundedSign;
+    };
+
+    static void BeginRenderPreparation(bool readOnly = false);
+    static void PrepareRemaining(DRender::tView *view, Draw::DCache *cache);
+    static sint32 AnimationPose(AnimScript *script, sint32 index, coorddef *position, matrixtdef *matrix);
+    static void EndRenderPreparation(void);
+    static bool IsRenderPreparation(void);
+    static bool HasAnimations(void);
+    static void ResetPrepared(void);
+    static void CaptureRenderPart(matrixtdef *matrix, Trk::ObjectDef *definition, coorddef *position, sint16 light, bool groundedSign = false);
+    static sint32 DrawAnimation(ObjectAnim *animation, DRender::tView *view, Draw::DCache *cache, sint32 offset);
+    static sint32 DrawPrepared(ObjectAnim *animation, DRender::tView *view, Draw::DCache *cache, sint32 offset);
+    static sint32 GetPreparedParts(ObjectAnim *animation, const RenderPart **parts);
+
     struct tSimObjList
     {
         sint32 numObjects;
@@ -103,7 +124,7 @@ public:
     static void GetPointsCollisionData(tSimObjList *objList, sint32 objIndex, sint32 *numPoints, coorddef *resultPoints);
     static void InitStatus(void);
     static void KillStatus(void);
-    static ObjectAnim * GetAnim(Trk::SimObject *simObj);
+    static ObjectAnim *GetAnim(Trk::SimObject *simObj);
     static sint32 CheckCollisionResults(tSimObjList *objList, sint32 objIndex, BO::tNewtonObj *N);
     static void InitCustomObjects(void);
     static void DeInitCustomObjects(void);

@@ -4,6 +4,7 @@
 #include <string.h>
 #include "xport.h"
 #include "psx.h"
+#include "hd_ui.h"
 #include "eaclib/psx/eaclib.h"
 #include "eaclib/psx/globals.h"
 #include "eaclib/psx/pad.h"
@@ -100,6 +101,7 @@ void SubtractiveBox(sint32 x, sint32 y, sint32 w, sint32 h, sint32 col1, sint32 
     prim->p[2].xy.y = bottom;
     prim->p[3].xy.x = right;
     prim->p[3].xy.y = bottom;
+    hd_ui_g4(prim);
     DR_MODE *mode = reinterpret_cast<DR_MODE *>(cprim->PrimPtr);
     ot = cprim->LastPrim;
     setaddr(mode, getaddr(ot));
@@ -107,6 +109,7 @@ void SubtractiveBox(sint32 x, sint32 y, sint32 w, sint32 h, sint32 col1, sint32 
     setaddr(ot, mode);
     uint16 page = GetTPage(2, 2, 0, 256);
     SetDrawMode(mode, 0, 0, page, 0);
+    hd_ui_page(page);
 }
 
 void tMenuItemGoToMenuButtonFade::TransitionOff(void)
@@ -323,9 +326,9 @@ void tOptionsMenu::Draw(void)
     tMenuItem *item = fItemList[fCurrentItem];
     if (item == 0 || (item->fFlags & 1) != 0)
         fCurrentItem = 0;
-    while ((fItemList[fCurrentItem]->fFlags & 1) != 0 && fItemList[fCurrentItem + 1] != 0)
+    while (fItemList[fCurrentItem] != 0 && (fItemList[fCurrentItem]->fFlags & 1) != 0 && fItemList[fCurrentItem + 1] != 0)
         ++fCurrentItem;
-    while ((fItemList[fCurrentItem]->fFlags & 1) != 0 && fCurrentItem > 0)
+    while (fItemList[fCurrentItem] != 0 && (fItemList[fCurrentItem]->fFlags & 1) != 0 && fCurrentItem > 0)
         --fCurrentItem;
     if (fFirstFrame >= 0 && fNumFrames > 0)
     {
@@ -634,7 +637,7 @@ void tMenuItemSlidingMenu::Draw(sint32 offx, sint32 offy, bool selected)
     sint16 hh = fOpenHeight;
     sint16 ww = fWidth;
     DRAWENV *drenv = Draw::GetDRAWENV(Draw::gPlayer1View, gFlip);
-    PSX_RECT full = { 0, drenv->clip.y, 512, (sint16)screenheight };
+    PSX_RECT full = {0, drenv->clip.y, 512, (sint16)screenheight};
     Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
     DR_AREA *daprim = reinterpret_cast<DR_AREA *>(cprim->PrimPtr);
     uint32 *ot = cprim->LastPrim;
@@ -642,6 +645,7 @@ void tMenuItemSlidingMenu::Draw(sint32 offx, sint32 offy, bool selected)
     cprim->PrimPtr = reinterpret_cast<char *>(daprim + 1);
     setaddr(ot, daprim);
     SetDrawArea(daprim, &full);
+    hd_ui_area(&full);
     sint32 half = sint32(hh) >> 1;
     SubtractiveBox(xx, yy, ww, half, 0x505050, 0x505050, 0, 0);
     SubtractiveBox(xx, ((yy + half)), ww, half, 0, 0, 0x505050, 0x505050);
@@ -660,13 +664,14 @@ void tMenuItemSlidingMenu::Draw(sint32 offx, sint32 offy, bool selected)
     sint32 bottomHeight = shapebottom->height;
     if (topHeight + bottomHeight < hh)
         PSXDrawSquare(0, xx, ((yy + topHeight)), ww, ((hh - topHeight) - bottomHeight));
-    PSX_RECT temp = { (sint16)xx, (sint16)(uint32((uint16)drenv->clip.y) + uint32(yy)), ww, hh };
+    PSX_RECT temp = {(sint16)xx, (sint16)(uint32((uint16)drenv->clip.y) + uint32(yy)), ww, hh};
     daprim = reinterpret_cast<DR_AREA *>(cprim->PrimPtr);
     ot = cprim->LastPrim;
     setaddr(daprim, getaddr(ot));
     cprim->PrimPtr = reinterpret_cast<char *>(daprim + 1);
     setaddr(ot, daprim);
     SetDrawArea(daprim, &temp);
+    hd_ui_area(&temp);
     if (fHelpText != -1)
     {
         char *help = TextSys::Word(fHelpText);
@@ -1084,50 +1089,50 @@ void tInsideBoxSongMenu::ProcessInput(tPlayer fromPlayer, tInputKeyType &keyval,
         AudioCmn::PlayFESFX(6);
     switch (keyval)
     {
-    case kInput_KeyType_Left:
-    case kInput_KeyType_Right:
-    {
-        sint32 song = screenAudio->fSelectedSong;
-        frontEnd.FEPlayList[song] = frontEnd.FEPlayList[song] == 0 ? 1 : 0;
-        break;
-    }
-    case kInput_KeyType_Up:
-        if (screenAudio->fSelectedSong > 0 && fMoving == 0)
+        case kInput_KeyType_Left:
+        case kInput_KeyType_Right:
         {
-            fMoving = -21;
-            fMovingDir = 4;
-            for (sint32 j = 4; j > 0; --j)
-            {
-                fOnOffFade[j] = fOnOffFade[j - 1];
-                fSelFade[j] = fSelFade[j - 1];
-            }
-            fOnOffFade[0] = 0;
-            fSelFade[0] = 0;
-            screenAudio->fSelectedSong = (sint16)(sint32(screenAudio->fSelectedSong) - 1);
-            AudioCmn::PlayFESFX(3);
+            sint32 song = screenAudio->fSelectedSong;
+            frontEnd.FEPlayList[song] = frontEnd.FEPlayList[song] == 0 ? 1 : 0;
+            break;
         }
-        break;
-    case kInput_KeyType_Down:
-    {
-        sint32 lastSong = (screenAudio->songlist->numsongs - 1);
-        if (screenAudio->fSelectedSong < lastSong && fMoving == 0)
+        case kInput_KeyType_Up:
+            if (screenAudio->fSelectedSong > 0 && fMoving == 0)
+            {
+                fMoving = -21;
+                fMovingDir = 4;
+                for (sint32 j = 4; j > 0; --j)
+                {
+                    fOnOffFade[j] = fOnOffFade[j - 1];
+                    fSelFade[j] = fSelFade[j - 1];
+                }
+                fOnOffFade[0] = 0;
+                fSelFade[0] = 0;
+                screenAudio->fSelectedSong = (sint16)(sint32(screenAudio->fSelectedSong) - 1);
+                AudioCmn::PlayFESFX(3);
+            }
+            break;
+        case kInput_KeyType_Down:
         {
-            fMoving = 21;
-            fMovingDir = -4;
-            for (sint32 j = 0; j < 4; ++j)
+            sint32 lastSong = (screenAudio->songlist->numsongs - 1);
+            if (screenAudio->fSelectedSong < lastSong && fMoving == 0)
             {
-                fOnOffFade[j] = fOnOffFade[j + 1];
-                fSelFade[j] = fSelFade[j + 1];
+                fMoving = 21;
+                fMovingDir = -4;
+                for (sint32 j = 0; j < 4; ++j)
+                {
+                    fOnOffFade[j] = fOnOffFade[j + 1];
+                    fSelFade[j] = fSelFade[j + 1];
+                }
+                fOnOffFade[4] = 0;
+                fSelFade[4] = 0;
+                screenAudio->fSelectedSong = (sint16)(sint32(screenAudio->fSelectedSong) + 1);
+                AudioCmn::PlayFESFX(4);
             }
-            fOnOffFade[4] = 0;
-            fSelFade[4] = 0;
-            screenAudio->fSelectedSong = (sint16)(sint32(screenAudio->fSelectedSong) + 1);
-            AudioCmn::PlayFESFX(4);
+            break;
         }
-        break;
-    }
-    default:
-        return;
+        default:
+            return;
     }
     keyval = kInput_KeyType_AlreadyProcessed;
 }
@@ -1246,18 +1251,30 @@ sint32 SpecialCharacter(char current)
     FUNCTION_MARKER(0x800200EC, "FRONT.BIN");
     switch ((uint8)current)
     {
-    case 0xE1: return 0x56;
-    case 0xE4: return 0x51;
-    case 0xE5: return 0x5B;
-    case 0xE8: return 0x55;
-    case 0xE9: return 0x54;
-    case 0xED: return 0x57;
-    case 0xF1: return 0x5A;
-    case 0xF3: return 0x58;
-    case 0xF6: return 0x52;
-    case 0xFA: return 0x59;
-    case 0xFC: return 0x53;
-    default: return 0;
+        case 0xE1:
+            return 0x56;
+        case 0xE4:
+            return 0x51;
+        case 0xE5:
+            return 0x5B;
+        case 0xE8:
+            return 0x55;
+        case 0xE9:
+            return 0x54;
+        case 0xED:
+            return 0x57;
+        case 0xF1:
+            return 0x5A;
+        case 0xF3:
+            return 0x58;
+        case 0xF6:
+            return 0x52;
+        case 0xFA:
+            return 0x59;
+        case 0xFC:
+            return 0x53;
+        default:
+            return 0;
     }
 }
 
@@ -1318,82 +1335,82 @@ void tInsideBoxTwoWaySlider::Calibrate(void)
     sint32 limit;
     switch (fType)
     {
-    case 0:
-        if (pad->ID == 0x23)
-        {
-            range = 128 - pad->data.analog.rightx;
-            if (range < 0)
-                range = -range;
-            limit = ((uint8)frontEnd.deadSpot[player]) + 10;
-            if (range < limit)
-                range = limit;
-            frontEnd.steeringRange[player] = (char)range;
-        }
-        else if (pad->ID == 0x53 || pad->ID == 0x73)
-        {
-            range = (uint8)GetCurrentStickRange(player);
-            limit = ((uint8)frontEnd.J1MIN[player]) + 10;
-            if (range < limit)
-                range = limit;
-            frontEnd.J1MAX[player] = (char)range;
-        }
-        break;
-    case 1:
-        if (pad->ID == 0x23)
-        {
-            range = 128 - pad->data.analog.rightx;
-            if (range < 0)
-                range = -range;
-            limit = ((uint8)frontEnd.steeringRange[player]) - 10;
-            if (range > limit)
-                range = limit;
-            if (range < 0)
-                range = 0;
-            frontEnd.deadSpot[player] = (char)range;
-        }
-        else if (pad->ID == 0x53 || pad->ID == 0x73)
-        {
-            range = (uint8)GetCurrentStickRange(player);
-            limit = ((uint8)frontEnd.J1MAX[player]) - 10;
-            if (range > limit)
-                range = limit;
-            if (range < 0)
-                range = 0;
-            frontEnd.J1MIN[player] = (char)range;
-        }
-        break;
-    case 2:
-        if (pad->ID == 0x23)
-            frontEnd.ImaxRange[player] = (char)pad->data.analog.righty;
-        else if (pad->ID == 0x53 || pad->ID == 0x73)
-        {
-            range = (uint8)GetCurrentStickRange2(player);
-            limit = ((uint8)frontEnd.J2MIN[player]) + 10;
-            if (range < limit)
-                range = limit;
-            frontEnd.J2MAX[player] = (char)range;
-            frontEnd.J2MAX[player] = (char)range;
-        }
-        break;
-    case 3:
-        if (pad->ID == 0x23)
-        {
-            range = pad->data.analog.leftx;
-            if (range < 10)
-                range = 10;
-            frontEnd.IImaxRange[player] = (char)range;
-        }
-        else if (pad->ID == 0x53 || pad->ID == 0x73)
-        {
-            range = (uint8)GetCurrentStickRange2(player);
-            limit = ((uint8)frontEnd.J2MAX[player]) - 10;
-            if (range > limit)
-                range = limit;
-            if (range < 0)
-                range = 0;
-            frontEnd.J2MIN[player] = (char)range;
-        }
-        break;
+        case 0:
+            if (pad->ID == 0x23)
+            {
+                range = 128 - pad->data.analog.rightx;
+                if (range < 0)
+                    range = -range;
+                limit = ((uint8)frontEnd.deadSpot[player]) + 10;
+                if (range < limit)
+                    range = limit;
+                frontEnd.steeringRange[player] = (char)range;
+            }
+            else if (pad->ID == 0x53 || pad->ID == 0x73)
+            {
+                range = (uint8)GetCurrentStickRange(player);
+                limit = ((uint8)frontEnd.J1MIN[player]) + 10;
+                if (range < limit)
+                    range = limit;
+                frontEnd.J1MAX[player] = (char)range;
+            }
+            break;
+        case 1:
+            if (pad->ID == 0x23)
+            {
+                range = 128 - pad->data.analog.rightx;
+                if (range < 0)
+                    range = -range;
+                limit = ((uint8)frontEnd.steeringRange[player]) - 10;
+                if (range > limit)
+                    range = limit;
+                if (range < 0)
+                    range = 0;
+                frontEnd.deadSpot[player] = (char)range;
+            }
+            else if (pad->ID == 0x53 || pad->ID == 0x73)
+            {
+                range = (uint8)GetCurrentStickRange(player);
+                limit = ((uint8)frontEnd.J1MAX[player]) - 10;
+                if (range > limit)
+                    range = limit;
+                if (range < 0)
+                    range = 0;
+                frontEnd.J1MIN[player] = (char)range;
+            }
+            break;
+        case 2:
+            if (pad->ID == 0x23)
+                frontEnd.ImaxRange[player] = (char)pad->data.analog.righty;
+            else if (pad->ID == 0x53 || pad->ID == 0x73)
+            {
+                range = (uint8)GetCurrentStickRange2(player);
+                limit = ((uint8)frontEnd.J2MIN[player]) + 10;
+                if (range < limit)
+                    range = limit;
+                frontEnd.J2MAX[player] = (char)range;
+                frontEnd.J2MAX[player] = (char)range;
+            }
+            break;
+        case 3:
+            if (pad->ID == 0x23)
+            {
+                range = pad->data.analog.leftx;
+                if (range < 10)
+                    range = 10;
+                frontEnd.IImaxRange[player] = (char)range;
+            }
+            else if (pad->ID == 0x53 || pad->ID == 0x73)
+            {
+                range = (uint8)GetCurrentStickRange2(player);
+                limit = ((uint8)frontEnd.J2MAX[player]) - 10;
+                if (range > limit)
+                    range = limit;
+                if (range < 0)
+                    range = 0;
+                frontEnd.J2MIN[player] = (char)range;
+            }
+            break;
     }
 }
 
@@ -1413,97 +1430,97 @@ void tUserNameMenuItem::ProcessInput(tPlayer, tInputKeyType &keyval, tMenuComman
     FUNCTION_MARKER(0x8001FD2C, "FRONT.BIN");
     switch (keyval)
     {
-    case kInput_KeyType_Up:
-        fCurrentRow = (sint16)(sint32(fCurrentRow) - 1);
-        if (fCurrentRow < 0)
-            fCurrentRow = (sint16)(sint32(menu_kUserNameRows) - 1);
-        AudioCmn::PlayFESFX(3);
-        if (fCurrentColumn < 0)
-            fCurrentColumn = 0;
-        keyval = kInput_KeyType_AlreadyProcessed;
-        break;
-    case kInput_KeyType_Down:
-        fCurrentRow = (sint16)(sint32(fCurrentRow) + 1);
-        if (fCurrentRow >= menu_kUserNameRows)
-            fCurrentRow = 0;
-        AudioCmn::PlayFESFX(4);
-        if (fCurrentColumn < 0)
-            fCurrentColumn = 0;
-        keyval = kInput_KeyType_AlreadyProcessed;
-        break;
-    case kInput_KeyType_Left:
-        fCurrentColumn = (sint16)(sint32(fCurrentColumn) - 1);
-        if (fCurrentColumn < 0)
-            fCurrentColumn = 5;
-        AudioCmn::PlayFESFX(3);
-        keyval = kInput_KeyType_AlreadyProcessed;
-        break;
-    case kInput_KeyType_Right:
-    {
-        fCurrentColumn = (sint16)(sint32(fCurrentColumn) + 1);
-        if (fCurrentColumn >= 6)
-            fCurrentColumn = 0;
-        AudioCmn::PlayFESFX(4);
-        keyval = kInput_KeyType_AlreadyProcessed;
-        sint32 row = fCurrentRow;
-        while (fRowList[row][fCurrentColumn] == '-')
+        case kInput_KeyType_Up:
+            fCurrentRow = (sint16)(sint32(fCurrentRow) - 1);
+            if (fCurrentRow < 0)
+                fCurrentRow = (sint16)(sint32(menu_kUserNameRows) - 1);
+            AudioCmn::PlayFESFX(3);
+            if (fCurrentColumn < 0)
+                fCurrentColumn = 0;
+            keyval = kInput_KeyType_AlreadyProcessed;
+            break;
+        case kInput_KeyType_Down:
+            fCurrentRow = (sint16)(sint32(fCurrentRow) + 1);
+            if (fCurrentRow >= menu_kUserNameRows)
+                fCurrentRow = 0;
+            AudioCmn::PlayFESFX(4);
+            if (fCurrentColumn < 0)
+                fCurrentColumn = 0;
+            keyval = kInput_KeyType_AlreadyProcessed;
+            break;
+        case kInput_KeyType_Left:
+            fCurrentColumn = (sint16)(sint32(fCurrentColumn) - 1);
+            if (fCurrentColumn < 0)
+                fCurrentColumn = 5;
+            AudioCmn::PlayFESFX(3);
+            keyval = kInput_KeyType_AlreadyProcessed;
+            break;
+        case kInput_KeyType_Right:
         {
             fCurrentColumn = (sint16)(sint32(fCurrentColumn) + 1);
             if (fCurrentColumn >= 6)
                 fCurrentColumn = 0;
-        }
-        break;
-    }
-    case kInput_KeyType_Cross:
-    {
-        sint16 len = (sint16)strlen(fData);
-        uint8 current = (uint8)fRowList[fCurrentRow][fCurrentColumn];
-        if (current == '#' || current == '$')
-        {
-            if (len > 0)
-            {
-                fData[sint32(len) - 1] = '\0';
-                AudioCmn::PlayFESFX(21);
-            }
+            AudioCmn::PlayFESFX(4);
             keyval = kInput_KeyType_AlreadyProcessed;
-        }
-        else if (current == '!' || current == '@')
-        {
-            if (CheckForCheats(fData))
-                fData[0] = '\0';
-            else
+            sint32 row = fCurrentRow;
+            while (fRowList[row][fCurrentColumn] == '-')
             {
-                keyval = (FEApp->fCurrentMenu[0]->fFlags & 0x100U) != 0 ? kInput_KeyType_Triangle : kInput_KeyType_Start;
-                AudioCmn::PlayFESFX(1);
+                fCurrentColumn = (sint16)(sint32(fCurrentColumn) + 1);
+                if (fCurrentColumn >= 6)
+                    fCurrentColumn = 0;
             }
+            break;
         }
-        else if (current == '&' || current == '^')
+        case kInput_KeyType_Cross:
         {
-            if (len < fMaxStringLength)
+            sint16 len = (sint16)strlen(fData);
+            uint8 current = (uint8)fRowList[fCurrentRow][fCurrentColumn];
+            if (current == '#' || current == '$')
             {
-                fData[len] = ' ';
-                fData[sint32(len) + 1] = '\0';
-                AudioCmn::PlayFESFX(21);
-            }
-            else
-                AudioCmn::PlayFESFX(1);
-        }
-        else
-        {
-            if (len < fMaxStringLength)
-            {
-                fData[len] = (char)current;
-                fData[sint32(len) + 1] = '\0';
-                AudioCmn::PlayFESFX(21);
+                if (len > 0)
+                {
+                    fData[sint32(len) - 1] = '\0';
+                    AudioCmn::PlayFESFX(21);
+                }
                 keyval = kInput_KeyType_AlreadyProcessed;
             }
+            else if (current == '!' || current == '@')
+            {
+                if (CheckForCheats(fData))
+                    fData[0] = '\0';
+                else
+                {
+                    keyval = (FEApp->fCurrentMenu[0]->fFlags & 0x100U) != 0 ? kInput_KeyType_Triangle : kInput_KeyType_Start;
+                    AudioCmn::PlayFESFX(1);
+                }
+            }
+            else if (current == '&' || current == '^')
+            {
+                if (len < fMaxStringLength)
+                {
+                    fData[len] = ' ';
+                    fData[sint32(len) + 1] = '\0';
+                    AudioCmn::PlayFESFX(21);
+                }
+                else
+                    AudioCmn::PlayFESFX(1);
+            }
             else
-                AudioCmn::PlayFESFX(1);
+            {
+                if (len < fMaxStringLength)
+                {
+                    fData[len] = (char)current;
+                    fData[sint32(len) + 1] = '\0';
+                    AudioCmn::PlayFESFX(21);
+                    keyval = kInput_KeyType_AlreadyProcessed;
+                }
+                else
+                    AudioCmn::PlayFESFX(1);
+            }
+            break;
         }
-        break;
-    }
-    default:
-        break;
+        default:
+            break;
     }
     sint32 row = fCurrentRow;
     while (fRowList[row][fCurrentColumn] == '-')
@@ -1585,7 +1602,7 @@ void tUserNameMenuItem::TransitionOn(void)
     FUNCTION_MARKER(0x80020580, "FRONT.BIN");
     for (sint16 i = 0; i < 10; ++i)
         sprintf(fRowList[i], TextSys::Word(i + 507));
-    sint16 NumberOfRows[6] = { 7, 9, 9, 9, 8, 9 };
+    sint16 NumberOfRows[6] = {7, 9, 9, 9, 8, 9};
     menu_kUserNameRows = NumberOfRows[(uint8)frontEnd.language];
     fCurrentRow = 0;
     sint32 i = 0;

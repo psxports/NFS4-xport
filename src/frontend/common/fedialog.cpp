@@ -1,10 +1,12 @@
 #include <stddef.h>
 #include <string.h>
 #include "xport.h"
+#include "hd_frontend.h"
 #include "psx.h"
 #include "eaclib/psx/globals.h"
 #include "eaclib/psx/pad.h"
 #include "frontend/common/feapp.h"
+#include "frontend/common/feaudio.h"
 #include "frontend/common/fedialog.h"
 #include "frontend/common/fefades.h"
 #include "frontend/common/feinput.h"
@@ -14,6 +16,8 @@
 #include "frontend/psx/mmeffect.h"
 #include "frontend/psx/psxfront.h"
 #include "game/common/audiocmn.h"
+#include "game/common/frame.h"
+#include "game/common/frameclock.h"
 #include "game/common/textsys.h"
 #include "game/psx/textpix.h"
 
@@ -158,7 +162,7 @@ void tDialogHelp::AddItem(sint16 textID, sint16 controllerID)
 void tDialogHelp::CalculateDimensions(void)
 {
     FUNCTION_MARKER(0x80018B90, "FRONT.BIN");
-    tHelpData helpArray[1] = { { 1, { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } } } };
+    tHelpData helpArray[1] = {{1, {{0, 0}, {0, 0}, {0, 0}, {0, 0}}}};
     FETextRender::SetFont(0);
     numItems = 0;
     AddItem(0x59, 0);
@@ -372,6 +376,8 @@ sint16 tDialogInteractive::Run(void)
 {
     FUNCTION_MARKER(0x800197E8, "FRONT.BIN");
 
+    FramePresentation::FinishActive();
+    hd_frontend_reset_history();
     fCurrentlyRunning = 1;
     Display();
     CalculateDimensions();
@@ -379,32 +385,59 @@ sint16 tDialogInteractive::Run(void)
     uint32 debounce = 0xFFFFFFFF;
     tInputKeyType keyVal[2];
     tMenuCommand command;
+    FrameClock dialogClock;
+    dialogClock.Reset(xport_frame());
+    bool firstDialogFrame = true;
     while (ReadyToReturnValue == 0)
     {
-        command.type = kMenu_Command_None;
-        for (sint32 i = 0; i < 2; ++i)
+        FramePresentation presentation;
+        if (FramePresentation::Handoff())
+            dialogClock.Reset(xport_frame());
+        FeAudio::systemtask(0);
+        bool reseeded;
+        uint32 due = dialogClock.Pending(xport_frame(), 1, 4, 16, &reseeded);
+        if (reseeded)
+            hd_frontend_reset_history();
+        if (firstDialogFrame)
+            due = 1;
+        for (uint32 dialogStep = 0; dialogStep < due && ReadyToReturnValue == 0; ++dialogStep)
         {
-            tPlayer player = static_cast<tPlayer>(i);
-            keyVal[i] = FEInput::GetKeyFromPlayer(player, debounce);
-            if (keyVal[i] == kInput_KeyType_NoKey)
-                keyVal[i] = kInput_KeyType_AlreadyProcessed;
-            if (keyVal[i] == kInput_KeyType_Circle && FEApp->helpPopup.currentlyOn == 0 && FEApp->fCurrentMenu[i] != 0)
+            command.type = kMenu_Command_None;
+            for (sint32 i = 0; i < 2; ++i)
             {
-                FEApp->fCurrentMenu[i]->ProcessInput(player, keyVal[i], command);
-                keyVal[i] = kInput_KeyType_AlreadyProcessed;
+                tPlayer player = static_cast<tPlayer>(i);
+                keyVal[i] = FEInput::GetKeyFromPlayer(player, debounce);
+                if (keyVal[i] == kInput_KeyType_NoKey)
+                    keyVal[i] = kInput_KeyType_AlreadyProcessed;
+                if (keyVal[i] == kInput_KeyType_Circle && FEApp->helpPopup.currentlyOn == 0 && FEApp->fCurrentMenu[i] != 0)
+                {
+                    FEApp->fCurrentMenu[i]->ProcessInput(player, keyVal[i], command);
+                    keyVal[i] = kInput_KeyType_AlreadyProcessed;
+                }
+                if (keyVal[i] != kInput_KeyType_AlreadyProcessed && FEApp->helpPopup.currentlyOn != 0)
+                {
+                    FEApp->helpPopup.Hide();
+                    keyVal[i] = kInput_KeyType_AlreadyProcessed;
+                }
+                if (keyVal[i] != kInput_KeyType_NoKey)
+                    ProcessInput(player, keyVal[i], command);
             }
-            if (keyVal[i] != kInput_KeyType_AlreadyProcessed && FEApp->helpPopup.currentlyOn != 0)
-            {
-                FEApp->helpPopup.Hide();
-                keyVal[i] = kInput_KeyType_AlreadyProcessed;
-            }
-            if (keyVal[i] != kInput_KeyType_NoKey)
-                ProcessInput(player, keyVal[i], command);
+            FEApp->Redraw();
+            if (!firstDialogFrame)
+                dialogClock.Consume(1);
         }
-        FEApp->Redraw();
+        if (firstDialogFrame)
+        {
+            dialogClock.Reset(xport_frame());
+            firstDialogFrame = false;
+        }
+        uint64 dialogFrame;
+        float dialogPhase = xport_frame_fract(&dialogFrame);
+        FramePresentation::SetPhase(dialogClock.Phase(dialogFrame, dialogPhase, 1));
     }
     AudioCmn::PlayFESFX(0);
     Hide();
+    hd_frontend_reset_history();
     FEApp->Redraw();
     sint16 result = ReturnValue;
     fCurrentlyRunning = 0;

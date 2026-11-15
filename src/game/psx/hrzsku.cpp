@@ -4,6 +4,7 @@
 #include "xport.h"
 #include "psx.h"
 #include "psx_gte.h"
+#include "hd.h"
 #include "eaclib/psx/eaclib.h"
 #include "game/common/camera.h"
 #include "game/common/genericpmx.h"
@@ -41,6 +42,8 @@ static SVECTOR moonPosInSky;
 static SVECTOR *starPosInSky;
 static uint32 *starColors;
 tHrz_Lightning gHrz_Lightning;
+static sint32 preparedLightningBrightness;
+static bool preparedLightningValid;
 SVECTOR *gRngCoordTop;
 char gSkyPixmapIndex[64];
 sint32 gfxPmxHeightPercentage[16];
@@ -108,7 +111,8 @@ void Sky::InitStars(void)
     seedrandom(gTrackSpec->starRandomSeed);
     starPosInSky = static_cast<SVECTOR *>(reservememadr("stars", ((uint32)gTrackSpec->numStars << 3), 0));
     starColors = static_cast<uint32 *>(reservememadr("starCols", ((uint32)gTrackSpec->numStars << 2), 0));
-    for (sint32 i = 0; i < gTrackSpec->numStars; ++i) {
+    for (sint32 i = 0; i < gTrackSpec->numStars; ++i)
+    {
         sint32 latAngle = random() & 0xffff;
         uint32 sample = random();
         uint32 angleRange = gTrackSpec->starAngleHigh - (uint32)gTrackSpec->starAngleLow;
@@ -145,14 +149,16 @@ void Hrz::InitSkyColor(void)
 {
     FUNCTION_MARKER(0x800CF8E0, "NFS4.EXE");
     sint32 k = 0;
-    for (sint32 i = 0; i < 5; ++i) {
+    for (sint32 i = 0; i < 5; ++i)
+    {
         CVECTOR cur_bk = Sky::gTrackSpec->backcolors[i];
         CVECTOR cur_fr = Sky::gTrackSpec->frontcolors[i];
         CVECTOR rounddiff;
         rounddiff.r = (cur_bk.r - cur_fr.r) / 8;
         rounddiff.g = (cur_bk.g - cur_fr.g) / 8;
         rounddiff.b = (cur_bk.b - cur_fr.b) / 8;
-        for (sint32 j = 0; j < 17; ++j, ++k) {
+        for (sint32 j = 0; j < 17; ++j, ++k)
+        {
             sint32 weight = j < 9 ? j : 16 - j;
             gSkyColor[k].r = cur_fr.r + rounddiff.r * weight;
             gSkyColor[k].g = cur_fr.g + rounddiff.g * weight;
@@ -170,24 +176,32 @@ void Hrz::InitSky(void)
     moonPosInSky.vx = (sint16)fixedmult(fixedcos(Sky::gTrackSpec->moonAngleInSky), 1000);
     moonPosInSky.vz = (sint16)fixedmult(fixedsin(Sky::gTrackSpec->moonAngleInSky), 1000);
     moonPosInSky.vy = (sint16)((uint16)TrackSpec::gSpec.skyspec.moonHeightInSky + (uint16)TrackSpec::gSpec.skyspec.yoffset);
-    if (GameSetup::gData.commMode == 1) {
+    if (GameSetup::gData.commMode == 1)
+    {
         Draw::SetViewColor(Draw::gPlayer1View, Sky::gTrackSpec->clearcolor.r, Sky::gTrackSpec->clearcolor.g, Sky::gTrackSpec->clearcolor.b);
         Draw::SetViewColor(Draw::gPlayer2View, Sky::gTrackSpec->clearcolor.r, Sky::gTrackSpec->clearcolor.g, Sky::gTrackSpec->clearcolor.b);
-    } else {
+    }
+    else
+    {
         Draw::SetViewColor(Draw::gPlayer1View, Sky::gTrackSpec->clearcolor.r, Sky::gTrackSpec->clearcolor.g, Sky::gTrackSpec->clearcolor.b);
     }
     sint32 k = 0;
-    for (sint32 i = 0; i < 5; ++i) {
+    for (sint32 i = 0; i < 5; ++i)
+    {
         sint32 angle, radius;
-        if (Sky::gTrackSpec->flags & 0x80) {
+        if (Sky::gTrackSpec->flags & 0x80)
+        {
             radius = fixedmult(fixedcos(Sky::gTrackSpec->ringAngles[i]), 1000);
             angle = Sky::gTrackSpec->ringAngles[i];
-        } else {
+        }
+        else
+        {
             angle = ((Sky::gTrackSpec->flags & 2) && i < 4) ? i << 11 : i << 12;
             radius = fixedmult(fixedcos(angle), 1000);
         }
         sint32 height = fixedmult(fixedsin(angle), 1000);
-        for (sint32 j = 0; j < 17; ++j, ++k) {
+        for (sint32 j = 0; j < 17; ++j, ++k)
+        {
             sint32 longitude = (((uint32)j << 12) - Sky::gTrackSpec->sunAngleInSky + 0x4000);
             gSkyMesh[k].vx = (sint16)fixedmult(fixedsin(longitude), radius);
             gSkyMesh[k].vy = (sint16)((uint16)Sky::gTrackSpec->yoffset + height);
@@ -206,7 +220,8 @@ void Hrz::InitSky(void)
 void Hrz::Init2DRing(void)
 {
     FUNCTION_MARKER(0x800CFD80, "NFS4.EXE");
-    for (sint32 i = 0; i < 17; ++i) {
+    for (sint32 i = 0; i < 17; ++i)
+    {
         sint32 angle = (((uint32)i << 12) + gTrackSpec->angle);
         gRngCoordTop[i].vx = (sint16)fixedmult(fixedsin(angle), 32000);
         gRngCoordTop[i].vy = 0;
@@ -215,7 +230,8 @@ void Hrz::Init2DRing(void)
     sint32 nMaxPmxHeight_InPixels = 1;
     sint32 pnPmxHeight_InPixels[16];
     CHorizonSpec *spec = gTrackSpec;
-    for (sint32 i = 0; i < 16; ++i) {
+    for (sint32 i = 0; i < 16; ++i)
+    {
         Draw::tPixMap *pmx = gHorizonPixmap[(uint8)spec->ringPMX[i] & 7];
         gpPmx[i] = pmx;
         sint32 height = pmx->v2 - pmx->v1;
@@ -225,14 +241,16 @@ void Hrz::Init2DRing(void)
     }
     for (sint32 i = 0; i < 16; ++i)
         gfxPmxHeightPercentage[i] = (pnPmxHeight_InPixels[i] * 65536) / nMaxPmxHeight_InPixels;
-    for (sint32 level = 0; level < 2; ++level) {
+    for (sint32 level = 0; level < 2; ++level)
+    {
         CVECTOR cur_bk = gTrackSpec->backColor[level];
         CVECTOR cur_fr = gTrackSpec->frontColor[level];
         CVECTOR rounddiff;
         rounddiff.r = (cur_bk.r - cur_fr.r) / 8;
         rounddiff.g = (cur_bk.g - cur_fr.g) / 8;
         rounddiff.b = (cur_bk.b - cur_fr.b) / 8;
-        for (sint32 j = 0; j < 16; ++j) {
+        for (sint32 j = 0; j < 16; ++j)
+        {
             sint32 weight = j < 9 ? j : 16 - j;
             gHrzRingColor[level][j].r = cur_fr.r + rounddiff.r * weight;
             gHrzRingColor[level][j].g = cur_fr.g + rounddiff.g * weight;
@@ -249,7 +267,8 @@ void Hrz::GetHorizonPixMap(Draw::tPixMap *p)
     FUNCTION_MARKER(0x800D0064, "NFS4.EXE");
     for (sint32 i = 11; i >= 0; --i)
         gHorizonPixmap[i] = &p[i];
-    for (sint32 i = 0; i < 4; ++i) {
+    for (sint32 i = 0; i < 4; ++i)
+    {
         Texture::CloneUVPmx(gHorizonPixmap[8 + i], 0, &gHorizonExtraSkyPixmaps[i]);
         gHorizonPixmap[12 + i] = &gHorizonExtraSkyPixmaps[i];
     }
@@ -289,16 +308,23 @@ void Hrz::LightningAddFork(sint8 direction, sint8 column, sint8 row)
     tHrz_LightningFork *fork = &gHrz_Lightning.forks[index];
     fork->pos.vx = column * 15;
     fork->pos.vy = row * 15;
-    if (type == 0) {
+    if (type == 0)
+    {
         LightningAddFork(direction, (sint8)(column + direction), (sint8)(row + 1));
         fork->pmxIndex = (random() & 1) + 2;
-    } else if (type == 1) {
+    }
+    else if (type == 1)
+    {
         LightningAddFork(-1, (sint8)(column - 1), (sint8)(row + 1));
         LightningAddFork(1, (sint8)(column + 1), (sint8)(row + 1));
         fork->pmxIndex = 6;
-    } else if (type == 2) {
+    }
+    else if (type == 2)
+    {
         fork->pmxIndex = (random() & 1) + 4;
-    } else {
+    }
+    else
+    {
         direction = (random() & 1) ? -1 : 1;
         LightningAddFork(direction, (sint8)(column + direction), (sint8)(row + 1));
         fork->pmxIndex = random() & 1;
@@ -354,7 +380,7 @@ void Hrz::TextureQuad(DVECTOR *pt, char type, char bright, Draw::DCache *sd)
 void Hrz::SetLightingPosInSky(DRender::tView *Vi)
 {
     FUNCTION_MARKER(0x800D0534, "NFS4.EXE");
-    coorddef forwardVec = { Vi->cview.mrotation.m[6], Vi->cview.mrotation.m[7], Vi->cview.mrotation.m[8] };
+    coorddef forwardVec = {Vi->cview.mrotation.m[6], Vi->cview.mrotation.m[7], Vi->cview.mrotation.m[8]};
     sint32 dx = random() % 8000;
     gLightningPosInSky.vx = (sint16)((forwardVec.x >> 2) + dx - 4000);
     sint32 dy = random() % 3000;
@@ -363,10 +389,25 @@ void Hrz::SetLightingPosInSky(DRender::tView *Vi)
     gLightningPosInSky.vz = (sint16)((forwardVec.z >> 2) + dz - 4000);
 }
 
+void Hrz::ResetRenderState(void)
+{
+    preparedLightningValid = false;
+}
+
+void Hrz::UpdateState(bool advanceEffects)
+{
+    if (!advanceEffects && preparedLightningValid)
+        return;
+    preparedLightningBrightness = gHrz_Lightning.brightness;
+    preparedLightningValid = true;
+    if (advanceEffects && Night::gLightning != 0 && Night::gShowForks != 0 && gHrz_Lightning.brightness > 0)
+        gHrz_Lightning.brightness -= 16;
+}
+
 void Hrz::BuildForkLightning(Draw::DCache *sd)
 {
     FUNCTION_MARKER(0x800D0644, "NFS4.EXE");
-    if (gHrz_Lightning.brightness <= 0)
+    if (preparedLightningBrightness <= 0)
         return;
     sd->otz = (Draw::gViewOtSize - 2);
     coorddef trans;
@@ -386,12 +427,11 @@ void Hrz::BuildForkLightning(Draw::DCache *sd)
             DVECTOR pos;
             pos.vx = (sint16)((uint16)fork->pos.vx + (uint16)screenPos.vx);
             sint32 y = (uint16)fork->pos.vy + (uint16)screenPos.vy;
-            char bright = (char)gHrz_Lightning.brightness;
+            char bright = (char)preparedLightningBrightness;
             pos.vy = (sint16)y;
             TextureQuad(&pos, fork->pmxIndex, bright, sd);
         } while (i < (uint8)gHrz_Lightning.numForks);
     }
-    gHrz_Lightning.brightness = (gHrz_Lightning.brightness - 16);
 }
 
 void HrzSetPsxTranslation(coorddef *t)
@@ -759,4 +799,60 @@ void Hrz::BuildHorizon(DRender::tView *Vi)
         BuildSky();
     if (hrz_projchange != 0)
         SetGeomScreen(hrz_projchange);
+}
+
+void Hrz::CaptureRenderSource(HdSkySource *source)
+{
+    memset(source, 0, sizeof(*source));
+    if (gRngCoordTop == 0 || Hrz::gTrackSpec == 0 || Sky::gTrackSpec == 0)
+        return;
+    source->mesh = gSkyMesh;
+    source->ring = gRngCoordTop;
+    source->stars = starPosInSky;
+    source->starColors = starColors;
+    source->starCount = Sky::gTrackSpec->numStars;
+    source->flags = Sky::gTrackSpec->flags;
+    source->type = Sky::gTrackSpec->type;
+    source->ringOffset = Hrz::gTrackSpec->yoffset;
+    source->ringHeight = Hrz::gTrackSpec->height;
+    source->skyEnabled = TrackSpec::gSpec.skystate != 0;
+    source->ringEnabled = TrackSpec::gSpec.horizonstate != 0;
+    source->clearColor = Sky::gTrackSpec->clearcolor;
+    source->frontColor = Sky::gTrackSpec->frontcolors[0];
+    memcpy(source->colors, gSkyColor, sizeof(source->colors));
+    memcpy(source->ringColors, gHrzRingColor, sizeof(source->ringColors));
+    for (sint32 i = 0; i < 16; ++i)
+    {
+        if (gHorizonPixmap[i] != 0)
+            source->pixmaps[i] = *gHorizonPixmap[i];
+        if (gpPmx[i] != 0)
+            source->ringPixmaps[i] = *gpPmx[i];
+        source->ringIndices[i] = (uint8)Hrz::gTrackSpec->ringPMX[i];
+        source->ringPercent[i] = gfxPmxHeightPercentage[i];
+    }
+    memcpy(source->cloudIndices, gSkyPixmapIndex, sizeof(source->cloudIndices));
+    source->sun = sunPosInSky;
+    source->moon = moonPosInSky;
+    source->lightning = Hrz::gLightningPosInSky;
+    memcpy(source->sunOctagon, Flare::gOct, sizeof(source->sunOctagon));
+    source->sunColor = TrackSpec::gSpec.skyspec.sunHaloColor;
+    Flare::CaptureRenderSource(source);
+    source->celestialFlags = TrackSpec::gSpec.skyspec.flags;
+    if (gFlarePixmap[0] != 0)
+    {
+        source->celestialPixmap = *gFlarePixmap[0];
+        source->celestialPixmapValid = true;
+    }
+    source->lightningBrightness = preparedLightningBrightness;
+    source->lightningActive = Night::gLightning != 0 && Night::gShowForks != 0 && preparedLightningBrightness > 0;
+    if (source->lightningActive)
+        for (sint32 i = 0; i < (uint8)gHrz_Lightning.numForks && i < 16; ++i)
+        {
+            sint32 index = (uint8)gHrz_Lightning.forks[i].pmxIndex;
+            if (index >= 16 || gLightningPixmap[index] == 0)
+                continue;
+            sint32 slot = source->lightningCount++;
+            source->lightningOffsets[slot] = gHrz_Lightning.forks[i].pos;
+            source->lightningPixmaps[slot] = *gLightningPixmap[index];
+        }
 }

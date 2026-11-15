@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <string.h>
 #include "xport.h"
+#include "hd.h"
 #include "psx.h"
 #include "eaclib/psx/eaclib.h"
 #include "game/common/anim.h"
@@ -23,81 +24,33 @@
 struct camera_flags
 {
     coorddef arm;
-    sint32 pitch:1,jostling:1,tracking:1,checkwalls:1,noLookBack:1,checkcollisions:1;
+    sint32 pitch : 1, jostling : 1, tracking : 1, checkwalls : 1, noLookBack : 1, checkcollisions : 1;
 };
 
-sint32 camSpeedTable[7] = { 64225, 60948, 56360, 52428, 47841, 43253, 39321 };
+sint32 camSpeedTable[7] = {64225, 60948, 56360, 52428, 47841, 43253, 39321};
 
-coorddef feeler3[3] =
-{
+coorddef feeler3[3] = {
     {0, 0, 137625},
     {-117964, 0, -72089},
     {117964, 0, -72089},
 };
 
 static coorddef gCop1Target[2];
-static sint32 gSplitCameras[3] = { 0, 2, 5 };
-static sint32 gTunnelCamHeight[13] = { 373555, 321126, 340787, 242483, 321126, 373555, 255590, 176947, 288358, 268697, 268697, 0, 0 };
-static char gAnimMode[13] = { 2, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0 };
-static char gAnimCams[13][4] = { { 2, 6, 0, 0 }, { 1, 6, 0, 0 }, { 2, 6, 0, 0 }, { 2, 6, 0, 0 }, { 2, 6, 0, 0 }, { 2, 6, 0, 0 }, { 2, 6, 0, 0 }, { 2, 6, 0, 0 }, { 2, 6, 0, 0 }, { 2, 6, 0, 0 }, { 2, 6, 0, 0 }, { 1, 6, 0, 0 }, { 1, 6, 0, 0 } };
+static sint32 gSplitCameras[3] = {0, 2, 5};
+static sint32 gTunnelCamHeight[13] = {373555, 321126, 340787, 242483, 321126, 373555, 255590, 176947, 288358, 268697, 268697, 0, 0};
+static char gAnimMode[13] = {2, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0};
+static char gAnimCams[13][4] = {{2, 6, 0, 0}, {1, 6, 0, 0}, {2, 6, 0, 0}, {2, 6, 0, 0}, {2, 6, 0, 0}, {2, 6, 0, 0}, {2, 6, 0, 0}, {2, 6, 0, 0}, {2, 6, 0, 0}, {2, 6, 0, 0}, {2, 6, 0, 0}, {1, 6, 0, 0}, {1, 6, 0, 0}};
 
-static coorddef gDriverCam[28] =
-{
-    { -23592, 26869, -17039 },
-    { -23592, 26869, -17039 },
-    { 25559, 30801, 15728 },
-    { 23592, 26869, 11796 },
-    { -23592, 26869, 0 },
-    { -23592, 26869, 0 },
-    { -23592, 26869, 0 },
-    { -23592, 26869, 0 },
-    { -23592, 26869, 15728 },
-    { -19660, 26869, -4587 },
-    { -23592, 22937, -8519 },
-    { -19660, 26869, -8519 },
-    { -23592, 22937, 11796 },
-    { -23592, 26869, 28180 },
-    { -19660, 22937, -3276 },
-    { 0, 19005, 32112 },
-    { -19660, 26869, -8519 },
-    { 25559, 30801, 15728 },
-    { -19660, 26869, -4587 },
-    { -23592, 26869, 11796 },
-    { -15728, 22937, 0 },
-    { -15728, 22937, 0 },
-    { -23592, 26869, 28180 },
-    { 25559, 30801, 15728 },
-    { -23592, 26869, 15728 },
-    { -19660, 26869, -4587 },
-    { -19660, 26869, -8519 },
-    { -23592, 26869, 28180 },
+static coorddef gDriverCam[28] = {
+    {-23592, 26869, -17039}, {-23592, 26869, -17039}, {25559, 30801, 15728}, {23592, 26869, 11796}, {-23592, 26869, 0}, {-23592, 26869, 0}, {-23592, 26869, 0}, {-23592, 26869, 0}, {-23592, 26869, 15728}, {-19660, 26869, -4587}, {-23592, 22937, -8519}, {-19660, 26869, -8519}, {-23592, 22937, 11796}, {-23592, 26869, 28180}, {-19660, 22937, -3276}, {0, 19005, 32112}, {-19660, 26869, -8519}, {25559, 30801, 15728}, {-19660, 26869, -4587}, {-23592, 26869, 11796}, {-15728, 22937, 0}, {-15728, 22937, 0}, {-23592, 26869, 28180}, {25559, 30801, 15728}, {-23592, 26869, 15728}, {-19660, 26869, -4587}, {-19660, 26869, -8519}, {-23592, 26869, 28180},
 };
 
 sint32 Camera::gGeomScreen = 190;
 sint32 Camera::gCopDist[6];
 Camera::tInfo Camera::gInfo[2];
 
-Camera::tFlags Camera::gFlags[19] =
-{
-    { { 0, 26214, 58982 }, 0, -1, 0, 0, 0, 0 },
-    { { 0, 26214, 58982 }, 0, 0, 0, 0, -1, 0 },
-    { { 0, 75366, -314572 }, -1, 0, -1, -1, 0, -1 },
-    { { 0, 75366, -314572 }, -1, 0, -1, -1, 0, -1 },
-    { { 0, 75366, -314572 }, -1, 0, -1, -1, 0, -1 },
-    { { 0, 131072, -393216 }, -1, 0, -1, -1, 0, -1 },
-    { { 0, 131072, -393216 }, -1, 0, -1, -1, 0, -1 },
-    { { 0, 321126, -439091 }, -1, 0, -1, -1, 0, -1 },
-    { { -114688, 16384, -245760 }, 0, 0, -1, -1, -1, -1 },
-    { { 0, 100270, 268697 }, 0, 0, 0, -1, -1, -1 },
-    { { 0, 0, 0 }, 0, 0, -1, -1, -1, -1 },
-    { { 0, 0, 0 }, 0, 0, -1, 0, -1, 0 },
-    { { 0, 0, 0 }, 0, 0, -1, 0, -1, 0 },
-    { { 0, 983040, -131072 }, 0, 0, -1, 0, -1, 0 },
-    { { 0, 0, 0 }, 0, 0, 0, 0, -1, 0 },
-    { { 0, 58785, -32702 }, 0, -1, 0, 0, -1, 0 },
-    { { 0, 0, 0 }, 0, 0, 0, -1, -1, 0 },
-    { { 0, 0, 0 }, 0, 0, -1, 0, -1, 0 },
-    { { 0, 0, 0 }, 0, 0, -1, 0, -1, 0 },
+Camera::tFlags Camera::gFlags[19] = {
+    {{0, 26214, 58982}, 0, -1, 0, 0, 0, 0}, {{0, 26214, 58982}, 0, 0, 0, 0, -1, 0}, {{0, 75366, -314572}, -1, 0, -1, -1, 0, -1}, {{0, 75366, -314572}, -1, 0, -1, -1, 0, -1}, {{0, 75366, -314572}, -1, 0, -1, -1, 0, -1}, {{0, 131072, -393216}, -1, 0, -1, -1, 0, -1}, {{0, 131072, -393216}, -1, 0, -1, -1, 0, -1}, {{0, 321126, -439091}, -1, 0, -1, -1, 0, -1}, {{-114688, 16384, -245760}, 0, 0, -1, -1, -1, -1}, {{0, 100270, 268697}, 0, 0, 0, -1, -1, -1}, {{0, 0, 0}, 0, 0, -1, -1, -1, -1}, {{0, 0, 0}, 0, 0, -1, 0, -1, 0}, {{0, 0, 0}, 0, 0, -1, 0, -1, 0}, {{0, 983040, -131072}, 0, 0, -1, 0, -1, 0}, {{0, 0, 0}, 0, 0, 0, 0, -1, 0}, {{0, 58785, -32702}, 0, -1, 0, 0, -1, 0}, {{0, 0, 0}, 0, 0, 0, -1, -1, 0}, {{0, 0, 0}, 0, 0, -1, 0, -1, 0}, {{0, 0, 0}, 0, 0, -1, 0, -1, 0},
 };
 
 static sint32 CameraSplineSpeed(uint8 mode)
@@ -238,14 +191,15 @@ void Camera::TunnelLimit(sint32 player, sint32 *armheight)
         if (track >= 16)
             track = (track - 7);
         sint32 maxheight = ((gTunnelCamHeight[track] - gInfo[player].anchor->position.y) + roadheight);
-        if (maxheight < *armheight) *armheight = maxheight;
+        if (maxheight < *armheight)
+            *armheight = maxheight;
     }
 }
 
 void Camera::UpdateCollisionCam(sint32 player)
 {
     FUNCTION_MARKER(0x8008090C, "NFS4.EXE");
-    coorddef arm = { 0, 196608, -655360 };
+    coorddef arm = {0, 196608, -655360};
     if (simVar.quickPauseSim != 0 && Replay::ReplayInterface.changeCamera == 0)
         return;
     if (InBetween != 0)
@@ -615,7 +569,7 @@ void Camera::UpdateCircleCam(sint32 player)
     if ((simVar.quickPauseSim != 0 && Replay::ReplayInterface.changeCamera == 0) || InBetween != 0 || simVar.pauseSim != 0)
         return;
 
-    const sint32 circle_height[3] = { 0x10000, 0x20000, 0x30000 };
+    const sint32 circle_height[3] = {0x10000, 0x20000, 0x30000};
     camera_info *info = &gInfo[player];
     info->circleAngle = (sint16)(info->circleAngle + 1);
 
@@ -680,7 +634,8 @@ void Camera::UpdateAnimCam(sint32 player)
 {
     FUNCTION_MARKER(0x80081F94, "NFS4.EXE");
     camera_info *info = &gInfo[player];
-    if ((sint8)info->animHandle == -1) {
+    if ((sint8)info->animHandle == -1)
+    {
         sint32 animNum = (sint8)info->animNum;
         info->animNum = (char)(animNum - 1);
         info->animHandle = (char)Anim::Handle((uint8)gAnimCams[GameSetup::gData.track][animNum]);
@@ -689,13 +644,16 @@ void Camera::UpdateAnimCam(sint32 player)
     coorddef animPos;
     matrixtdef animRot;
     AnimScript *script = Anim::GetAnim((sint8)info->animHandle);
-    if (script->GetTimedAnimPosRot(&animPos, &animRot) <= 0) {
-        if ((sint8)info->animNum <= 0) {
+    if (script->GetTimedAnimPosRot(&animPos, &animRot) <= 0)
+    {
+        if ((sint8)info->animNum <= 0)
+        {
             if (Replay::ReplayMode != 2)
                 SetMode(player, GameSetup::gData.carInfo[player].Camera[0]);
             else if (numValidCams != 0)
                 Replay::ReplayFindClosestCamera(player, info->anchor->simRoadInfo.slice);
-            else {
+            else
+            {
                 SetMode(player, 11);
                 info->splineMode = 3;
             }
@@ -710,10 +668,13 @@ void Camera::UpdateAnimCam(sint32 player)
     }
 
     uint32 animIndex = (uint8)info->animNum & 31U;
-    if (((uint8)gAnimMode[GameSetup::gData.track] >> animIndex & 1U) != 0) {
+    if (((uint8)gAnimMode[GameSetup::gData.track] >> animIndex & 1U) != 0)
+    {
         info->position = animPos;
         CopyCameraMatrix(&animRot, &info->rotation);
-    } else {
+    }
+    else
+    {
         coorddef newarm;
         transform(&animPos, &info->anchor->orientMat, &newarm);
         BO::tNewtonObj *anchor = info->anchor;
@@ -804,7 +765,7 @@ void Camera::SetSplineCam(sint32 player)
         next = (uint16)(next - (uint16)gNumSlices);
     info->slicePos.slice = next;
     Trk::NewSlice *slice = &BWorldSm::slices[info->slicePos.slice];
-    coorddef center = { slice->center[0], slice->center[1], slice->center[2] };
+    coorddef center = {slice->center[0], slice->center[1], slice->center[2]};
     info->position = center;
     BWorldSm::FindClosestQuadRez(&info->position, &info->slicePos, 1);
 }
@@ -860,15 +821,15 @@ void Camera::UpdateSplineCam(sint32 player)
             next = (uint16)(next - (uint16)gNumSlices);
         info->slicePos.slice = next;
         Trk::NewSlice *slice = &BWorldSm::slices[info->slicePos.slice];
-        coorddef center = { slice->center[0], slice->center[1], slice->center[2] };
+        coorddef center = {slice->center[0], slice->center[1], slice->center[2]};
         info->position = center;
     }
     BWorldSm::FindClosestQuadRez(&info->position, &info->slicePos, 1);
     Trk::NewSlice *slice = &BWorldSm::slices[info->slicePos.slice];
-    coorddef splineVel = { slice->center[0], slice->center[1], slice->center[2] };
+    coorddef splineVel = {slice->center[0], slice->center[1], slice->center[2]};
     sint32 next = info->slicePos.slice + 1;
     Trk::NewSlice *nextSlice = next < gNumSlices ? &BWorldSm::slices[next] : BWorldSm::slices;
-    coorddef nextVel = { nextSlice->center[0], nextSlice->center[1], nextSlice->center[2] };
+    coorddef nextVel = {nextSlice->center[0], nextSlice->center[1], nextSlice->center[2]};
     splineVel.x = (nextVel.x - splineVel.x);
     splineVel.y = (nextVel.y - splineVel.y);
     splineVel.z = (nextVel.z - splineVel.z);
@@ -927,7 +888,7 @@ void Camera::UpdatePulloverCam(sint32 player)
         return;
     }
     Trk::NewSlice *slice = &BWorldSm::slices[info->anchor->simRoadInfo.slice];
-    coorddef sCenter = { slice->center[0], slice->center[1], slice->center[2] };
+    coorddef sCenter = {slice->center[0], slice->center[1], slice->center[2]};
     coorddef sForward;
     sForward.x = (sint8)slice->forward[0] * 512;
     sForward.y = (sint8)slice->forward[1] * 512;
@@ -1107,25 +1068,55 @@ void Camera::Update(void)
         }
         switch (info->mode)
         {
-        case 0:
-        case 1: UpdateBumperCam(player); break;
-        case 2: UpdateTailCam(player, 0); break;
-        case 3: UpdateTailCam(player, 1); break;
-        case 4: UpdateTailCam(player, 2); break;
-        case 5: UpdateHeliCam(player, 0); break;
-        case 6: UpdateHeliCam(player, 1); break;
-        case 7: UpdateHeliCam(player, 2); break;
-        case 8:
-        case 9:
-        case 15: UpdateSimpleCam(player); break;
-        case 10: UpdateCircleCam(player); break;
-        case 11: UpdateSplineCam(player); break;
-        case 12: UpdateTVCam(player); break;
-        case 13: UpdateBlimpCam(player); break;
-        case 14: UpdateAnimCam(player); break;
-        case 16: UpdateCopCam1(player); break;
-        case 17:
-        case 18: UpdateCopCam2(player); break;
+            case 0:
+            case 1:
+                UpdateBumperCam(player);
+                break;
+            case 2:
+                UpdateTailCam(player, 0);
+                break;
+            case 3:
+                UpdateTailCam(player, 1);
+                break;
+            case 4:
+                UpdateTailCam(player, 2);
+                break;
+            case 5:
+                UpdateHeliCam(player, 0);
+                break;
+            case 6:
+                UpdateHeliCam(player, 1);
+                break;
+            case 7:
+                UpdateHeliCam(player, 2);
+                break;
+            case 8:
+            case 9:
+            case 15:
+                UpdateSimpleCam(player);
+                break;
+            case 10:
+                UpdateCircleCam(player);
+                break;
+            case 11:
+                UpdateSplineCam(player);
+                break;
+            case 12:
+                UpdateTVCam(player);
+                break;
+            case 13:
+                UpdateBlimpCam(player);
+                break;
+            case 14:
+                UpdateAnimCam(player);
+                break;
+            case 16:
+                UpdateCopCam1(player);
+                break;
+            case 17:
+            case 18:
+                UpdateCopCam2(player);
+                break;
         }
     }
 }
@@ -1309,7 +1300,7 @@ void Camera::CheckWallCollisions(sint32 player, coorddef *pos)
     temp.y = ((gInfo[player].wallRight.y - gInfo[player].wallLeft.y) + 0x8000);
     temp.z = (gInfo[player].wallRight.z - gInfo[player].wallLeft.z);
     Math::NormalizeVector(&temp);
-    coorddef normal = { -temp.z, temp.y, temp.x };
+    coorddef normal = {-temp.z, temp.y, temp.x};
     edge.x = (edge.x - triPnt.x);
     edge.z = (edge.z - triPnt.z);
     edge.y = (edge.y - triPnt.y);
@@ -1347,7 +1338,7 @@ void Camera::SetAboveGround(sint32 player, coorddef *pos)
 void Camera::AcquireTarget(sint32 player, coorddef *point, coorddef *pos, matrixtdef *rot, sint32 hirez)
 {
     FUNCTION_MARKER(0x80084898, "NFS4.EXE");
-    coorddef upvector = { 0, 0x10000, 0 };
+    coorddef upvector = {0, 0x10000, 0};
     coorddef tgtPos = point ? *point : gInfo[player].target->position;
     coorddef *rotx = reinterpret_cast<coorddef *>(&rot->m[0]);
     coorddef *roty = reinterpret_cast<coorddef *>(&rot->m[3]);
@@ -1408,12 +1399,12 @@ void Camera::OpponentLookBehind(sint32 player, coorddef *pos, sint32 reset)
     if (reset != 0)
     {
         Car::tObj *car = Cars::gHumanRaceCarList[player];
-        coorddef forward = { car->N.orientMat.m[6], car->N.orientMat.m[7], car->N.orientMat.m[8] };
+        coorddef forward = {car->N.orientMat.m[6], car->N.orientMat.m[7], car->N.orientMat.m[8]};
         lastOppVector[player] = forward;
         return;
     }
     Car::tObj *car = Cars::gHumanRaceCarList[player];
-    coorddef oppVector = { car->N.orientMat.m[6], car->N.orientMat.m[7], car->N.orientMat.m[8] };
+    coorddef oppVector = {car->N.orientMat.m[6], car->N.orientMat.m[7], car->N.orientMat.m[8]};
     sint32 oppSlice = 11;
     for (sint32 i = 0; i < Cars::gNumCars; ++i)
     {
@@ -1463,18 +1454,18 @@ void Camera::OpponentLookBehind(sint32 player, coorddef *pos, sint32 reset)
     sint32 mode = (sint16)((uint16)gInfo[player].mode - 2);
     switch (mode)
     {
-    case 0:
-    case 1:
-    case 2:
-        oppVector.y = (oppVector.y - 0x14ccc);
-        break;
-    case 5:
-        oppVector.y = (oppVector.y - 0x6666);
+        case 0:
+        case 1:
+        case 2:
+            oppVector.y = (oppVector.y - 0x14ccc);
+            break;
+        case 5:
+            oppVector.y = (oppVector.y - 0x6666);
 
-    case 3:
-    case 4:
-        oppVector.y = (oppVector.y - 0x19999);
-        break;
+        case 3:
+        case 4:
+            oppVector.y = (oppVector.y - 0x19999);
+            break;
     }
     AcquireTarget(player, &oppVector, pos, &gInfo[player].rotation, 1);
 }
@@ -1546,8 +1537,10 @@ void Camera::GetAudioViewInfo(sint32 cviewP, DRender::tCalcView *cview, coorddef
             LookBack(&info->rotation, &cview->mrotation);
     }
     sint32 mode = gInfo[cviewP].mode;
-    if (mode == 12 || mode == 14) *cvel = 0;
-    else *cvel = &gInfo[cviewP].anchor->linearVel;
+    if (mode == 12 || mode == 14)
+        *cvel = 0;
+    else
+        *cvel = &gInfo[cviewP].anchor->linearVel;
 }
 
 sint32 Camera::GetMode(sint32 cviewP)
@@ -1594,6 +1587,7 @@ void Camera::SetMode(sint32 cviewP, sint32 mode)
 void Camera::NextMode(sint32 cviewP)
 {
     FUNCTION_MARKER(0x8008581C, "NFS4.EXE");
+    hd_reset_view(cviewP);
     camera_info *info = &gInfo[cviewP];
     if (info->mode == 14 || info->modechange)
         return;

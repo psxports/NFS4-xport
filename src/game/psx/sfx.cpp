@@ -3,6 +3,7 @@
 #include "xport.h"
 #include "psx.h"
 #include "psx_gte.h"
+#include "hd.h"
 #include "eaclib/psx/eaclib.h"
 #include "game/common/bworld.h"
 #include "game/common/genericpmx.h"
@@ -24,6 +25,115 @@ struct sfxsouffle
     SVECTOR v2;
     SVECTOR v3;
 };
+
+static VEC3F SfxRenderPosition(const coorddef *position)
+{
+    VEC3F result = {position->x / 1024.0f, position->y / 1024.0f, position->z / 1024.0f};
+    return result;
+}
+
+void Sfx::CaptureRenderSource(const Souffle::tISouffle *is, HdSouffleSource *source)
+{
+    memset(source, 0, sizeof(*source));
+    if (is == 0)
+        return;
+    sint32 type = (uint8)is->type, cycle = (uint8)is->cycle;
+    source->type = type == 2 ? 1 : type;
+    source->kind = 1;
+    source->offset = 15;
+    source->angle = (float)(is->angle & 1023);
+    source->points[0] = SfxRenderPosition(&is->source);
+    source->color.r = source->color.g = source->color.b = GameSetup::gData.Time == 0 ? 24 : 8;
+    source->color.cd = 0x2e;
+    const Draw::tPixMap *texture = 0, *palette = 0;
+    sint32 paletteOffset = 0, abr = type == 3 || type == 8 ? 2 : 1;
+    switch (type)
+    {
+        case 1:
+        case 2:
+        case 3:
+            if (is->rndpixmap < 0 || is->rndpixmap >= 2 || cycle > 31)
+                return;
+            source->radius = (float)((31 - cycle) * 4 + 38);
+            texture = gSMokePixmap[is->rndpixmap];
+            palette = gSMokePalette;
+            paletteOffset = (31 - cycle) >> 1;
+            break;
+        case 6:
+        case 7:
+        case 9:
+        case 11:
+            if (is->rndpixmap < 0 || is->rndpixmap >= 2 || cycle > 8)
+                return;
+            source->radius = (float)(type == 6 ? 136 - cycle : (8 - cycle) * 4 + (type == 11 ? 12 : 25));
+            texture = type == 6 || type == 11 ? gSMokePixmap[is->rndpixmap] : gGravelPixmap[is->rndpixmap];
+            palette = type == 6 ? gDirtPalette : type == 7 ? gGrassPalette : gSnowPalette;
+            paletteOffset = 8 - cycle;
+            break;
+        case 4:
+        case 8:
+        case 10:
+        {
+            if (cycle < 1 || cycle > 6)
+                return;
+            texture = gSparkHPixmap[6 - cycle];
+            coorddef tail = is->motion;
+            Math::NormalizeVector(&tail);
+            if (type == 4)
+            {
+                tail.x = is->source.x - ((uint32)tail.x << 2);
+                tail.y = is->source.y - ((uint32)tail.y << 2);
+                tail.z = is->source.z - ((uint32)tail.z << 2);
+                source->kind = 2;
+                source->offset = 40;
+                source->points[1] = SfxRenderPosition(&tail);
+                source->color.r = 184;
+                source->color.g = 152;
+                source->color.b = 88;
+            }
+            else
+            {
+                sint32 scale = (sint16)(is->rndpixmap >> 16);
+                tail.x = is->source.x - ((sint32)((uint32)tail.x * (uint32)scale) >> 4);
+                tail.y = is->source.y - ((sint32)((uint32)tail.y * (uint32)scale) >> 4);
+                tail.z = is->source.z - ((sint32)((uint32)tail.z * (uint32)scale) >> 4);
+                sint32 angle = intatan(is->source.x - tail.x, is->source.z - tail.z);
+                sint32 x = fixedmult(0xe666, -fastintcos(angle)) >> 1;
+                sint32 z = fixedmult(0xe666, fastintsin(angle)) >> 1;
+                source->kind = 3;
+                source->offset = 50;
+                source->points[1] = SfxRenderPosition(&tail);
+                source->points[2] = source->points[0];
+                source->points[3] = source->points[1];
+                for (sint32 corner = 0; corner < 4; ++corner)
+                {
+                    source->points[corner].x += (corner < 2 ? x : -x) / 1024.0f;
+                    source->points[corner].z += (corner < 2 ? z : -z) / 1024.0f;
+                }
+                source->color.r = source->color.g = type == 8 ? 24 : 16;
+                source->color.b = type == 8 ? 48 : 24;
+            }
+            break;
+        }
+        case 13:
+        case 14:
+            source->radius = 6;
+            memcpy(&source->color, &is->colour, sizeof(source->color));
+            source->color.cd |= 0x2c;
+            texture = gLeafPixmap;
+            break;
+        default:
+            return;
+    }
+    if (texture == 0 || ((type == 1 || type == 2 || type == 3 || type == 6 || type == 7 || type == 9 || type == 11) && palette == 0))
+        return;
+    source->pixmap = *texture;
+    if (palette != 0)
+        source->pixmap.clut = (uint16)(palette->clut + paletteOffset);
+    if (type != 13 && type != 14)
+        source->pixmap.tpage = (uint16)((source->pixmap.tpage & ~96) | (abr << 5));
+    source->active = true;
+}
 
 static void BuildSfxQuad(Souffle::tISouffle *is, sfxsouffle *dSouffle, sint32 radius)
 {
@@ -83,7 +193,7 @@ void Sfx::Transform(coorddef *worldpt, SVECTOR *campt, coorddef *t)
     campt->vx = (sint16)campt32.vx;
     campt->vy = (sint16)campt32.vy;
     campt->vz = (sint16)campt32.vz;
-    MATRIX ident = { 0 };
+    MATRIX ident = {0};
     ident.m[0][0] = 4096;
     ident.m[1][1] = 4096;
     ident.m[2][2] = 4096;
@@ -205,21 +315,21 @@ void Sfx::BuildSouffleFacet(DRender::tView *Vi, Souffle::tISouffle *is)
     sint32 type = (uint8)is->type;
     switch (type)
     {
-    case 1:
-        BuildSmokeFacet(is, &dSouffle, gSMokePalette);
-        AdditivePrim(&dSouffle.pmx, &dSouffle.v0, 0, 15, sd);
-        return;
-    case 2:
-        BuildSmokeFacet(is, &dSouffle, gSMokePalette);
-        if ((uint8)is->cycle < 18)
-            is->type = 1;
-        AdditivePrim(&dSouffle.pmx, &dSouffle.v0, 0, 15, sd);
-        return;
-    case 3:
-        BuildSmokeFacet(is, &dSouffle, gSMokePalette);
-        AdditivePrim(&dSouffle.pmx, &dSouffle.v0, 1, 15, sd);
-        return;
-    case 4:
+        case 1:
+            BuildSmokeFacet(is, &dSouffle, gSMokePalette);
+            AdditivePrim(&dSouffle.pmx, &dSouffle.v0, 0, 15, sd);
+            return;
+        case 2:
+            BuildSmokeFacet(is, &dSouffle, gSMokePalette);
+            if ((uint8)is->cycle < 18)
+                is->type = 1;
+            AdditivePrim(&dSouffle.pmx, &dSouffle.v0, 0, 15, sd);
+            return;
+        case 3:
+            BuildSmokeFacet(is, &dSouffle, gSMokePalette);
+            AdditivePrim(&dSouffle.pmx, &dSouffle.v0, 1, 15, sd);
+            return;
+        case 4:
         {
             coorddef invertedm = is->motion;
             Math::NormalizeVector(&invertedm);
@@ -253,10 +363,10 @@ void Sfx::BuildSouffleFacet(DRender::tView *Vi, Souffle::tISouffle *is)
             AdditivePrim(&dSouffle.pmx, &dSouffle.v0, 2, 40, sd);
             return;
         }
-    case 6:
-    case 7:
-    case 9:
-    case 11:
+        case 6:
+        case 7:
+        case 9:
+        case 11:
         {
             sint32 radius;
             if (type == 6)
@@ -290,8 +400,8 @@ void Sfx::BuildSouffleFacet(DRender::tView *Vi, Souffle::tISouffle *is)
             AdditivePrim(&dSouffle.pmx, &dSouffle.v0, 0, 15, sd);
             return;
         }
-    case 8:
-    case 10:
+        case 8:
+        case 10:
         {
             uint32 colour = type == 8 ? 0x2E301818 : 0x2E181010;
             coorddef invertedm = is->motion;
@@ -333,8 +443,8 @@ void Sfx::BuildSouffleFacet(DRender::tView *Vi, Souffle::tISouffle *is)
             LinkSfxQuad(sd);
             return;
         }
-    case 13:
-    case 14:
+        case 13:
+        case 14:
         {
             BuildSfxQuad(is, &dSouffle, 6);
             Draw::PrimStruct &active = sd->head.cprim;
@@ -367,36 +477,36 @@ void Sfx::Add(Souffle::tISouffle *is)
     FUNCTION_MARKER(0x800DE638, "NFS4.EXE");
     switch ((uint8)is->type)
     {
-    case 1:
-    case 2:
-    case 3:
-        is->cycle = 31;
-        is->rndpixmap = random() & 1;
-        break;
-    case 4:
-    case 8:
-    case 10:
-        is->cycle = 6;
-        break;
-    case 6:
-    case 7:
-    case 9:
-        is->cycle = 8;
-        is->rndpixmap = random() & 1;
-        break;
-    case 11:
-        is->rndpixmap = random() & 1;
-        is->cycle = 2;
-        break;
-    case 13:
-        is->cycle = 64;
-        {
-            sint32 z = is->motion.z;
-            sint32 x = is->motion.x;
-            is->extramotion.y = 0;
-            is->extramotion.x = (-z);
-            is->extramotion.z = x;
-        }
-        break;
+        case 1:
+        case 2:
+        case 3:
+            is->cycle = 31;
+            is->rndpixmap = random() & 1;
+            break;
+        case 4:
+        case 8:
+        case 10:
+            is->cycle = 6;
+            break;
+        case 6:
+        case 7:
+        case 9:
+            is->cycle = 8;
+            is->rndpixmap = random() & 1;
+            break;
+        case 11:
+            is->rndpixmap = random() & 1;
+            is->cycle = 2;
+            break;
+        case 13:
+            is->cycle = 64;
+            {
+                sint32 z = is->motion.z;
+                sint32 x = is->motion.x;
+                is->extramotion.y = 0;
+                is->extramotion.x = (-z);
+                is->extramotion.z = x;
+            }
+            break;
     }
 }

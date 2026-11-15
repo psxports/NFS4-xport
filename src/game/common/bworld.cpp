@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <string.h>
 #include "xport.h"
 #include "eaclib/psx/eaclib.h"
 #include "game/common/anim.h"
@@ -12,6 +13,7 @@
 #include "game/common/gmesetup.h"
 #include "game/common/group.h"
 #include "game/common/object.h"
+#include "game/common/render.h"
 #include "game/common/renderview.h"
 #include "game/common/replay.h"
 #include "game/common/scene.h"
@@ -41,6 +43,23 @@ struct tBuildEntry
     char geomRez;
     char enableBits;
 };
+
+struct PreparedWorldView
+{
+    matrixtdef world;
+    matrixtdef night;
+    matrixtdef cop;
+    MATRIX nightMatrix;
+    MATRIX copMatrix;
+    BW::tContext *context;
+    Car::tObj *copCar;
+    Night::tCopLightingTable *copColors[2];
+    sint32 slice;
+    sint32 viewId;
+    bool valid;
+};
+
+static PreparedWorldView preparedWorld[2];
 
 sint32 gSpikeBelt;
 sint32 gSpikeBeltSlice;
@@ -80,7 +99,8 @@ void UpdateContext(DRender::tView *Vi, sint32 contextHandle)
     if (contextHandle == 0)
         gBWSlice = gCurrContext->slicePos.slice;
     BWorldSm::FindClosestQuadRez(pt, &gCurrContext->slicePos, 1);
-    if (gCurrContext->slicePos.offEdge != 0) {
+    if (gCurrContext->slicePos.offEdge != 0)
+    {
         FindAbsClosestSliceCrude(pt, &gCurrContext->slicePos);
         BWorldSm::FindClosestQuadRez(pt, &gCurrContext->slicePos, 1);
     }
@@ -90,7 +110,7 @@ void UpdateContext(DRender::tView *Vi, sint32 contextHandle)
         context->currentChunk = chunk;
 }
 
-void SetupBuildMatrices(DRender::tView *Vi, Draw::DCache *sd)
+void SetupBuildMatrices(DRender::tView *Vi, Draw::DCache *sd, bool advanceEffects)
 {
     FUNCTION_MARKER(0x8007D940, "NFS4.EXE");
 
@@ -139,7 +159,8 @@ void SetupBuildMatrices(DRender::tView *Vi, Draw::DCache *sd)
     {
         Night::SetCopColor(BW::gCopCarObj->carInfo);
         static sint32 cop_angle = 0;
-        cop_angle = (cop_angle + 64);
+        if (advanceEffects)
+            cop_angle = (cop_angle + 64);
         matrixtdef rotY;
         xformy(&rotY, cop_angle);
         matrixtdef tm;
@@ -150,6 +171,52 @@ void SetupBuildMatrices(DRender::tView *Vi, Draw::DCache *sd)
         gCopMat.m[4] = (-gCopMat.m[4]);
         DrawW::WorldSetUpMatrix(&gCopMat, &sd->matCop);
     }
+}
+
+void BWorld::ResetRenderState(void)
+{
+    Flare::ResetTrackEffects();
+    preparedWorld[0].valid = false;
+    preparedWorld[1].valid = false;
+}
+
+void BWorld::PrepareView(DRender::tView *view, bool advanceEffects)
+{
+    Draw::DCache cache = {0};
+    SetupBuildMatrices(view, &cache, advanceEffects);
+    PreparedWorldView *prepared = &preparedWorld[view->player];
+    prepared->world = gWorldMat;
+    prepared->night = gNightMat;
+    prepared->cop = gCopMat;
+    prepared->nightMatrix = cache.matNight;
+    prepared->copMatrix = cache.matCop;
+    prepared->context = gCurrContext;
+    prepared->copCar = BW::gCopCarObj;
+    prepared->copColors[0] = Night::gCopColor[0];
+    prepared->copColors[1] = Night::gCopColor[1];
+    prepared->slice = gBWSlice;
+    prepared->viewId = view->id;
+    prepared->valid = true;
+}
+
+bool BWorld::ApplyPreparedView(DRender::tView *view, Draw::DCache *cache)
+{
+    if (view->player < 0 || view->player >= 2)
+        return false;
+    const PreparedWorldView *prepared = &preparedWorld[view->player];
+    if (!prepared->valid || prepared->viewId != view->id)
+        return false;
+    gWorldMat = prepared->world;
+    gNightMat = prepared->night;
+    gCopMat = prepared->cop;
+    memcpy(cache->matNight.m, prepared->nightMatrix.m, sizeof(cache->matNight.m));
+    memcpy(cache->matCop.m, prepared->copMatrix.m, sizeof(cache->matCop.m));
+    gCurrContext = prepared->context;
+    BW::gCopCarObj = prepared->copCar;
+    Night::gCopColor[0] = prepared->copColors[0];
+    Night::gCopColor[1] = prepared->copColors[1];
+    gBWSlice = prepared->slice;
+    return true;
 }
 
 sint32 GetRezIndex(sint32 dist)
@@ -234,8 +301,9 @@ void BWorld::BuildGlareEffects(DRender::tView *Vi, Draw::DCache *sd, Group *grou
         sint16 type = effect->type;
         if (type == 100)
         {
-            coorddef dir = { 0, 655360, 0 };
-            TrgSfx::AddEnviroEffect(i, 0x101, reinterpret_cast<coorddef *>(effect), &dir);
+            coorddef dir = {0, 655360, 0};
+            if (Flare::IsTrackPreparation())
+                TrgSfx::AddEnviroEffect(i, 0x101, reinterpret_cast<coorddef *>(effect), &dir);
             return;
         }
         if (pad == 0)
@@ -262,12 +330,14 @@ void BWorld::InitSpikeBelt(void)
     gSpikeBelt = 0;
     gSpikeBeltSlice = 0;
     gSpikeBeltChunk = 0;
-    for (sint32 i = 0; i < count; ++i) {
+    for (sint32 i = 0; i < count; ++i)
+    {
         sint32 red = 128 - light[i].r;
         sint32 green = 128 - light[i].g;
         sint32 blue = 128 - light[i].b;
         sint32 dist = red * red + green * green + blue * blue;
-        if (dist < leastDist) {
+        if (dist < leastDist)
+        {
             leastDist = dist;
             leastDistInd = i;
         }
@@ -290,7 +360,8 @@ void BWorld::SetSpikeBelt(sint32 slice, sint32 x, sint32 width)
 sint32 BWorld::GetSpikeBelt(sint32 *slice, sint32 *x, sint32 *width)
 {
     FUNCTION_MARKER(0x8007D8F8, "NFS4.EXE");
-    if (gSpikeBelt != 1) {
+    if (gSpikeBelt != 1)
+    {
         *width = 0;
         *x = 0;
         *slice = 0;
@@ -321,16 +392,19 @@ sint32 BWorld::CheckChunkVisible(BWorldSm::Pos *slicePosSource, BWorldSm::Pos *s
     if (count == -1)
         return 0;
     sint16 *chunkViewList = Track::gInViewList[sourceChunkInd];
-    for (; count != -1; --count) {
+    for (; count != -1; --count)
+    {
         sint32 chunkInd = chunkViewList[count];
-        if ((chunkInd & 0x3FF) == testChunkIndFwd) {
+        if ((chunkInd & 0x3FF) == testChunkIndFwd)
+        {
             if (chunkInd & 0x800)
                 return vis == 2;
             ++vis;
             if (vis != 1)
                 return vis == 2;
         }
-        if ((chunkInd & 0x3FF) == testChunkIndBwd) {
+        if ((chunkInd & 0x3FF) == testChunkIndBwd)
+        {
             if (chunkInd & 0x800)
                 return vis == 2;
             ++vis;
@@ -346,11 +420,58 @@ bool BWorld::IsSliceInBuildList(sint32 slice)
     FUNCTION_MARKER(0x8007E0A0, "NFS4.EXE");
     sint32 chunk = slice / 8;
     sint32 count = gChunkCount;
-    for (sint32 bi = 0; bi < count; ++bi) {
+    for (sint32 bi = 0; bi < count; ++bi)
+    {
         if (gChunkBuildList[bi].chunkInd == chunk)
             return true;
     }
     return false;
+}
+
+bool BWorld::IsObjectChunkInBuildList(sint32 chunk)
+{
+    for (sint32 i = 0; i < gChunkCount; ++i)
+        if (gChunkBuildList[i].chunkInd == chunk && (gChunkBuildList[i].enableBits & 2) != 0)
+            return true;
+    return false;
+}
+
+void BWorld::BuildTrackEffects(DRender::tView *Vi, Draw::DCache *sd)
+{
+    if (GameSetup::gData.commMode == 0)
+    {
+        for (sint32 buildInd = 0; buildInd < gChunkCount; ++buildInd)
+        {
+            sint32 chunkInd = gChunkBuildList[buildInd].chunkInd;
+            Group *effects = Track::chunkList[chunkInd].sfxBuf;
+            if (effects != 0)
+                BuildGlareEffects(Vi, sd, effects);
+        }
+    }
+    if (Object::customSFXInst != 0 && IsSliceInBuildList(Object::customSliceNum))
+        BuildGlareEffects(Vi, sd, Object::customSFXInst);
+}
+
+void BWorld::PrepareObjectState(DRender::tView *view)
+{
+    DRender::tView savedView = gCView;
+    gCView = *view;
+    TrsProj::SetViewTrsProjEnviro(view);
+    Draw::DCache *cache = &gNativeRenderCache.horizonDraw;
+    ApplyPreparedView(view, cache);
+    DrawW::WorldSetUpMatrix(&gWorldMat, &cache->matB);
+    gChunkCount = SetupChunkBuildList(view);
+    sint32 savedOtSize = Draw::gViewOtSize;
+    Draw::gViewOtSize = Draw::gView[view->id].otsize;
+    Flare::BeginTrackPreparation(view->player);
+    BuildTrackEffects(view, cache);
+    DrawW::WorldSetUpMatrix(&gWorldMat, &cache->matB);
+    Object::BeginRenderPreparation();
+    DrawW::DoObjects(view, gChunkBuildList);
+    Object::EndRenderPreparation();
+    Flare::EndTrackPreparation();
+    Draw::gViewOtSize = savedOtSize;
+    gCView = savedView;
 }
 
 void BWorld::OnyxBuildFacets(DRender::tView *Vi)
@@ -358,10 +479,12 @@ void BWorld::OnyxBuildFacets(DRender::tView *Vi)
     FUNCTION_MARKER(0x8007E0F4, "NFS4.EXE");
 
     gVi2 = Vi;
+    Flare::BeginTrackDrawing(Vi->player);
     Draw::DCache *sd = &gNativeRenderCache.horizonDraw;
 
     stackSpeedUpEnbabledFlag = 1;
-    SetupBuildMatrices(gVi2, sd);
+    if (!ApplyPreparedView(gVi2, sd))
+        SetupBuildMatrices(gVi2, sd, true);
     DrawW::WorldSetUpMatrix(&gWorldMat, &sd->matB);
     gChunkCount = SetupChunkBuildList(gVi2);
     stackSpeedUpEnbabledFlag = 0;
@@ -392,18 +515,7 @@ void BWorld::OnyxBuildFacets(DRender::tView *Vi)
             if (gChunkBuildList[buildInd].chunkInd == gSpikeBeltChunk)
                 DrawW::BuildSpikeBelt(Vi, gSpikeBeltWidth, sd);
     }
-    if (GameSetup::gData.commMode == 0)
-    {
-        for (sint32 buildInd = 0; buildInd < gChunkCount; ++buildInd)
-        {
-            sint32 chunkInd = gChunkBuildList[buildInd].chunkInd;
-            Group *effects = Track::chunkList[chunkInd].sfxBuf;
-            if (effects != 0)
-                BuildGlareEffects(Vi, sd, effects);
-        }
-    }
-    if (Object::customSFXInst != 0 && IsSliceInBuildList(Object::customSliceNum))
-        BuildGlareEffects(Vi, sd, Object::customSFXInst);
+    BuildTrackEffects(Vi, sd);
     DrawW::WorldSetUpMatrix(&gWorldMat, &sd->matB);
     DrawW::DoObjects(Vi, gChunkBuildList);
 }
@@ -429,12 +541,15 @@ sint32 BWorld::OpenContext(sint32 contextType, sint32 client)
     BW::tContext *context = &gContextMan.contexts[gContextMan.count];
     context->slicePos.slice = 0;
     context->client = client;
-    if (contextType == 0) {
+    if (contextType == 0)
+    {
         context->polyFarZClipSq = 0x9C400;
         context->lineFarZClipSq = 0x4C90;
         context->chunkFarZClipSq = 0xCEA40;
         context->lowDetailDistSq = 0xE100;
-    } else if (contextType == 1) {
+    }
+    else if (contextType == 1)
+    {
         context->polyFarZClipSq = 0x44944;
         context->lineFarZClipSq = 0x2710;
         context->chunkFarZClipSq = 0x52210;
@@ -467,12 +582,16 @@ void BWorld::StartLoop(void)
 void BWorld::Init(void)
 {
     FUNCTION_MARKER(0x8007E5C8, "NFS4.EXE");
-    if (Replay::ReplayMode == 0) {
-        if (GameSetup::gData.commMode == 1 || GameSetup::gData.raceType == 2) {
+    if (Replay::ReplayMode == 0)
+    {
+        if (GameSetup::gData.commMode == 1 || GameSetup::gData.raceType == 2)
+        {
             GameSetup::gData.SceneNumber = 99;
             GameSetup::gData.SceneStartLap = 99;
             GameSetup::gData.SceneEndLap = 99;
-        } else {
+        }
+        else
+        {
             GameSetup::gData.SceneNumber = randPSX() / 0x4000;
             sint32 draw = randPSX();
             sint32 laps = GameSetup::gData.numLaps;
@@ -487,10 +606,13 @@ void BWorld::Init(void)
             GameSetup::gData.SceneEndLap = end;
             if (start == end)
                 GameSetup::gData.SceneEndLap = (start + 1);
-            if (GameSetup::gData.Weather != 0) {
+            if (GameSetup::gData.Weather != 0)
+            {
                 GameSetup::gData.SceneNumber = (GameSetup::gData.SceneNumber + 10);
                 GameSetup::gData.SceneEndLap = (GameSetup::gData.SceneEndLap + 5);
-            } else if (GameSetup::gData.trafficDensity != 0) {
+            }
+            else if (GameSetup::gData.trafficDensity != 0)
+            {
                 GameSetup::gData.SceneNumber = (GameSetup::gData.SceneNumber + 20);
             }
             SceneLoaded = 0;
@@ -500,10 +622,13 @@ void BWorld::Init(void)
     Track::SetTrackNumber(GameSetup::gData.track);
     InitContexts();
     sint32 contextType;
-    if (GameSetup::gData.commMode == 1) {
+    if (GameSetup::gData.commMode == 1)
+    {
         OpenContext(1, 0);
         contextType = 1;
-    } else {
+    }
+    else
+    {
         contextType = 0;
     }
     OpenContext(contextType, contextType);

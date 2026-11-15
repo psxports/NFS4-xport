@@ -3,6 +3,7 @@
 #include "xport.h"
 #include "psx.h"
 #include "psx_gte.h"
+#include "hd.h"
 #include "eaclib/psx/eaclib.h"
 #include "game/common/anim.h"
 #include "game/common/bworld.h"
@@ -51,7 +52,7 @@ struct tBuildEntry
     char enableBits;
 };
 
-static char goffsets[8] = { 125, 125, 50, 15, 255, 125, 0, 0 };
+static char goffsets[8] = {125, 125, 50, 15, 255, 125, 0, 0};
 uint32 gWSavePtr;
 sint32 gSD_gt4counter;
 sint32 gSD_gt3counter;
@@ -59,35 +60,12 @@ sint32 stackSpeedUpEnbabledFlag;
 Draw::SubdivStruct gDiv;
 ChunkObjectInfo gChunkObjInfo;
 DRender::tView *gVi;
-MATRIX gIdentTemplate = { {{4096, 0, 0}, {0, 4096, 0}, {0, 0, 4096}}, {0, 0, 0} };
+MATRIX gIdentTemplate = {{{4096, 0, 0}, {0, 4096, 0}, {0, 0, 4096}}, {0, 0, 0}};
 sint32 animation_timer[12];
 
-sint32 trk0[9][2] =
-{
-    { 410, 530 },
-    { 800, 850 },
-    { 800, 850 },
-    { 800, 850 },
-    { 800, 850 },
-    { 800, 850 },
-    { 815, 885 },
-    { 815, 885 },
-    { 815, 885 }
-};
+sint32 trk0[9][2] = {{410, 530}, {800, 850}, {800, 850}, {800, 850}, {800, 850}, {800, 850}, {815, 885}, {815, 885}, {815, 885}};
 
-sint32 trk4[10][2] =
-{
-    { 300, 440 },
-    { 300, 440 },
-    { 300, 440 },
-    { 300, 440 },
-    { 300, 440 },
-    { 705, 910 },
-    { 705, 910 },
-    { 705, 910 },
-    { 705, 910 },
-    { 705, 910 }
-};
+sint32 trk4[10][2] = {{300, 440}, {300, 440}, {300, 440}, {300, 440}, {300, 440}, {705, 910}, {705, 910}, {705, 910}, {705, 910}, {705, 910}};
 
 CCOORD16 gVertex3d[160];
 
@@ -263,9 +241,9 @@ void DrawW::SubdividFacet(Draw::tGiveShelbyMoreCache *sd, sint32 l, Draw::SVerte
         {
             sd->GT4Prim.p[0].rgbc.code &= 0xF7;
             sint32 otz = (sd->otz + 8);
-            Draw::SVertex *edge0[4] = { v0, v1, v2, v3 };
-            Draw::SVertex *edge1[4] = { v1, v2, v3, v0 };
-            Draw::SVertex *midpoint[4] = { v4, v5, v6, v7 };
+            Draw::SVertex *edge0[4] = {v0, v1, v2, v3};
+            Draw::SVertex *edge1[4] = {v1, v2, v3, v0};
+            Draw::SVertex *midpoint[4] = {v4, v5, v6, v7};
             for (sint32 edge = 0; edge < 4; ++edge)
             {
                 if (edge0[edge]->a == 0 && edge1[edge]->a == 0 && midpoint[edge]->a == 0)
@@ -358,8 +336,8 @@ void DrawW::SetUpSubdividFacet(sint32 face, Draw::tGiveShelbyMoreCache *sd)
     memcpy(&v1->dvx, &t1, sizeof(t1));
     memcpy(&v2->dvx, &t2, sizeof(t2));
     memcpy(&v3->dvx, &t3, sizeof(t3));
-    Draw::SVertex *vertices[4] = { v0, v1, v2, v3 };
-    VECTOR *depths[4] = { &sd->tVn0, &sd->tVn1, &sd->tVn2, &sd->tVn3 };
+    Draw::SVertex *vertices[4] = {v0, v1, v2, v3};
+    VECTOR *depths[4] = {&sd->tVn0, &sd->tVn1, &sd->tVn2, &sd->tVn3};
     for (sint32 i = 0; i < 4; ++i)
     {
         if (depths[i]->vz < 320)
@@ -422,7 +400,8 @@ void Night::NightCalc(VECTOR *v, sint16 *idx, Draw::tGiveShelbyMoreCache *sd)
     sint32 znear = sd->night_ZNear;
     sint32 drawLightning = sd->night_DrawLightning;
     sint32 zfar = (znear + (1U << ((zShift + 6) & 31)));
-    if (drawLightning != 0) *idx = (*gWeatherLightingTable[sd->night_LightningType])[*idx];
+    if (drawLightning != 0)
+        *idx = (*gWeatherLightingTable[sd->night_LightningType])[*idx];
     if (z <= znear || z >= zfar)
         return;
     sint32 xShift = sd->night_XDistShift;
@@ -445,7 +424,7 @@ void DrawW::NightColorCalc(Draw::tGiveShelbyMoreCache *sd, POLY_GT4 *prim, CCOOR
 {
     FUNCTION_MARKER(0x800C609C, "NFS4.EXE");
     bool perVertex = sd->light == -1;
-    CCOORD16 *vertices[4] = { vt0, vt1, vt2, vt3 };
+    CCOORD16 *vertices[4] = {vt0, vt1, vt2, vt3};
     for (sint32 pass = 0; pass < 2; ++pass)
     {
         if (((uint8)sd->nightFlags & (1 << pass)) == 0)
@@ -521,10 +500,10 @@ void DrawW::DrawQuad(Draw::tGiveShelbyMoreCache *sd, Trk::Quad *inQuad)
     sint16 tx = sd->trans.x;
     sint16 ty = sd->trans.y;
     sint16 tz = sd->trans.z;
-    uint8 indices[4] = { inQuad->aPoints[1], inQuad->aPoints[0], inQuad->aPoints[3], inQuad->aPoints[2] };
+    uint8 indices[4] = {inQuad->aPoints[1], inQuad->aPoints[0], inQuad->aPoints[3], inQuad->aPoints[2]};
     CCOORD16 vt[4];
     uint32 dvxy[4];
-    VECTOR *vectors[4] = { &sd->tVn0, &sd->tVn1, &sd->tVn2, &sd->tVn3 };
+    VECTOR *vectors[4] = {&sd->tVn0, &sd->tVn1, &sd->tVn2, &sd->tVn3};
     for (sint32 i = 0; i < 4; ++i)
     {
         CCOORD16 vertex = geomVertices[indices[i]];
@@ -591,7 +570,7 @@ void DrawW::DrawQuad(Draw::tGiveShelbyMoreCache *sd, Trk::Quad *inQuad)
         return;
     if ((flag & 0x80) != 0)
     {
-        PSX_RECT r = { 0, 0, 0, 0 };
+        PSX_RECT r = {0, 0, 0, 0};
         Draw::PrimStruct *cprim = &gNativeRenderCache.world.head.cprim;
         DR_TWIN *aprim = reinterpret_cast<DR_TWIN *>(cprim->PrimPtr);
         uint32 *ot = cprim->LastPrim + sd->otz;
@@ -698,7 +677,7 @@ void DrawW::DrawQuad(Draw::tGiveShelbyMoreCache *sd, Trk::Quad *inQuad)
         sint32 dV = workPmx->v3 - workPmx->v0;
         if (dV < 0)
             dV = -dV;
-        PSX_RECT r = { 0, 0, (sint16)(dU + 1), (sint16)(dV + 1) };
+        PSX_RECT r = {0, 0, (sint16)(dU + 1), (sint16)(dV + 1)};
         Draw::PrimStruct *cprim = &gNativeRenderCache.world.head.cprim;
         DR_TWIN *aprim = reinterpret_cast<DR_TWIN *>(cprim->PrimPtr);
         uint32 *ot = cprim->LastPrim + sd->otz;
@@ -707,6 +686,14 @@ void DrawW::DrawQuad(Draw::tGiveShelbyMoreCache *sd, Trk::Quad *inQuad)
         setaddr(ot, aprim);
         SetTexWindow(aprim, &r);
     }
+}
+
+bool DrawW::ReadRenderOrderOffset(uint8 index, sint32 *offset)
+{
+    if (index >= 8)
+        return false;
+    *offset = (sint8)goffsets[index];
+    return true;
 }
 
 void DrawW::kCtrlWorld_High(Draw::tGiveShelbyMoreCache *sd)
@@ -953,21 +940,29 @@ void DrawW::SetAnimationTime(Trk::AnimateInst *animInst, sint32 *table, sint32 t
     FUNCTION_MARKER(0x800C76C8, "NFS4.EXE");
     sint32 objIndex = animInst->objectIndex - 1;
     sint32 *timer = &animation_timer[objIndex];
-    if (*timer < 3841) {
-        if (*timer > 0) {
+    if (*timer < 3841)
+    {
+        if (*timer > 0)
+        {
             *timer = ((*timer) + 1);
             return;
         }
         sint32 numCars = Cars::gNumHumanRaceCars;
-        for (sint32 i = 0; i < numCars; ++i) {
+        for (sint32 i = 0; i < numCars; ++i)
+        {
             sint32 slice = Cars::gHumanRaceCarList[i]->N.simRoadInfo.slice;
-            if (table[objIndex * 2] <= slice && slice <= table[objIndex * 2 + 1]) *timer = ((*timer) + 1);
+            if (table[objIndex * 2] <= slice && slice <= table[objIndex * 2 + 1])
+                *timer = ((*timer) + 1);
         }
-    } else {
+    }
+    else
+    {
         sint32 numCars = Cars::gNumHumanRaceCars;
-        for (sint32 i = 0; i < numCars; ++i) {
+        for (sint32 i = 0; i < numCars; ++i)
+        {
             sint32 slice = Cars::gHumanRaceCarList[i]->N.simRoadInfo.slice;
-            if (slice < table[objIndex * 2] || table[objIndex * 2 + 1] < slice) *timer = 0;
+            if (slice < table[objIndex * 2] || table[objIndex * 2 + 1] < slice)
+                *timer = 0;
         }
     }
 }
@@ -1003,6 +998,9 @@ void DrawW::DoObjectAnimations(void)
 sint32 DrawW::BuildObjectFacets(DRender::tView *Vi, ChunkObjectInfo *gObjInfo)
 {
     FUNCTION_MARKER(0x800C78A8, "NFS4.EXE");
+    bool preparingHalos = Flare::IsTrackPreparation();
+    if (Object::IsRenderPreparation() && !preparingHalos)
+        return 0;
     Group *group = gObjInfo->objInstanceBuf;
     Trk::SimpleInst *objInstance = reinterpret_cast<Trk::SimpleInst *>(group + 1);
     sint32 groupNumElements = group->m_num_elements;
@@ -1030,6 +1028,8 @@ sint32 DrawW::BuildObjectFacets(DRender::tView *Vi, ChunkObjectInfo *gObjInfo)
             objectOffset = (sint8)goffsets[objInstance->zoffset];
         if (objInstance->type == 1)
         {
+            if (preparingHalos)
+                continue;
             sint32 index = objInstance->pad;
             Trk::ObjectDef *objDef = Track::gObjDefs[index];
             coorddef *position = reinterpret_cast<coorddef *>(&objInstance->x);
@@ -1048,7 +1048,7 @@ sint32 DrawW::BuildObjectFacets(DRender::tView *Vi, ChunkObjectInfo *gObjInfo)
             if (zClipSq != -1 && xzsquaredist32(&cp, &Vi->cview.translation) >= zClipSq)
                 continue;
             Trk::ObjectDef *objDef = Track::gObjDefs[animInst->pad];
-            sint32 count = DrawObjectTransform(Vi, sd, &matrix, objDef, &cp, objectOffset, -1);
+            sint32 count = preparingHalos ? 0 : DrawObjectTransform(Vi, sd, &matrix, objDef, &cp, objectOffset, -1);
             totalCount = (totalCount + count);
             if ((animInst->flags & 2) != 0)
             {
@@ -1056,7 +1056,9 @@ sint32 DrawW::BuildObjectFacets(DRender::tView *Vi, ChunkObjectInfo *gObjInfo)
                 pt2.x = (uint32(cp.x) - (uint32(matrix.m[6]) << 4));
                 pt2.y = (uint32(cp.y) - (uint32(matrix.m[7]) << 4));
                 pt2.z = (uint32(cp.z) - (uint32(matrix.m[8]) << 4));
+                Flare::SetTrackOwner(animInst);
                 Flare::Halo2(Vi, -1, 30, &cp, &pt2, &gNativeRenderCache.flare);
+                Flare::SetTrackOwner(0);
             }
         }
     }
@@ -1066,7 +1068,7 @@ sint32 DrawW::BuildObjectFacets(DRender::tView *Vi, ChunkObjectInfo *gObjInfo)
 sint32 DrawW::BuildCustomObjectFacets(DRender::tView *Vi, Draw::DCache *sd, Trk::SimObject *simObjs, Group *group, sint32 zClipSq)
 {
     FUNCTION_MARKER(0x800C7B9C, "NFS4.EXE");
-    static char offsets[8] = { 125, 125, 50, 15, 255, 125, 0, 0 };
+    static char offsets[8] = {125, 125, 50, 15, 255, 125, 0, 0};
     Trk::SimpleInst *objInstance = reinterpret_cast<Trk::SimpleInst *>(group + 1);
     sint32 groupNumElements = group->m_num_elements;
     sint32 totalCount = 0;
@@ -1080,6 +1082,17 @@ sint32 DrawW::BuildCustomObjectFacets(DRender::tView *Vi, Draw::DCache *sd, Trk:
     {
         sint32 objectOffset = (sint8)offsets[objInstance->zoffset];
         uint8 type = objInstance->type;
+        if (Object::IsRenderPreparation())
+        {
+            if (type == 5)
+            {
+                Trk::CollideBoomInst *instance = reinterpret_cast<Trk::CollideBoomInst *>(objInstance);
+                ObjectAnim *animation = Object::GetAnim(simObjs + instance->simIndex);
+                if (animation != 0)
+                    Object::DrawAnimation(animation, Vi, sd, objectOffset);
+            }
+            continue;
+        }
         if (type != 5 && type != 2)
             continue;
         Trk::ObjectDef *objDef = Track::gObjDefs[objInstance->pad];
@@ -1087,7 +1100,7 @@ sint32 DrawW::BuildCustomObjectFacets(DRender::tView *Vi, Draw::DCache *sd, Trk:
         if (type != 2 && Object::GetAnim(simObjs + objCollideBoomInstance->simIndex) != 0)
         {
             ObjectAnim *anim = Object::GetAnim(simObjs + objCollideBoomInstance->simIndex);
-            anim->Draw(Vi, sd, objectOffset);
+            Object::DrawAnimation(anim, Vi, sd, objectOffset);
             continue;
         }
         coorddef *position = reinterpret_cast<coorddef *>(&objInstance->x);
@@ -1102,7 +1115,7 @@ sint32 DrawW::BuildCustomObjectFacets(DRender::tView *Vi, Draw::DCache *sd, Trk:
         sint32 sx = objCollideBoomInstance->sx * 256;
         sint32 sy = objCollideBoomInstance->sy * 256;
         sint32 sz = objCollideBoomInstance->sz * 256;
-        sint32 scale[3] = { sx, sy, sz };
+        sint32 scale[3] = {sx, sy, sz};
         for (sint32 column = 0; column < 3; ++column)
         {
             sint32 t1 = fixedmult(matrix.m[column], scale[column]);
@@ -1121,6 +1134,11 @@ sint32 DrawW::BuildCustomObjectFacets(DRender::tView *Vi, Draw::DCache *sd, Trk:
 sint32 DrawObjectTransform(DRender::tView *Vi, Draw::DCache *sd, matrixtdef *matrix, Trk::ObjectDef *objDef, coorddef *pCp, sint32 offset, sint16 light)
 {
     FUNCTION_MARKER(0x800C7EBC, "NFS4.EXE");
+    if (Object::IsRenderPreparation())
+    {
+        Object::CaptureRenderPart(matrix, objDef, pCp, light);
+        return objDef->quadCount;
+    }
     Draw::tGiveShelbyMoreCache *world = reinterpret_cast<Draw::tGiveShelbyMoreCache *>(sd);
     world->vertices = reinterpret_cast<CCOORD16 *>(objDef + 1);
     world->quadCount = objDef->quadCount;
@@ -1190,6 +1208,8 @@ sint32 DrawObjectTransform(DRender::tView *Vi, Draw::DCache *sd, matrixtdef *mat
 sint32 DrawObjectSimple(DRender::tView *Vi, Draw::DCache *sd, Trk::ObjectDef *objDef, coorddef *pCp, sint32 offset)
 {
     FUNCTION_MARKER(0x800C8214, "NFS4.EXE");
+    if (Object::IsRenderPreparation())
+        return objDef->quadCount;
     Draw::tGiveShelbyMoreCache *world = reinterpret_cast<Draw::tGiveShelbyMoreCache *>(sd);
     Track::tMaterial *materials = Track::materials;
     world->vertices = reinterpret_cast<CCOORD16 *>(objDef + 1);
@@ -1265,6 +1285,17 @@ sint32 DrawW::BuildChunkObjectFacets(DRender::tView *Vi, ChunkObjectInfo *gObjIn
         sint32 objectOffset = (sint8)goffsets[objInstance->zoffset];
         if ((type & 0x80) != 0)
             continue;
+        if (Object::IsRenderPreparation())
+        {
+            if (type == 5 && (objInstance->flags & 1) == 0)
+            {
+                Trk::CollideBoomInst *instance = reinterpret_cast<Trk::CollideBoomInst *>(objInstance);
+                ObjectAnim *animation = Object::GetAnim(simObjs + instance->simIndex);
+                if (animation != 0)
+                    Object::DrawAnimation(animation, Vi, sd, objectOffset);
+            }
+            continue;
+        }
         coorddef *position = reinterpret_cast<coorddef *>(&objInstance->x);
         if (type != 5 && doFrustumClip != 0 && ObjectClipped(Vi, objInstance->pad, position, world) && objInstance->type != 2)
             continue;
@@ -1295,7 +1326,7 @@ sint32 DrawW::BuildChunkObjectFacets(DRender::tView *Vi, ChunkObjectInfo *gObjIn
                 if (Object::GetAnim(simObjs + instance->simIndex) != 0)
                 {
                     ObjectAnim *anim = Object::GetAnim(simObjs + instance->simIndex);
-                    anim->Draw(Vi, sd, objectOffset);
+                    Object::DrawAnimation(anim, Vi, sd, objectOffset);
                     continue;
                 }
             }
@@ -1303,7 +1334,7 @@ sint32 DrawW::BuildChunkObjectFacets(DRender::tView *Vi, ChunkObjectInfo *gObjIn
             sint32 sx = instance->sx * 256;
             sint32 sy = instance->sy * 256;
             sint32 sz = instance->sz * 256;
-            sint32 scale[3] = { sx, sy, sz };
+            sint32 scale[3] = {sx, sy, sz};
             for (sint32 column = 0; column < 3; ++column)
             {
                 sint32 t1 = fixedmult(matrix.m[column], scale[column]);
@@ -1335,7 +1366,7 @@ sint32 DrawW::BuildChunkObjectFacets(DRender::tView *Vi, ChunkObjectInfo *gObjIn
             sint16 sx, sy;
             memcpy(&sx, reinterpret_cast<uint8 *>(objInstance) + 24, sizeof(sx));
             memcpy(&sy, reinterpret_cast<uint8 *>(objInstance) + 22, sizeof(sy));
-            sint32 scale[3] = { sx * 256, sy * 256, sx * 256 };
+            sint32 scale[3] = {sx * 256, sy * 256, sx * 256};
             for (sint32 column = 0; column < 3; ++column)
             {
                 sint32 t1 = fixedmult(matrix.m[column], scale[column]);
@@ -1395,8 +1426,7 @@ void DrawW::DoObjects(DRender::tView *Vi, tBuildEntry *buildList)
             continue;
         Chunk *chunkDat = Track::chunkList + buildList->chunkInd;
         Group *simGroup = chunkDat->simObjBuf;
-        Trk::SimObject *simObjs = simGroup != 0 ? reinterpret_cast<Trk::SimObject *>(simGroup + 1) :
-            reinterpret_cast<Trk::SimObject *>(sizeof(Group));
+        Trk::SimObject *simObjs = simGroup != 0 ? reinterpret_cast<Trk::SimObject *>(simGroup + 1) : reinterpret_cast<Trk::SimObject *>(sizeof(Group));
         if (chunkDat->objInstanceBuf != 0)
         {
             world->doublelayer = 1;
@@ -1454,8 +1484,7 @@ void DrawW::DoObjects(DRender::tView *Vi, tBuildEntry *buildList)
     if (Object::customObjInst != 0 && Object::customObjInst->m_num_elements > 0)
     {
         Group *simGroup = Object::customSimObjs;
-        Trk::SimObject *simObjs = simGroup != 0 ? reinterpret_cast<Trk::SimObject *>(simGroup + 1) :
-            reinterpret_cast<Trk::SimObject *>(sizeof(Group));
+        Trk::SimObject *simObjs = simGroup != 0 ? reinterpret_cast<Trk::SimObject *>(simGroup + 1) : reinterpret_cast<Trk::SimObject *>(sizeof(Group));
         BuildCustomObjectFacets(Vi, &gNativeRenderCache.horizonDraw, simObjs, Object::customObjInst, gCurrContext->polyFarZClipSq);
     }
 }
@@ -1610,7 +1639,7 @@ void DrawW::SetUpSubdividFacet_Line(Draw::tGiveShelbyMoreCache *sd)
     memcpy(&v3->r, &b, sizeof(b));
     memcpy(&v0->r, &b, sizeof(b));
     gte_stsxy3(&v1->dvx, &v2->dvx, &v3->dvx);
-    Draw::SVertex *vertices[4] = { v0, v1, v2, v3 };
+    Draw::SVertex *vertices[4] = {v0, v1, v2, v3};
     uint16 u0 = prim->p[0].uv.uv;
     uint16 u1 = prim->p[1].uv.uv;
     uint16 u2 = prim->p[3].uv.uv;
@@ -1869,6 +1898,35 @@ void DrawW::DoLines(DRender::tView *Vi, tBuildEntry *buildList, Draw::DCache *sd
         trans.z = (sint16)((pChunkCp->z - (uint32)Vi->cview.translation.z) >> 10);
         BuildChunkCenterLineFacets(chunkDat, group, world, &trans);
     }
+}
+
+void DrawW::CaptureRoadSource(HdRoadSource *source)
+{
+    memset(source, 0, sizeof(*source));
+    for (sint32 type = 0; type < 10; ++type)
+        if (gDLPixmap[type] != 0)
+        {
+            source->lines[type] = *gDLPixmap[type];
+            source->lineValid[type] = true;
+        }
+    sint32 index = gInitialArt.shapeCount - 1;
+    if (gInitialArt.pPmx != 0 && index >= 0 && index < Track::GetArtCapacity())
+    {
+        source->spike = gInitialArt.pPmx[index];
+        source->spikeValid = true;
+    }
+    if (BWorld::GetSpikeBelt(&source->slice, &source->x, &source->width) == 0 || source->slice < 0 || source->slice >= gNumSlices || BWorldSm::slices == 0 || Chunk::lightTable == 0)
+        return;
+    const Trk::NewSlice *slice = BWorldSm::slices + source->slice;
+    memcpy(&source->center, slice->center, sizeof(source->center));
+    for (sint32 axis = 0; axis < 3; ++axis)
+    {
+        source->right[axis] = (sint8)slice->right[axis];
+        source->forward[axis] = (sint8)slice->forward[axis];
+    }
+    source->color = Chunk::lightTable[0];
+    source->chunk = slice->chunkIndex;
+    source->spikeActive = source->spikeValid;
 }
 
 void DrawW::BuildSpikeBelt(DRender::tView *Vi, sint32 scale, Draw::DCache *sd)

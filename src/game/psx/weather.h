@@ -8,6 +8,8 @@
 #include "game/common/renderview.h"
 #include "game/psx/trackspec.h"
 
+struct HdWeatherSource;
+
 class Weather
 {
 public:
@@ -34,19 +36,20 @@ public:
     static sint32 gIntensityTbl[4];
     static sint32 gTrackIntensityLimitTbl[16];
     static char gRandomVelocityVectors[12][3];
-    static char * gWasDrawn;
+    static char *gWasDrawn;
     static tSys gSys;
-    static CWeatherSpec * gTrackSpec;
-    static tSplatInfo * gSplatInfoServer[2];
-    static tSplatInfo * gSplatInfo;
-    static char * gDrawnServer[2];
-    static SVECTOR * gPos;
-    static DVECTOR * gPrevPos;
+    static CWeatherSpec *gTrackSpec;
+    static tSplatInfo *gSplatInfoServer[2];
+    static tSplatInfo *gSplatInfo;
+    static char *gDrawnServer[2];
+    static SVECTOR *gPos;
+    static DVECTOR *gPrevPos;
     static tState gType;
-    static SVECTOR * gPServer[2];
-    static DVECTOR * gPrevPServer[2];
+    static SVECTOR *gPServer[2];
+    static DVECTOR *gPrevPServer[2];
     static sint32 gLastProcessTime[2];
 
+    static void CaptureRenderSource(sint32 player, HdWeatherSource *source);
     static sint32 GetNumParticles(sint32 player);
     static void SetMatrix(matrixtdef *m);
     static void SetIdentMatrix(void);
@@ -70,6 +73,9 @@ public:
     static void CreateRain(SVECTOR *pt0, DVECTOR *pt1, char *wd);
     static void CreateSplat(tSplatInfo *splat);
     static void DoSplats(sint32 num, tSplatInfo *splats);
+    static void UpdateSplats(sint32 player, sint32 num, tSplatInfo *splats);
+    static void UpdateState(DRender::tView *Vi);
+    static void PrepareRender(DRender::tView *view);
     static void DoWeather(DRender::tView *Vi);
     static void BuildWeather(DRender::tView *Vi);
 };

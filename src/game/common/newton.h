@@ -32,6 +32,7 @@ public:
     static void QDUpdateRot64Hz(BO::tNewtonObj *newtonObj);
     static void QDUpdateRot32Hz(BO::tNewtonObj *newtonObj);
     static void CalculateGroundShadowMatrix(BO::tNewtonObj *newtonObj, coorddef *normal, sint32 orientToGround);
+    static void CalculateRenderShadow(Car::tObj *carObj, sint32 currentTick, coorddef *output);
     static void CalcRealShadowCoordinates(Car::tObj *carObj, sint32 currentTick);
     static void CheckForSpikeBelts(BO::tNewtonObj *newtonObj);
     static void DoPostBarrierCollisionHandling(BO::tNewtonObj *newtonObj, coorddef normal);

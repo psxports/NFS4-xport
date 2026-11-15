@@ -7,6 +7,7 @@
 #include "game/common/aihigh.h"
 #include "game/common/anim.h"
 #include "game/common/bo.h"
+#include "game/common/bworld.h"
 #include "game/common/bworldsm.h"
 #include "game/common/car.h"
 #include "game/common/carobj.h"
@@ -34,24 +35,26 @@ struct AnimDef
     sint32 animIndex;
 };
 
+struct PreparedObjectAnimation
+{
+    Object::RenderPart parts[20];
+    uint32 count;
+    ObjectAnim *owner;
+    sint32 tick;
+    sint32 result;
+    bool valid;
+    bool advanced;
+};
+
+static bool preparingObjectRender;
+static bool readOnlyObjectRender;
+static sint32 preparedObjectSlot = -1;
+static PreparedObjectAnimation preparedObjects[450];
+
 sint32 gNumIMassObjects;
 
-AnimDef gAnimDefs[14] =
-{
-    {0, 1, -1, 2, 0},
-    {1, 10, 0, 0, 1},
-    {1, 20, 0, 0, 1},
-    {1, 6, 0, 0, 1},
-    {1, 2, 0, 0, 1},
-    {1, 1, 0, 0, 1},
-    {1, 10, 0, 0, 1},
-    {1, 14, 0, 0, 1},
-    {1, 5, 0, 0, 1},
-    {1, 5, 0, 0, 1},
-    {1, 1, 0, 0, 1},
-    {1, 8, 0, 0, 1},
-    {0, 1, -1, 2, 0},
-    {0, 1, -1, 2, 0},
+AnimDef gAnimDefs[14] = {
+    {0, 1, -1, 2, 0}, {1, 10, 0, 0, 1}, {1, 20, 0, 0, 1}, {1, 6, 0, 0, 1}, {1, 2, 0, 0, 1}, {1, 1, 0, 0, 1}, {1, 10, 0, 0, 1}, {1, 14, 0, 0, 1}, {1, 5, 0, 0, 1}, {1, 5, 0, 0, 1}, {1, 1, 0, 0, 1}, {1, 8, 0, 0, 1}, {0, 1, -1, 2, 0}, {0, 1, -1, 2, 0},
 };
 
 ObjectAnim *gSimObjAnims[450];
@@ -60,6 +63,129 @@ Group *Object::customObjInst;
 Group *Object::customSimObjs;
 Group *Object::customSFXInst;
 Object::tIMassObjInfo *Object::IMassObjInst;
+
+void Object::BeginRenderPreparation(bool readOnly)
+{
+    readOnlyObjectRender = readOnly;
+    preparingObjectRender = true;
+    preparedObjectSlot = -1;
+}
+
+void Object::EndRenderPreparation(void)
+{
+    readOnlyObjectRender = false;
+    preparingObjectRender = false;
+    preparedObjectSlot = -1;
+}
+
+void Object::PrepareRemaining(DRender::tView *view, Draw::DCache *cache)
+{
+    BeginRenderPreparation(true);
+    for (sint32 slot = 0; slot < 450; ++slot)
+        if (gSimObjAnims[slot] != 0)
+            DrawAnimation(gSimObjAnims[slot], view, cache, 125);
+    EndRenderPreparation();
+}
+
+sint32 Object::AnimationPose(AnimScript *script, sint32 index, coorddef *position, matrixtdef *matrix)
+{
+    return readOnlyObjectRender ? script->GetRenderPosRot(index, position, matrix) : script->GetTimedAnimPosRot(index, position, matrix);
+}
+
+bool Object::IsRenderPreparation(void)
+{
+    return preparingObjectRender;
+}
+
+bool Object::HasAnimations(void)
+{
+    for (sint32 slot = 0; slot < 450; ++slot)
+        if (gSimObjAnims[slot] != 0)
+            return true;
+    return false;
+}
+
+void Object::ResetPrepared(void)
+{
+    for (sint32 i = 0; i < 450; ++i)
+    {
+        PreparedObjectAnimation empty = {0};
+        preparedObjects[i] = empty;
+    }
+    preparingObjectRender = false;
+    preparedObjectSlot = -1;
+}
+
+void Object::CaptureRenderPart(matrixtdef *matrix, Trk::ObjectDef *definition, coorddef *position, sint16 light, bool groundedSign)
+{
+    if (!preparingObjectRender || preparedObjectSlot < 0)
+        return;
+    PreparedObjectAnimation *prepared = preparedObjects + preparedObjectSlot;
+    if (prepared->count >= sizeof(prepared->parts) / sizeof(prepared->parts[0]))
+    {
+        xport_message_error("NFS4", "Object animation exceeds the original 20-part limit");
+        exit(EXIT_FAILURE);
+    }
+    RenderPart *part = prepared->parts + prepared->count++;
+    part->matrix = *matrix;
+    part->position = *position;
+    part->definition = definition;
+    part->light = light;
+    part->groundedSign = groundedSign;
+}
+
+sint32 Object::DrawAnimation(ObjectAnim *animation, DRender::tView *view, Draw::DCache *cache, sint32 offset)
+{
+    if (!preparingObjectRender)
+        return animation->Draw(view, cache, offset);
+    for (sint32 slot = 0; slot < 450; ++slot)
+        if (gSimObjAnims[slot] == animation)
+        {
+            PreparedObjectAnimation *prepared = preparedObjects + slot;
+            if (!prepared->valid || prepared->owner != animation || prepared->tick != simGlobal.gameTicks || (!readOnlyObjectRender && !prepared->advanced))
+            {
+                prepared->count = 0;
+                preparedObjectSlot = slot;
+                prepared->result = animation->Draw(view, cache, offset);
+                preparedObjectSlot = -1;
+                prepared->owner = gSimObjAnims[slot];
+                prepared->tick = simGlobal.gameTicks;
+                prepared->valid = true;
+                prepared->advanced = !readOnlyObjectRender;
+            }
+            return prepared->result;
+        }
+    return 0;
+}
+
+sint32 Object::GetPreparedParts(ObjectAnim *animation, const RenderPart **parts)
+{
+    *parts = 0;
+    for (sint32 slot = 0; slot < 450; ++slot)
+        if (gSimObjAnims[slot] == animation && preparedObjects[slot].valid && preparedObjects[slot].owner == animation)
+        {
+            *parts = preparedObjects[slot].parts;
+            return preparedObjects[slot].count;
+        }
+    return -1;
+}
+
+sint32 Object::DrawPrepared(ObjectAnim *animation, DRender::tView *view, Draw::DCache *cache, sint32 offset)
+{
+    const RenderPart *parts;
+    sint32 count = GetPreparedParts(animation, &parts);
+    if (count < 0)
+        return 0;
+    for (sint32 i = 0; i < count; ++i)
+    {
+        RenderPart part = parts[i];
+        DrawObjectTransform(view, cache, &part.matrix, part.definition, &part.position, offset, part.light);
+    }
+    for (sint32 slot = 0; slot < 450; ++slot)
+        if (gSimObjAnims[slot] == animation)
+            return preparedObjects[slot].result;
+    return 0;
+}
 
 void *ObjectAnim::operator new(size_t size) throw()
 {
@@ -85,8 +211,8 @@ void CalcObjExtentPoints(coorddef *cp, CCOORD16 *pts, coorddef *resultPts, tQuat
     sint32 cpx = cp->x;
     sint32 cpz = cp->z;
 
-    coorddef pt0 = { pts[0].x * 1024, 0, pts[0].z * 1024 };
-    coorddef pt1 = { pts[1].x * 1024, 0, pts[1].z * 1024 };
+    coorddef pt0 = {pts[0].x * 1024, 0, pts[0].z * 1024};
+    coorddef pt1 = {pts[1].x * 1024, 0, pts[1].z * 1024};
     resultPts[0].x = cpx;
     resultPts[0].z = cpz;
     matrixtdef matrix;
@@ -118,7 +244,8 @@ Trk::SimpleInst *FindObjInstanceFromSerialNum(Group *group, sint32 index)
     FUNCTION_MARKER(0x800A4C8C, "NFS4.EXE");
     if ((uint32)index - 126 < 2)
         return 0;
-    if ((index & 0x80) != 0) {
+    if ((index & 0x80) != 0)
+    {
         group = Object::customObjInst;
         index &= ~0x80;
     }
@@ -126,7 +253,8 @@ Trk::SimpleInst *FindObjInstanceFromSerialNum(Group *group, sint32 index)
         return 0;
     Trk::SimpleInst *objInstance = reinterpret_cast<Trk::SimpleInst *>(group + 1);
     index = (index - 1);
-    while (index != -1) {
+    while (index != -1)
+    {
         sint32 size = objInstance->size;
         index = (index - 1);
         objInstance = reinterpret_cast<Trk::SimpleInst *>(reinterpret_cast<char *>(objInstance) + size);
@@ -140,7 +268,8 @@ Trk::SimObject *GetSimObj(sint32 objIndex, Object::tSimObjList *objList, sint32 
     sint32 first = objList->numObjects;
     sint32 second = objList->numObjects2;
     sint32 total = (first + second);
-    if (objIndex >= total) {
+    if (objIndex >= total)
+    {
         sint32 index = ((objIndex - first) - second);
         Group *group = Object::customSimObjs;
         *chunk = -1;
@@ -149,14 +278,16 @@ Trk::SimObject *GetSimObj(sint32 objIndex, Object::tSimObjList *objList, sint32 
     *chunk = objList->chunk;
     first = objList->numObjects;
     sint32 index = objIndex;
-    if (index >= first) {
+    if (index >= first)
+    {
         sint32 nextChunk = objList->chunk2;
         index = (index - first);
         *chunk = nextChunk;
     }
     Group *group = Track::chunkList[*chunk].simObjBuf;
     Trk::SimObject *simObj = 0;
-    if (group) {
+    if (group)
+    {
         simObj = reinterpret_cast<Trk::SimObject *>(group + 1) + index;
         if (simObj->type == 0x10)
             simObj = 0;
@@ -169,7 +300,8 @@ void SetCautionSurface(coorddef *pt, BWorldSm::Pos *slicePos)
     FUNCTION_MARKER(0x800A573C, "NFS4.EXE");
     BWorldSm::FindClosestQuadRez(pt, slicePos, 1);
     Trk::NewSimQuad *simQuad = slicePos->simQuad;
-    if (simQuad && (simQuad->surface & 0x40) == 0) {
+    if (simQuad && (simQuad->surface & 0x40) == 0)
+    {
         Track::gSaveSurface->Save(simQuad);
         simQuad = slicePos->simQuad;
         simQuad->surface |= 0x40;
@@ -180,11 +312,12 @@ void GetObjMaxDimensions(Trk::ObjectDef **pObjDefs, Trk::SimpleInst *objInstance
 {
     FUNCTION_MARKER(0x800A5D58, "NFS4.EXE");
     Trk::ObjectDef *objDef = pObjDefs[objInstance->pad];
-    CCOORD16 minDim = { 0 };
-    CCOORD16 maxDim = { 0 };
+    CCOORD16 minDim = {0};
+    CCOORD16 maxDim = {0};
     sint32 vertCount = objDef->vertexCount;
     CCOORD16 *pts = reinterpret_cast<CCOORD16 *>(objDef + 1);
-    for (sint32 i = 0; i < vertCount; ++i, ++pts) {
+    for (sint32 i = 0; i < vertCount; ++i, ++pts)
+    {
         if (maxDim.x < pts->x)
             maxDim.x = pts->x;
         else if (pts->x < minDim.x)
@@ -219,7 +352,8 @@ void Object::InitCollisionCheckLoop(BWorldSm::Pos *slicePos, Object::tSimObjList
     group = 0;
     if (altChunk != slicePos->chunk)
         group = Track::chunkList[altChunk].simObjBuf;
-    if (!group) {
+    if (!group)
+    {
         slice = slicePos->slice;
         sint32 previous = slice - 1;
         if (previous < 0)
@@ -229,18 +363,22 @@ void Object::InitCollisionCheckLoop(BWorldSm::Pos *slicePos, Object::tSimObjList
             group = Track::chunkList[altChunk].simObjBuf;
     }
     sint32 total;
-    if (group) {
+    if (group)
+    {
         objList->numObjects2 = group->m_num_elements;
         sint32 first = objList->numObjects;
         sint32 second = objList->numObjects2;
         objList->chunk2 = altChunk;
         total = (first + second);
-    } else {
+    }
+    else
+    {
         total = objList->numObjects;
     }
     *numObj = total;
     group = customSimObjs;
-    if (group && group->m_num_elements > 0 && Math::DistXZ(reinterpret_cast<coorddef *>(BWorldSm::slices + customSliceNum), reinterpret_cast<coorddef *>(BWorldSm::slices + slicePos->slice)) < 0xC00000) {
+    if (group && group->m_num_elements > 0 && Math::DistXZ(reinterpret_cast<coorddef *>(BWorldSm::slices + customSliceNum), reinterpret_cast<coorddef *>(BWorldSm::slices + slicePos->slice)) < 0xC00000)
+    {
         sint32 customCount = customSimObjs->m_num_elements;
         *numObj = (((*numObj)) + customCount);
     }
@@ -251,9 +389,11 @@ sint32 Object::GetRadiusCollisionData(Object::tSimObjList *objList, sint32 objIn
     FUNCTION_MARKER(0x800A4FE8, "NFS4.EXE");
     sint32 chunk;
     Trk::SimObject *simObj = GetSimObj(objIndex, objList, &chunk);
-    if (simObj) {
-        if ((simObj->type & 0x80) != 0 && !gSimObjAnims[simObj->serialNum]) {
-            Trk::SimpleInst *objInstance = FindObjInstanceFromSerialNum( Track::chunkList[chunk].objInstanceBuf, simObj->instIndex);
+    if (simObj)
+    {
+        if ((simObj->type & 0x80) != 0 && !gSimObjAnims[simObj->serialNum])
+        {
+            Trk::SimpleInst *objInstance = FindObjInstanceFromSerialNum(Track::chunkList[chunk].objInstanceBuf, simObj->instIndex);
             sint32 dummy;
             Anim::GetPos(reinterpret_cast<Trk::AnimateInst *>(objInstance), 1, simGlobal.gameTicks, reinterpret_cast<coorddef *>(simObj->point), &dummy, &dummy);
         }
@@ -263,7 +403,9 @@ sint32 Object::GetRadiusCollisionData(Object::tSimObjList *objList, sint32 objIn
         value.z = simObj->point[2];
         *pos = value;
         *radius = ((uint32)(sint32)simObj->radius << 7);
-    } else {
+    }
+    else
+    {
         *radius = 0;
     }
     return 0;
@@ -274,13 +416,15 @@ void Object::GetPointsCollisionData(Object::tSimObjList *objList, sint32 objInde
     FUNCTION_MARKER(0x800A50F4, "NFS4.EXE");
     sint32 chunk;
     Trk::SimObject *simObj = GetSimObj(objIndex, objList, &chunk);
-    if (!simObj) {
+    if (!simObj)
+    {
         *numPoints = 0;
         return;
     }
     Group *group = chunk == -1 ? 0 : Track::chunkList[chunk].objInstanceBuf;
     Trk::SimpleInst *objInstance = FindObjInstanceFromSerialNum(group, simObj->instIndex);
-    if (!objInstance) {
+    if (!objInstance)
+    {
         *numPoints = 1;
         coorddef value;
         value.x = simObj->point[0];
@@ -290,10 +434,13 @@ void Object::GetPointsCollisionData(Object::tSimObjList *objList, sint32 objInde
         return;
     }
     Trk::ObjectDef *objDef = Track::gObjDefs[objInstance->pad];
-    if (objInstance->type == 5 && reinterpret_cast<Trk::CollideBoomInst *>(objInstance)->boomIndex == 0) {
+    if (objInstance->type == 5 && reinterpret_cast<Trk::CollideBoomInst *>(objInstance)->boomIndex == 0)
+    {
         CalcObjExtentPoints(reinterpret_cast<coorddef *>(simObj->point), reinterpret_cast<CCOORD16 *>(objDef + 1), resultPoints, reinterpret_cast<tQuat *>(objInstance + 1));
         *numPoints = 3;
-    } else {
+    }
+    else
+    {
         coorddef value;
         value.x = simObj->point[0];
         value.y = simObj->point[1];
@@ -306,6 +453,7 @@ void Object::GetPointsCollisionData(Object::tSimObjList *objList, sint32 objInde
 void Object::InitStatus(void)
 {
     FUNCTION_MARKER(0x800A5230, "NFS4.EXE");
+    ResetPrepared();
     for (sint32 i = 449; i >= 0; --i)
         gSimObjAnims[i] = 0;
 }
@@ -313,14 +461,16 @@ void Object::InitStatus(void)
 void Object::KillStatus(void)
 {
     FUNCTION_MARKER(0x800A5258, "NFS4.EXE");
-    for (sint32 i = 0; i < 450; ++i) {
+    ResetPrepared();
+    for (sint32 i = 0; i < 450; ++i)
+    {
         ObjectAnim *object = gSimObjAnims[i];
         if (object)
             delete object;
     }
 }
 
-ObjectAnim * Object::GetAnim(Trk::SimObject *simObj)
+ObjectAnim *Object::GetAnim(Trk::SimObject *simObj)
 {
     FUNCTION_MARKER(0x800A52C4, "NFS4.EXE");
     if (simObj)
@@ -363,21 +513,27 @@ sint32 Object::CheckCollisionResults(Object::tSimObjList *objList, sint32 objInd
         objDef = reinterpret_cast<Trk::ObjectDef *>(gPersistObjDef + 1);
     else
         objDef = Track::gObjDefs[objInstance->pad];
-    if (animDef->type == 1) {
+    if (animDef->type == 1)
+    {
         void *storage = reservememadr(0, sizeof(ObjectFinishedMultiAnim), 0);
         ObjectFinishedMultiAnim *finishedAnim = ::new (storage) ObjectFinishedMultiAnim;
         storage = reservememadr(0, sizeof(ObjectMultiAnim), 0);
         objStatus = ::new (storage) ObjectMultiAnim(&N->linearVel, animDef, reinterpret_cast<Trk::CollideBoomInst *>(objInstance), objDef, simObj, finishedAnim);
-    } else if (animDef->type == 0) {
+    }
+    else if (animDef->type == 0)
+    {
         void *storage = reservememadr(0, sizeof(ObjectFinishedSignAnim), 0);
         ObjectFinishedSignAnim *finishedAnim = ::new (storage) ObjectFinishedSignAnim;
         storage = reservememadr(0, sizeof(ObjectSignAnim), 0);
         sint32 impactAngle = fixedatan(N->linearVel.x >> 8, N->linearVel.z >> 8) >> 8;
         objStatus = ::new (storage) ObjectSignAnim(&N->linearVel, impactAngle, animDef, reinterpret_cast<Trk::CollideBoomInst *>(objInstance), objDef, simObj, reinterpret_cast<coorddef *>(&N->roadMatrix.m[3]), finishedAnim);
-    } else {
+    }
+    else
+    {
         return -1;
     }
     gSimObjAnims[simObj->serialNum] = objStatus;
+    preparedObjects[simObj->serialNum].valid = false;
     return -1;
 }
 
@@ -437,7 +593,8 @@ void Object::ClearCustomObjects(void)
 sint32 Object::AddCustomSimObject(SceneElem *objectData, sint32 serialNum, sint32 instIndex)
 {
     FUNCTION_MARKER(0x800A57B0, "NFS4.EXE");
-    if (objectData->type == 0) {
+    if (objectData->type == 0)
+    {
         Group *group = customSimObjs;
         Trk::SimObject *simObj = reinterpret_cast<Trk::SimObject *>(group + 1) + group->m_num_elements;
         simObj->point[0] = objectData->cp.x;
@@ -482,7 +639,8 @@ sint32 Object::FindDefWithThisID(sint32 ID)
     FUNCTION_MARKER(0x800A59AC, "NFS4.EXE");
     Group *definitions = gPersistObjDef;
     Trk::ObjectDef **entry = Track::gObjDefs;
-    for (sint32 i = 0; i < definitions->m_num_elements; ++i, ++entry) {
+    for (sint32 i = 0; i < definitions->m_num_elements; ++i, ++entry)
+    {
         if (ID == (*entry)->id)
             return i;
     }
@@ -492,15 +650,18 @@ sint32 Object::FindDefWithThisID(sint32 ID)
 void Object::AddCustomObject(SceneElem *objectData, sint32 setupSimDataFlag)
 {
     FUNCTION_MARKER(0x800A5A04, "NFS4.EXE");
-    if (objectData->type == 0) {
+    if (objectData->type == 0)
+    {
         Group *group = customObjInst;
         sint32 index = (group->m_num_elements - 1);
         Trk::CollideBoomInst *objBoomInstance = reinterpret_cast<Trk::CollideBoomInst *>(group + 1);
-        if (index != -1) {
+        if (index != -1)
+        {
             sint32 stride = objBoomInstance->size;
-            do {
+            do
+            {
                 index = (index - 1);
-                objBoomInstance = reinterpret_cast<Trk::CollideBoomInst *>( reinterpret_cast<char *>(objBoomInstance) + stride);
+                objBoomInstance = reinterpret_cast<Trk::CollideBoomInst *>(reinterpret_cast<char *>(objBoomInstance) + stride);
             } while (index != -1);
         }
         objBoomInstance->size = 36;
@@ -517,15 +678,19 @@ void Object::AddCustomObject(SceneElem *objectData, sint32 setupSimDataFlag)
         if (objBoomInstance->pad >= definitions->m_num_elements)
             objBoomInstance->pad = 0;
 
-        if (GetObjDefID(objBoomInstance->pad) != objectData->scalar1 && objectData->committed && objectData->visible) {
+        if (GetObjDefID(objBoomInstance->pad) != objectData->scalar1 && objectData->committed && objectData->visible)
+        {
             FindDefWithThisID(objectData->scalar1);
             sint32 newInd = FindDefWithThisID(objectData->scalar1);
-            if (newInd != -1) {
+            if (newInd != -1)
+            {
                 objBoomInstance->pad = (sint16)newInd;
                 sint32 requestedID = objectData->scalar1;
                 objectData->subTypeIndex = newInd;
                 FindDefWithThisID(requestedID);
-            } else {
+            }
+            else
+            {
                 objectData->scalar1 = GetObjDefID(objBoomInstance->pad);
             }
         }
@@ -539,18 +704,23 @@ void Object::AddCustomObject(SceneElem *objectData, sint32 setupSimDataFlag)
         objBoomInstance->sy = 256;
         objBoomInstance->sz = 256;
         objBoomInstance->qz = qz;
-        if (setupSimDataFlag) {
+        if (setupSimDataFlag)
+        {
             sint32 count = customObjInst->m_num_elements;
             sint32 simIndex = AddCustomSimObject(objectData, count, count);
             objBoomInstance->simIndex = (uint8)simIndex;
             objBoomInstance->boomIndex = (uint8)objectData->scalar1;
-        } else {
+        }
+        else
+        {
             objBoomInstance->simIndex = 0;
             objBoomInstance->boomIndex = 0;
         }
         group = customObjInst;
         group->m_num_elements = (group->m_num_elements + 1);
-    } else if (objectData->type == 2) {
+    }
+    else if (objectData->type == 2)
+    {
         Group *group = customSFXInst;
         sint32 count = group->m_num_elements;
         Trk::SFX *sfxInstance = reinterpret_cast<Trk::SFX *>(group + 1) + count;
@@ -561,16 +731,21 @@ void Object::AddCustomObject(SceneElem *objectData, sint32 setupSimDataFlag)
         sfxInstance->pad = 0;
         sfxInstance->type = type;
         group->m_num_elements = (group->m_num_elements + 1);
-    } else if (objectData->type == 1 && objectData->subType == 0) {
+    }
+    else if (objectData->type == 1 && objectData->subType == 0)
+    {
         sint32 count = Cars::gNumTrafficCars;
-        if (count > 0) {
+        if (count > 0)
+        {
             sint32 i;
-            for (i = 0; i < count; ++i) {
+            for (i = 0; i < count; ++i)
+            {
                 Car::tObj *carObj = Cars::gTrafficCarList[i];
                 if ((carObj->carFlags & 0x400) == 0 && carObj->render.currentCarType == objectData->scalar3)
                     break;
             }
-            if (i < Cars::gNumTrafficCars) {
+            if (i < Cars::gNumTrafficCars)
+            {
                 Car::tObj *carObj = Cars::gTrafficCarList[i];
                 AIHigh_Traffic *aicar = static_cast<AIHigh_Traffic *>(highLevelAIObjs[carObj->carIndex]);
                 aicar->accidentData_ = objectData;
@@ -585,14 +760,18 @@ void Object::InitIMassObjectInfo(void)
     Group *instances = gPersistObjInst;
     gNumIMassObjects = 0;
     IMassObjInst = 0;
-    if (instances && gPersistObjDef) {
+    if (instances && gPersistObjDef)
+    {
         IMassObjInst = static_cast<tIMassObjInfo *>(reservememadr("IMObj info", ((uint32)instances->m_num_elements << 5), 0));
-        if (IMassObjInst) {
+        if (IMassObjInst)
+        {
             instances = gPersistObjInst;
             sint32 count = instances->m_num_elements;
             Trk::AnimateInst *objInst = reinterpret_cast<Trk::AnimateInst *>(instances + 1);
-            for (sint32 objIndex = 0; objIndex < count; ++objIndex) {
-                if (objInst->type == 7) {
+            for (sint32 objIndex = 0; objIndex < count; ++objIndex)
+            {
+                if (objInst->type == 7)
+                {
                     tIMassObjInfo *info = &IMassObjInst[gNumIMassObjects];
                     info->animInst = objInst;
                     GetObjMaxDimensions(Track::gObjDefs, reinterpret_cast<Trk::SimpleInst *>(objInst), &info->dimension);
@@ -633,14 +812,17 @@ void Object::GetIMassObjectMotion(sint32 objIndex, coorddef *cpoint, matrixtdef 
     Anim::GetRotPos(IMassObjInst[objIndex].animInst, 1, objTime, cpoint, orientMat);
     tIMassObjInfo *info = &IMassObjInst[objIndex];
     sint32 timeDiff = (objTime - info->lastTick);
-    if (timeDiff > 0) {
+    if (timeDiff > 0)
+    {
         sint32 delta = (cpoint->x - info->lastPos.x);
         velocity->x = ((uint32)(delta / timeDiff) << 6);
         delta = (cpoint->y - info->lastPos.y);
         velocity->y = ((uint32)(delta / timeDiff) << 6);
         delta = (cpoint->z - info->lastPos.z);
         velocity->z = ((uint32)(delta / timeDiff) << 6);
-    } else {
+    }
+    else
+    {
         velocity->x = 0;
         velocity->y = 0;
         velocity->z = 0;
@@ -685,10 +867,15 @@ ObjectMultiAnim::ObjectMultiAnim(coorddef *impactVel, AnimDef *def, Trk::Collide
 sint32 ObjectMultiAnim::Draw(DRender::tView *Vi, Draw::DCache *sd, sint32 offset)
 {
     FUNCTION_MARKER(0x800A62F8, "NFS4.EXE");
+    if (!Object::IsRenderPreparation())
+        return Object::DrawPrepared(this, Vi, sd, offset);
     matrixtdef matrix;
     coorddef animcp;
-    sint32 status = script->GetTimedAnimPosRot(0, &animcp, &matrix);
-    if ((uint32)status + 1 < 2) {
+    sint32 status = Object::AnimationPose(script, 0, &animcp, &matrix);
+    if ((uint32)status + 1 < 2)
+    {
+        if (readOnlyObjectRender)
+            return finishedAnim->Draw(Vi, sd, offset);
         sint32 i = simObj->serialNum;
         ObjectAnim *anim = finishedAnim;
         finishedAnim = 0;
@@ -712,7 +899,8 @@ sint32 ObjectMultiAnim::Draw(DRender::tView *Vi, Draw::DCache *sd, sint32 offset
     impact.z = (impactVel.z * ticks);
     matrixtdef RSmatrix;
     Trk::CollideBoomInst *instance = objCollideInstance;
-    if (instance->type != 6) {
+    if (instance->type != 6)
+    {
         tQuat quat;
         quat.x = instance->qx;
         quat.y = instance->qy;
@@ -723,8 +911,9 @@ sint32 ObjectMultiAnim::Draw(DRender::tView *Vi, Draw::DCache *sd, sint32 offset
         sint32 sx = instance->sx * 256;
         sint32 sy = instance->sy * 256;
         sint32 sz = instance->sz * 256;
-        sint32 scale[3] = { sx, sy, sz };
-        for (sint32 column = 0; column < 3; ++column) {
+        sint32 scale[3] = {sx, sy, sz};
+        for (sint32 column = 0; column < 3; ++column)
+        {
             sint32 t1 = fixedmult(RSmatrix.m[column], scale[column]);
             sint32 t2 = fixedmult(RSmatrix.m[column + 3], scale[column]);
             sint32 t3 = fixedmult(RSmatrix.m[column + 6], scale[column]);
@@ -734,8 +923,9 @@ sint32 ObjectMultiAnim::Draw(DRender::tView *Vi, Draw::DCache *sd, sint32 offset
         }
     }
     Trk::AnimateBoomInst *objInst = reinterpret_cast<Trk::AnimateBoomInst *>(gPersistObjInst + 1);
-    for (sint32 animIndex = 0; animIndex < partCount; ++animIndex) {
-        script->GetTimedAnimPosRot(animIndex, &animcp, &matrix);
+    for (sint32 animIndex = 0; animIndex < partCount; ++animIndex)
+    {
+        Object::AnimationPose(script, animIndex, &animcp, &matrix);
         if (objCollideInstance->type != 6)
             Math::fasttransmult(&matrix, &RSmatrix, &matrix);
         Trk::SimObject *object = simObj;
@@ -746,18 +936,20 @@ sint32 ObjectMultiAnim::Draw(DRender::tView *Vi, Draw::DCache *sd, sint32 offset
         cp.y = (cp.y + animcp.y);
         cp.x = ((cp.x + animcp.x) + impact.x);
         cp.z = ((cp.z + animcp.z) + impact.z);
-        for (;;) {
-            if (objInst->type == 8) {
+        for (;;)
+        {
+            if (objInst->type == 8)
+            {
                 instance = objCollideInstance;
                 sint32 type = instance->type;
                 if ((type != 5 || objInst->boomIndex == instance->boomIndex) && (type != 6 || objInst->boomIndex == reinterpret_cast<Trk::AnimateBoomInst *>(instance)->boomIndex))
                     break;
             }
-            objInst = reinterpret_cast<Trk::AnimateBoomInst *>( reinterpret_cast<char *>(objInst) + objInst->size);
+            objInst = reinterpret_cast<Trk::AnimateBoomInst *>(reinterpret_cast<char *>(objInst) + objInst->size);
         }
         Trk::ObjectDef *pObjDef = Track::gObjDefs[objInst->pad];
         DrawObjectTransform(Vi, sd, &matrix, pObjDef, &cp, offset, -1);
-        objInst = reinterpret_cast<Trk::AnimateBoomInst *>( reinterpret_cast<char *>(objInst) + objInst->size);
+        objInst = reinterpret_cast<Trk::AnimateBoomInst *>(reinterpret_cast<char *>(objInst) + objInst->size);
     }
     return 4;
 }
@@ -765,7 +957,9 @@ sint32 ObjectMultiAnim::Draw(DRender::tView *Vi, Draw::DCache *sd, sint32 offset
 sint32 ObjectFinishedSignAnim::Draw(DRender::tView *Vi, Draw::DCache *sd, sint32 offset)
 {
     FUNCTION_MARKER(0x800A671C, "NFS4.EXE");
-    DrawObjectTransform(Vi, sd, &finalMatrix, objDef, reinterpret_cast<coorddef *>(&objCollideInstance->x), offset, -1);
+    if (!Object::IsRenderPreparation())
+        return Object::DrawPrepared(this, Vi, sd, offset);
+    Object::CaptureRenderPart(&finalMatrix, objDef, reinterpret_cast<coorddef *>(&objCollideInstance->x), -1, true);
     return 2;
 }
 
@@ -841,10 +1035,15 @@ ObjectSignAnim::ObjectSignAnim(coorddef *impactVel, sint32 impactAngle, AnimDef 
 sint32 ObjectSignAnim::Draw(DRender::tView *Vi, Draw::DCache *sd, sint32 offset)
 {
     FUNCTION_MARKER(0x800A6A38, "NFS4.EXE");
+    if (!Object::IsRenderPreparation())
+        return Object::DrawPrepared(this, Vi, sd, offset);
     matrixtdef matrix;
     coorddef animcp;
-    sint32 status = script->GetTimedAnimPosRot(0, &animcp, &matrix);
-    if ((uint32)status + 1 < 2) {
+    sint32 status = Object::AnimationPose(script, 0, &animcp, &matrix);
+    if ((uint32)status + 1 < 2)
+    {
+        if (readOnlyObjectRender)
+            return finishedAnim->Draw(Vi, sd, offset);
         sint32 i = simObj->serialNum;
         ObjectAnim *anim = finishedAnim;
         finishedAnim = 0;
@@ -856,7 +1055,7 @@ sint32 ObjectSignAnim::Draw(DRender::tView *Vi, Draw::DCache *sd, sint32 offset)
         return anim->Draw(Vi, sd, offset);
     }
     Trk::ObjectDef *pObjDef = objDef;
-    script->GetTimedAnimPosRot(0, &animcp, &matrix);
+    Object::AnimationPose(script, 0, &animcp, &matrix);
     sint32 frame;
     sint32 numFrames;
     script->GetAnimFrameInfo(&frame, &numFrames);
@@ -890,7 +1089,8 @@ ObjectMultiAnim::~ObjectMultiAnim(void)
 {
     FUNCTION_MARKER(0x800A6CF8, "NFS4.EXE");
     AnimScript *animation = script;
-    if (animation) {
+    if (animation)
+    {
         Trk::AnimateInst **parts = animation->inst;
         if (parts)
             purgememadr(parts);
@@ -910,7 +1110,8 @@ ObjectSignAnim::~ObjectSignAnim(void)
 {
     FUNCTION_MARKER(0x800A6C10, "NFS4.EXE");
     AnimScript *animation = script;
-    if (animation) {
+    if (animation)
+    {
         Trk::AnimateInst **parts = animation->inst;
         if (parts)
             purgememadr(parts);
@@ -920,3 +1121,84 @@ ObjectSignAnim::~ObjectSignAnim(void)
     if (finished)
         delete finished;
 }
+
+#if defined(_DEBUG)
+static sint32 objectWitnessSerial[2] = {-1, -1};
+static ObjectAnim *objectWitnessOwner[2];
+
+sint32 ObjectRenderWitness(sint32 preferredChunk, sint32 kind, BO::tNewtonObj *car)
+{
+    if (kind < 0 || kind > 1 || car == 0)
+        return 0;
+    sint32 chunks = Track::GetChunkCount();
+    for (sint32 order = -1; order < chunks; ++order)
+    {
+        sint32 chunk = order < 0 ? preferredChunk : order;
+        if (chunk < 0 || chunk >= chunks || !BWorld::IsObjectChunkInBuildList(chunk))
+            continue;
+        Group *group = Track::chunkList[chunk].simObjBuf;
+        Group *instances = Track::chunkList[chunk].objInstanceBuf;
+        if (group == 0 || instances == 0)
+            continue;
+        Trk::SimObject *objects = (Trk::SimObject *)(group + 1);
+        for (sint32 i = 0; i < group->m_num_elements; ++i)
+        {
+            Trk::SimObject *object = objects + i;
+            if ((object->type & 15) != 2 || object->instIndex >= 126 || Object::GetAnim(object) != 0)
+                continue;
+            Trk::SimpleInst *source = FindObjInstanceFromSerialNum(instances, object->instIndex);
+            if (source == 0 || source->type != 5 || (source->flags & 1) != 0 || source->size < (sint32)sizeof(Trk::CollideBoomInst))
+                continue;
+            Trk::CollideBoomInst *instance = (Trk::CollideBoomInst *)source;
+            if (instance->boomIndex >= 14 || gAnimDefs[instance->boomIndex].type != kind)
+                continue;
+            Object::tSimObjList list = {group->m_num_elements, chunk, 0, 0};
+            Object::CheckCollisionResults(&list, i, car);
+            objectWitnessSerial[kind] = object->serialNum;
+            objectWitnessOwner[kind] = Object::GetAnim(object);
+            return objectWitnessOwner[kind] != 0 ? object->serialNum + 1 : 0;
+        }
+    }
+    if (kind == 1 && Object::customObjInst != 0 && Object::customSimObjs != 0 && Object::customObjInst->m_num_elements < 28 && Object::customSimObjs->m_num_elements < 50)
+        for (sint32 definition = 0; definition < gPersistObjDef->m_num_elements; ++definition)
+        {
+            sint32 id = Track::gObjDefs[definition]->id;
+            if (id < 1 || id > 8 || gAnimDefs[id].type != 1)
+                continue;
+            Trk::AnimateBoomInst *part = (Trk::AnimateBoomInst *)(gPersistObjInst + 1);
+            sint32 pieces = 0;
+            bool valid = true;
+            for (sint32 i = 0; i < gPersistObjInst->m_num_elements; ++i)
+            {
+                if (part->type == 8 && part->boomIndex == id)
+                {
+                    ++pieces;
+                    if (part->count < 2 || part->size < (sint32)(sizeof(*part) + part->count * sizeof(Anim::tFrame)))
+                        valid = false;
+                }
+                part = (Trk::AnimateBoomInst *)((uint8 *)part + part->size);
+            }
+            if (!valid || pieces != gAnimDefs[id].numPieces)
+                continue;
+            SceneElem data = {0};
+            data.type = 0;
+            data.cp = car->position;
+            data.cp.x += car->orientMat.m[6] * 4;
+            data.cp.y += car->orientMat.m[7] * 4;
+            data.cp.z += car->orientMat.m[8] * 4;
+            data.orient = car->orientMat;
+            data.subTypeIndex = definition;
+            data.scalar1 = id;
+            data.scalar2 = 65536;
+            sint32 index = Object::customSimObjs->m_num_elements;
+            Object::AddCustomObject(&data, 1);
+            Object::tSimObjList list = {0, -1, 0, -1};
+            Object::CheckCollisionResults(&list, index, car);
+            Trk::SimObject *object = (Trk::SimObject *)(Object::customSimObjs + 1) + index;
+            objectWitnessSerial[kind] = object->serialNum;
+            objectWitnessOwner[kind] = Object::GetAnim(object);
+            return objectWitnessOwner[kind] != 0 ? object->serialNum + 1 : 0;
+        }
+    return 0;
+}
+#endif

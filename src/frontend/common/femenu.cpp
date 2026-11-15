@@ -3,6 +3,7 @@
 #include <string.h>
 #include "xport.h"
 #include "psx.h"
+#include "hd_ui.h"
 #include "eaclib/psx/eaclib.h"
 #include "frontend/common/feapp.h"
 #include "frontend/common/fefades.h"
@@ -80,7 +81,8 @@ void tListIterator::Increment(tPlayer)
     FUNCTION_MARKER(0x80023E8C, "FRONT.BIN");
 
     ++*fValue;
-    if (fSelectionList[*fValue] == 0) *fValue = 0;
+    if (fSelectionList[*fValue] == 0)
+        *fValue = 0;
 }
 
 void tListIterator::Decrement(tPlayer)
@@ -137,7 +139,8 @@ void tListIteratorIndexed::Increment(tPlayer)
 
     ++fValue[*fIndex];
     char *value = fValue + *fIndex;
-    if (fSelectionList[*value] == 0) *value = 0;
+    if (fSelectionList[*value] == 0)
+        *value = 0;
 }
 
 void tListIteratorIndexed::Decrement(tPlayer)
@@ -179,7 +182,8 @@ void tListIteratorDoubleIndexed::Increment(tPlayer)
     ++fValue[offset];
     offset = ((uint32)*fIndex1 * index1multiplier + *fIndex2);
     char *value = fValue + offset;
-    if (fSelectionList[*value] == 0) *value = 0;
+    if (fSelectionList[*value] == 0)
+        *value = 0;
 }
 
 void tListIteratorDoubleIndexed::Decrement(tPlayer)
@@ -225,7 +229,8 @@ void tListIteratorMultiPlayer::Increment(tPlayer atIndex)
         atIndex = kPlayerOne;
     ++fValue[atIndex];
     char *value = fValue + atIndex;
-    if (fSelectionList[*value] == 0) *value = 0;
+    if (fSelectionList[*value] == 0)
+        *value = 0;
 }
 
 void tListIteratorMultiPlayer::Decrement(tPlayer atIndex)
@@ -523,6 +528,7 @@ void DrawSlider(sint16 value, sint16 min, sint16 max, sint16 fX, sint16 fY, sint
         memcpy(&prim->rgbc, &color, sizeof(color));
         SetPolyF4(prim);
         SetSemiTrans(prim, 0);
+        hd_ui_f4(prim);
         sint32 step = ((uint16)rectwidth) + ((uint16)rectspace);
         x1 = (sint16)(reverse ? sint32(x1) - step : sint32(x1) + step);
         if (reverse ? x1 < fX : sint32(x1) >= end)
@@ -612,6 +618,8 @@ void tMenu::tMenuConstructor(tMenuItem *firstItem, void *ap)
 
     VertHelp = 0;
     fItemList[0] = firstItem;
+    if (firstItem == 0)
+        return;
     va_list *items = static_cast<va_list *>(ap);
     sint32 i = 0;
     tMenuItem *p;
@@ -635,6 +643,7 @@ tMenu::tMenu(uint32 flags, tScreen *screenHandler, tMenu *nextMenu, tMenu *optio
     fOptionsMenu = optionsMenu;
     fOnButtonPress = OnButtonPress;
     fTitle = title;
+    fItemList[0] = 0;
 }
 
 tMenu::~tMenu(void)
@@ -647,6 +656,8 @@ void tMenu::Initialize(void)
     FUNCTION_MARKER(0x800254E4, "FRONT.BIN");
 
     sint32 original = fCurrentItem;
+    if (fItemList[fCurrentItem] == 0)
+        return;
     if ((fItemList[fCurrentItem]->fFlags & 1U) == 0)
         return;
     do
@@ -672,64 +683,64 @@ void tMenu::ProcessInput(tPlayer fromPlayer, tInputKeyType &keyval, tMenuCommand
 
     switch (keyval)
     {
-    case kInput_KeyType_Up:
-    {
-        sint32 lastItem = fCurrentItem;
-        do
+        case kInput_KeyType_Up:
         {
-            if (fCurrentItem > 0)
-                fCurrentItem = (fCurrentItem - 1);
+            sint32 lastItem = fCurrentItem;
+            do
+            {
+                if (fCurrentItem > 0)
+                    fCurrentItem = (fCurrentItem - 1);
+                else
+                    while (fItemList[(fCurrentItem + 1)] != 0)
+                        fCurrentItem = (fCurrentItem + 1);
+            } while ((fItemList[fCurrentItem]->fFlags & 1U) != 0);
+            if (fCurrentItem != lastItem)
+                AudioCmn::PlayFESFX(3);
+            break;
+        }
+        case kInput_KeyType_Down:
+        {
+            sint32 lastItem = fCurrentItem;
+            do
+            {
+                fCurrentItem = (fCurrentItem + 1);
+                if (fItemList[fCurrentItem] == 0)
+                    fCurrentItem = 0;
+            } while ((fItemList[fCurrentItem]->fFlags & 1U) != 0);
+            if (fCurrentItem != lastItem)
+                AudioCmn::PlayFESFX(4);
+            break;
+        }
+        case kInput_KeyType_Cross:
+            if (fNextMenu == 0)
+                return;
+            command.type = kMenu_Command_GoToMenu;
+            command.nextMenu = fNextMenu;
+            break;
+        case kInput_KeyType_Start:
+            if (fOnButtonPress != 0)
+                fOnButtonPress(command);
+            else if ((fFlags & 1U) != 0)
+                command.type = kMenu_Command_StartRace;
+            else if ((fFlags & 2U) != 0)
+                command.type = kMenu_Command_Start2PlayerRace;
             else
-                while (fItemList[(fCurrentItem + 1)] != 0)
-                    fCurrentItem = (fCurrentItem + 1);
-        } while ((fItemList[fCurrentItem]->fFlags & 1U) != 0);
-        if (fCurrentItem != lastItem)
-            AudioCmn::PlayFESFX(3);
-        break;
-    }
-    case kInput_KeyType_Down:
-    {
-        sint32 lastItem = fCurrentItem;
-        do
-        {
-            fCurrentItem = (fCurrentItem + 1);
-            if (fItemList[fCurrentItem] == 0)
-                fCurrentItem = 0;
-        } while ((fItemList[fCurrentItem]->fFlags & 1U) != 0);
-        if (fCurrentItem != lastItem)
-            AudioCmn::PlayFESFX(4);
-        break;
-    }
-    case kInput_KeyType_Cross:
-        if (fNextMenu == 0)
+                return;
+            break;
+        case kInput_KeyType_Circle:
+            FEApp->DisplayHelp(0);
             return;
-        command.type = kMenu_Command_GoToMenu;
-        command.nextMenu = fNextMenu;
-        break;
-    case kInput_KeyType_Start:
-        if (fOnButtonPress != 0)
-            fOnButtonPress(command);
-        else if ((fFlags & 1U) != 0)
-            command.type = kMenu_Command_StartRace;
-        else if ((fFlags & 2U) != 0)
-            command.type = kMenu_Command_Start2PlayerRace;
-        else
+        case kInput_KeyType_Square:
+            if (fOptionsMenu == 0)
+                return;
+            command.type = kMenu_Command_GoToMenu;
+            command.nextMenu = fOptionsMenu;
+            break;
+        case kInput_KeyType_Triangle:
+            command.type = kMenu_Command_BackupMenu;
+            break;
+        default:
             return;
-        break;
-    case kInput_KeyType_Circle:
-        FEApp->DisplayHelp(0);
-        return;
-    case kInput_KeyType_Square:
-        if (fOptionsMenu == 0)
-            return;
-        command.type = kMenu_Command_GoToMenu;
-        command.nextMenu = fOptionsMenu;
-        break;
-    case kInput_KeyType_Triangle:
-        command.type = kMenu_Command_BackupMenu;
-        break;
-    default:
-        return;
     }
     keyval = kInput_KeyType_AlreadyProcessed;
 }

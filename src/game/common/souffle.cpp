@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <string.h>
 #include "xport.h"
+#include "hd.h"
 #include "eaclib/psx/eaclib.h"
 #include "game/common/renderview.h"
 #include "game/common/replay.h"
@@ -22,12 +23,14 @@ static void DampSouffleComponent(sint32 *component, sint32 amount)
     if (value < 0)
     {
         *component = value + amount;
-        if (value + amount > 0) *component = 0;
+        if (value + amount > 0)
+            *component = 0;
     }
     else if (value > 0)
     {
         *component = value - amount;
-        if (value - amount < 0) *component = 0;
+        if (value - amount < 0)
+            *component = 0;
     }
 }
 
@@ -80,6 +83,7 @@ Souffle::tISouffle *Souffle::Add(coorddef *soufflept, sint32 type, coorddef *vec
         gCISouffle = (gCISouffle + 1);
     }
     tISouffle *is = gISouffle + inserti;
+    hd_reset_souffle(inserti);
     coorddef source = *soufflept;
     is->source = source;
     is->cycle = 0;
@@ -87,40 +91,40 @@ Souffle::tISouffle *Souffle::Add(coorddef *soufflept, sint32 type, coorddef *vec
     is->id = (char)inserti;
     is->ground = ground;
     is->colour = colour;
-    coorddef vempty = { 0, 0, 0 };
+    coorddef vempty = {0, 0, 0};
     if (vec == 0)
         vec = &vempty;
     switch (type)
     {
-    case 1:
-    case 2:
-    case 3:
-    case 6:
-        GetGustWind(is);
-        is->wind = 1;
-        GetAngleWind(is);
-        break;
-    case 4:
-    case 8:
-    case 10:
-    case 12:
-        is->rndpixmap = velVX;
+        case 1:
+        case 2:
+        case 3:
+        case 6:
+            GetGustWind(is);
+            is->wind = 1;
+            GetAngleWind(is);
+            break;
+        case 4:
+        case 8:
+        case 10:
+        case 12:
+            is->rndpixmap = velVX;
 
-    case 7:
-    case 9:
-    case 11:
-    case 13:
-    case 14:
-    case 257:
-        is->motion.x = vec->x >> 5;
-        is->motion.y = vec->y >> 6;
-        {
-            sint32 z = vec->z;
-            is->wind = 0;
-            is->motion.z = z >> 5;
-        }
-        GetAngleWind(is);
-        break;
+        case 7:
+        case 9:
+        case 11:
+        case 13:
+        case 14:
+        case 257:
+            is->motion.x = vec->x >> 5;
+            is->motion.y = vec->y >> 6;
+            {
+                sint32 z = vec->z;
+                is->wind = 0;
+                is->motion.z = z >> 5;
+            }
+            GetAngleWind(is);
+            break;
     }
     Sfx::Add(is);
     return is;
@@ -212,6 +216,7 @@ void Souffle::DoSouffle(void)
         if (gISouffle[i].type == 0)
         {
             memmove(&gISouffle[i], &gISouffle[gCISouffle - 1], sizeof(tISouffle));
+            hd_move_souffle(i, gCISouffle - 1);
             --gCISouffle;
             --i;
         }
@@ -260,6 +265,7 @@ void Souffle::InsertFacet(DRender::tView *Vi)
 void Souffle::InitTrackSouffle(void)
 {
     FUNCTION_MARKER(0x800B7ED4, "NFS4.EXE");
+    hd_reset_souffle();
     sint32 gameTicks = simGlobal.gameTicks;
     gWindDir = 0;
     gCISouffle = 0;
@@ -270,6 +276,7 @@ void Souffle::InitTrackSouffle(void)
 void Souffle::RestartTrackSouffle(void)
 {
     FUNCTION_MARKER(0x800B7F14, "NFS4.EXE");
+    hd_reset_souffle();
     sint32 gameTicks = simGlobal.gameTicks;
     gWindDir = 0;
     gCISouffle = 0;
@@ -279,6 +286,7 @@ void Souffle::RestartTrackSouffle(void)
 void Souffle::KillTrackSouffle(void)
 {
     FUNCTION_MARKER(0x800B7F30, "NFS4.EXE");
+    hd_reset_souffle();
     tISouffle *memory = gISouffle;
     if (memory != 0)
         purgememadr(memory);

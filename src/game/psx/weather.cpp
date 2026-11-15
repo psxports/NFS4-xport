@@ -3,6 +3,7 @@
 #include "xport.h"
 #include "psx.h"
 #include "psx_gte.h"
+#include "hd.h"
 #include "eaclib/psx/eaclib.h"
 #include "game/common/bworldsm.h"
 #include "game/common/cameraobj.h"
@@ -38,7 +39,22 @@ struct Weather::tSplatInfo
     sint32 startTick;
 };
 
+struct PreparedRainLine
+{
+    DVECTOR start;
+    DVECTOR end;
+};
+
+struct PreparedRainView
+{
+    SVECTOR *owner;
+    sint32 count;
+    PreparedRainLine lines[HD_WEATHER_PARTICLES];
+};
+
 static sint32 timechange;
+static uint32 splatDrawMask[2];
+static PreparedRainView preparedRain[2];
 sint32 gCurrentNumSplats;
 coorddef prevCamPos[2];
 matrixtdef prevCamMat[2];
@@ -57,23 +73,12 @@ CWeatherSpec *Weather::gTrackSpec;
 Weather::tSplatInfo *Weather::gSplatInfo;
 SVECTOR *Weather::gPos;
 DVECTOR *Weather::gPrevPos;
-sint32 Weather::gDensityTbl[4] = { 0, 50, 100, 150 };
-sint32 Weather::gIntensityTbl[4] = { -104, -84, -70, -17 };
-sint32 Weather::gTrackIntensityLimitTbl[16] = { 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2 };
+sint32 Weather::gDensityTbl[4] = {0, 50, 100, 150};
+sint32 Weather::gIntensityTbl[4] = {-104, -84, -70, -17};
+sint32 Weather::gTrackIntensityLimitTbl[16] = {2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2};
 
 char Weather::gRandomVelocityVectors[12][3] = {
-    { 252, 0, 0 },
-    { 5, 0, 0 },
-    { 250, 255, 0 },
-    { 4, 255, 0 },
-    { 0, 0, 253 },
-    { 0, 0, 252 },
-    { 0, 251, 1 },
-    { 0, 253, 6 },
-    { 4, 0, 4 },
-    { 246, 0, 2 },
-    { 8, 254, 255 },
-    { 254, 248, 8 },
+    {252, 0, 0}, {5, 0, 0}, {250, 255, 0}, {4, 255, 0}, {0, 0, 253}, {0, 0, 252}, {0, 251, 1}, {0, 253, 6}, {4, 0, 4}, {246, 0, 2}, {8, 254, 255}, {254, 248, 8},
 };
 
 Weather::tSplatInfo *Weather::gSplatInfoServer[2];
@@ -82,6 +87,42 @@ Weather::tState Weather::gType = Weather::kSnow;
 SVECTOR *Weather::gPServer[2];
 DVECTOR *Weather::gPrevPServer[2];
 sint32 Weather::gLastProcessTime[2];
+
+void Weather::CaptureRenderSource(sint32 player, HdWeatherSource *source)
+{
+    memset(source, 0, sizeof(*source));
+    if (player < 0 || player > 1 || gPos == 0 || gPServer[player] == 0 || GameSetup::gData.Weather == 0 || gSys.num[0] == 0 || BWorldSm::TunnelFlagSm(&Camera::gInfo[player].slicePos))
+        return;
+    if (gSys.num[player] < 0 || gSys.num[player] > (GameSetup::gData.commMode == 1 ? 76 : HD_WEATHER_PARTICLES) || gCurrentNumSplats < 0 || gCurrentNumSplats > (GameSetup::gData.commMode == 1 ? 9 : HD_WEATHER_SPLATS))
+        return;
+    source->owner = gPServer[player];
+    source->rotation = prevCamMat[player];
+    if (GameSetup::gData.mirrorTrack != 0)
+        for (sint32 column = 0; column < 3; ++column)
+            source->rotation.m[column * 3] = -source->rotation.m[column * 3];
+    source->camera = prevCamPos[player];
+    source->count = gSys.num[player];
+    memcpy(source->particles, gPServer[player], source->count * sizeof(*source->particles));
+    source->processTick = gLastProcessTime[player];
+    source->gameTick = simGlobal.gameTicks;
+    source->projection = (float)Camera::gGeomScreen;
+    source->type = gType;
+    source->snowMap = (reinterpret_cast<uintptr_t>(gPServer[player]) & 4) >> 2;
+    for (sint32 i = 0; i < 3; ++i)
+        if (gWeatherPixmap[i] != 0)
+            source->pixmaps[i] = *gWeatherPixmap[i];
+    if (Camera::gInfo[player].inCar && gSplatInfo != 0 && gSplatInfoServer[player] != 0)
+    {
+        source->splatCount = gCurrentNumSplats;
+        source->splatMask = splatDrawMask[player];
+        for (sint32 i = 0; i < source->splatCount; ++i)
+        {
+            source->splats[i].position = gSplatInfoServer[player][i].pos;
+            source->splats[i].startTick = gSplatInfoServer[player][i].startTick;
+        }
+    }
+    source->active = source->count > 0;
+}
 
 sint32 Weather::GetNumParticles(sint32 player)
 {
@@ -280,6 +321,8 @@ void Weather::InitStateControls(void)
 void Weather::Restart(void)
 {
     FUNCTION_MARKER(0x800E24B4, "NFS4.EXE");
+    memset(preparedRain, 0, sizeof(preparedRain));
+    hd_reset_weather();
     if (GameSetup::gData.Weather == 0)
         return;
     if (GameSetup::gData.commMode != 1)
@@ -294,6 +337,8 @@ void Weather::Restart(void)
 void Weather::Init(void)
 {
     FUNCTION_MARKER(0x800E2530, "NFS4.EXE");
+    memset(preparedRain, 0, sizeof(preparedRain));
+    hd_reset_weather();
     gTrackSpec = &TrackSpec::gSpec.weatherspec;
     if (GameSetup::gData.Weather == 0)
         return;
@@ -352,6 +397,8 @@ void Weather::Init(void)
 void Weather::DeInit(void)
 {
     FUNCTION_MARKER(0x800E287C, "NFS4.EXE");
+    memset(preparedRain, 0, sizeof(preparedRain));
+    hd_reset_weather();
     if (GameSetup::gData.Weather == 0)
         return;
     if (gSplatInfo != 0)
@@ -462,7 +509,7 @@ sint16 Weather::CheckAndResetParticles(SVECTOR *pt)
 void Weather::QuickReOrthogonalize(matrixtdef *rot, matrixtdef *rotNew)
 {
     FUNCTION_MARKER(0x800E2D50, "NFS4.EXE");
-    coorddef upvector = { 0, 65536, 0 };
+    coorddef upvector = {0, 65536, 0};
     sint32 zx = rot->m[6];
     sint32 zy = rot->m[7];
     sint32 zz = rot->m[8];
@@ -534,9 +581,9 @@ void Weather::ProcessParticles(DRender::tView *Vi, sint32 num, SVECTOR *wpt, cha
     VECTOR result;
     gte_stlvnl(&result);
     SVECTOR total_vector_change;
-    total_vector_change.vx = (sint16)-(uint16)result.vx;
-    total_vector_change.vy = (sint16)-(uint16)result.vy;
-    total_vector_change.vz = (sint16)-(uint16)result.vz;
+    total_vector_change.vx = (sint16) - (uint16)result.vx;
+    total_vector_change.vy = (sint16) - (uint16)result.vy;
+    total_vector_change.vz = (sint16) - (uint16)result.vz;
     temp_vector.vx = gSys.velocity.vx;
     temp_vector.vy = gSys.velocity.vy;
     temp_vector.vz = gSys.velocity.vz;
@@ -575,7 +622,10 @@ void Weather::ProcessParticles(DRender::tView *Vi, sint32 num, SVECTOR *wpt, cha
         wpt->vy = pt.vy;
         wpt->vz = pt.vz;
         if (flag != 0)
+        {
             wd[n] = 0;
+            hd_reset_weather_particle(Vi->player, n);
+        }
     }
 }
 
@@ -621,19 +671,25 @@ void Weather::CreateSnow(SVECTOR *pt)
     prim->p[3].uv_attr = l3;
 }
 
-void Weather::CreateRain(SVECTOR *pt0, DVECTOR *pt1, char *wd)
+static PreparedRainLine project_rain(SVECTOR *point, const DVECTOR *previous, bool drawn)
 {
-    FUNCTION_MARKER(0x800E356C, "NFS4.EXE");
-    SVECTOR gv;
-    gv.vx = pt0->vx;
-    gv.vy = pt0->vy;
-    gv.vz = pt0->vz;
-    const bool drawn = *wd != 0;
-    DVECTOR previous;
-    if (drawn)
-        previous = *pt1;
-    gte_ldv0(&gv);
+    PreparedRainLine line;
+    gte_ldv0(point);
     gte_rtps();
+    gte_stsxy(&line.end);
+    line.start = line.end;
+    if (drawn)
+    {
+        sint32 nx = previous->vx + line.end.vx * 3;
+        sint32 ny = previous->vy + line.end.vy;
+        line.start.vx = (sint16)(nx / 4);
+        line.start.vy = (sint16)(ny / 2);
+    }
+    return line;
+}
+
+static void build_rain(const PreparedRainLine *line)
+{
     Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
     LINE_G2 *prim = reinterpret_cast<LINE_G2 *>(cprim->PrimPtr);
     uint32 *ot = cprim->LastPrim;
@@ -643,18 +699,40 @@ void Weather::CreateRain(SVECTOR *pt0, DVECTOR *pt1, char *wd)
     setlen(prim, 4);
     prim->p[0].rgbc.rgbc = 0x52000000;
     prim->p[1].rgbc.rgbc = 0x00402020;
-    gte_stsxy(&prim->p[1].xy);
-    if (drawn)
-    {
-        sint32 nx = previous.vx + prim->p[1].xy.x * 3;
-        sint32 ny = previous.vy + prim->p[1].xy.y;
-        prim->p[0].xy.x = (sint16)(nx / 4);
-        prim->p[0].xy.y = (sint16)(ny / 2);
-    }
-    else
-        prim->p[0].xy.xy = prim->p[1].xy.xy;
+    prim->p[0].xy.x = line->start.vx;
+    prim->p[0].xy.y = line->start.vy;
+    prim->p[1].xy.x = line->end.vx;
+    prim->p[1].xy.y = line->end.vy;
+}
+
+void Weather::CreateRain(SVECTOR *pt0, DVECTOR *pt1, char *wd)
+{
+    FUNCTION_MARKER(0x800E356C, "NFS4.EXE");
+    PreparedRainLine line = project_rain(pt0, pt1, *wd != 0);
+    build_rain(&line);
     *wd = 1;
-    memcpy(pt1, &prim->p[1].xy, sizeof(*pt1));
+    *pt1 = line.end;
+}
+
+void Weather::PrepareRender(DRender::tView *view)
+{
+    sint32 player = view->player;
+    PreparedRainView *prepared = preparedRain + player;
+    prepared->owner = 0;
+    prepared->count = 0;
+    if (gType != kRain || GameSetup::gData.Weather == 0 || gSys.num[0] == 0 || BWorldSm::TunnelFlagSm(&Camera::gInfo[player].slicePos))
+        return;
+    if (gPServer[player] == 0 || gPrevPServer[player] == 0 || gDrawnServer[player] == 0 || gSys.num[player] < 0 || gSys.num[player] > HD_WEATHER_PARTICLES)
+        return;
+    SetIdentMatrix();
+    for (sint32 slot = 0; slot < gSys.num[player]; ++slot)
+    {
+        prepared->lines[slot] = project_rain(gPServer[player] + slot, gPrevPServer[player] + slot, gDrawnServer[player][slot] != 0);
+        gDrawnServer[player][slot] = 1;
+        gPrevPServer[player][slot] = prepared->lines[slot].end;
+    }
+    prepared->owner = gPServer[player];
+    prepared->count = gSys.num[player];
 }
 
 void Weather::CreateSplat(Weather::tSplatInfo *splat)
@@ -700,9 +778,9 @@ void Weather::CreateSplat(Weather::tSplatInfo *splat)
     prim->p[3].uv_attr = l3;
 }
 
-void Weather::DoSplats(sint32 num, Weather::tSplatInfo *splats)
+void Weather::UpdateSplats(sint32 player, sint32 num, Weather::tSplatInfo *splats)
 {
-    FUNCTION_MARKER(0x800E3858, "NFS4.EXE");
+    splatDrawMask[player] = 0;
     if (gCurrentNumSplats < num)
         gCurrentNumSplats = num;
     for (sint32 i = 0; i < gCurrentNumSplats; ++i, ++splats)
@@ -727,18 +805,29 @@ void Weather::DoSplats(sint32 num, Weather::tSplatInfo *splats)
             splats->startTick = (simGlobal.gameTicks + value % 100);
         }
         else
-            CreateSplat(splats);
+            splatDrawMask[player] |= 1 << i;
     }
 }
 
-void Weather::DoWeather(DRender::tView *Vi)
+void Weather::DoSplats(sint32 num, Weather::tSplatInfo *splats)
 {
-    FUNCTION_MARKER(0x800E3A1C, "NFS4.EXE");
-    static sint32 prevLookBehind[2] = { -1, -1 };
-    static sint32 prevCameraMode[2] = { -1, -1 };
+    FUNCTION_MARKER(0x800E3858, "NFS4.EXE");
+    sint32 player = splats == gSplatInfoServer[1] ? 1 : 0;
+    for (sint32 i = 0; i < gCurrentNumSplats; ++i)
+        if ((splatDrawMask[player] & (1 << i)) != 0)
+            CreateSplat(splats + i);
+}
+
+void Weather::UpdateState(DRender::tView *Vi)
+{
+    preparedRain[Vi->player].owner = 0;
+    preparedRain[Vi->player].count = 0;
+    if (GameSetup::gData.Weather == 0 || BWorldSm::TunnelFlagSm(&Camera::gInfo[Vi->player].slicePos))
+        return;
+    static sint32 prevLookBehind[2] = {-1, -1};
+    static sint32 prevCameraMode[2] = {-1, -1};
     sint32 player = Vi->player;
     SVECTOR *wpt = gPServer[player];
-    DVECTOR *wprevpt = gPrevPServer[player];
     char *wd = gDrawnServer[player];
     if (GameSetup::gData.commMode != 1)
     {
@@ -762,21 +851,43 @@ void Weather::DoWeather(DRender::tView *Vi)
         clean_up = 1;
     prevCameraMode[player] = mode;
     if (clean_up != 0)
+    {
+        hd_reset_weather(player);
         for (sint32 i = 0; i < gSys.num[player]; ++i)
             wd[i] = 0;
+    }
     sint32 ticks = simGlobal.gameTicks;
     if ((ticks - gLastProcessTime[player]) > 1)
     {
         gLastProcessTime[player] = ticks;
         ProcessParticles(Vi, gSys.num[player], wpt, wd);
     }
+    if (Camera::gInfo[player].inCar)
+        UpdateSplats(player, gSys.num[player] >> 3, gSplatInfoServer[player]);
+}
+
+void Weather::DoWeather(DRender::tView *Vi)
+{
+    FUNCTION_MARKER(0x800E3A1C, "NFS4.EXE");
+    if (gSys.num[0] == 0)
+        return;
+    sint32 player = Vi->player;
+    SVECTOR *wpt = gPServer[player];
+    DVECTOR *wprevpt = gPrevPServer[player];
+    char *wd = gDrawnServer[player];
     SetIdentMatrix();
     if (Camera::gInfo[player].inCar)
         DoSplats(gSys.num[player] >> 3, gSplatInfoServer[player]);
     for (sint32 n = 0; n < gSys.num[player]; ++n, ++wpt, ++wprevpt)
     {
         if (gType == kRain)
-            CreateRain(wpt, wprevpt, wd + n);
+        {
+            const PreparedRainView *prepared = preparedRain + player;
+            if (prepared->owner == gPServer[player] && prepared->count == gSys.num[player])
+                build_rain(prepared->lines + n);
+            else
+                CreateRain(wpt, wprevpt, wd + n);
+        }
         else
             CreateSnow(wpt);
     }

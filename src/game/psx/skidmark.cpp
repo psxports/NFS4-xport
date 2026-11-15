@@ -1,11 +1,16 @@
 #include <stddef.h>
+#include <string.h>
 #include "xport.h"
+#include "hd.h"
 #include "psx.h"
 #include "eaclib/psx/eaclib.h"
+#include "game/common/bworld.h"
+#include "game/common/genericpmx.h"
 #include "game/common/gmesetup.h"
 #include "game/common/renderview.h"
 #include "game/psx/draw.h"
 #include "game/psx/skidmark.h"
+#include "game/psx/textureprocess.h"
 #include "lib/psx/fixdmult.h"
 #include "lib/psx/sinfunc.h"
 
@@ -67,39 +72,50 @@ void CalcOneSegment(Skidmark::Segment *r1, coorddef *cp, coorddef *pt1, coorddef
     r1->svx[1].vz = (sint16)((pt2->z - (uint32)pzp - (uint32)cp->z) >> 6);
 }
 
-Skidmark::Chunk * Skidmark::CheckChunk(coorddef *skidpt, sint32 newsegs, sint32 slice)
+Skidmark::Chunk *Skidmark::CheckChunk(coorddef *skidpt, sint32 newsegs, sint32 slice)
 {
     FUNCTION_MARKER(0x800DE9EC, "NFS4.EXE");
     Skidmark::Chunk *returnsm = gSm + gUseSm;
     sint32 NewChunk = (returnsm->n + newsegs) > 24;
-    for (sint32 axis = 0; axis < 3; ++axis) {
+    for (sint32 axis = 0; axis < 3; ++axis)
+    {
         sint32 center;
         sint32 point;
-        if (axis == 0) {
+        if (axis == 0)
+        {
             center = returnsm->cp.x;
             point = skidpt->x;
-        } else if (axis == 1) {
+        }
+        else if (axis == 1)
+        {
             center = returnsm->cp.y;
             point = skidpt->y;
-        } else {
+        }
+        else
+        {
             center = returnsm->cp.z;
             point = skidpt->z;
         }
         sint32 delta = (center - point);
         if (delta <= 0)
             delta = (point - center);
-        if (delta > 0xFFFFF) {
+        if (delta > 0xFFFFF)
+        {
             NewChunk = 1;
             break;
         }
     }
-    if (NewChunk) {
+    if (NewChunk)
+    {
         sint32 count = gCountSm;
         sint32 maximum = gMaxSChunk;
-        if (count < maximum) {
+        if (count < maximum)
+        {
             gUseSm = count;
             gCountSm = (count + 1);
-        } else {
+        }
+        else
+        {
             sint32 use = gUseSm;
             if (use < (maximum - 1))
                 gUseSm = (use + 1);
@@ -107,9 +123,11 @@ Skidmark::Chunk * Skidmark::CheckChunk(coorddef *skidpt, sint32 newsegs, sint32 
                 gUseSm = 0;
         }
         returnsm = gSm + gUseSm;
+        hd_reset_skids();
         returnsm->n = 0;
     }
-    if (returnsm->n == 0) {
+    if (returnsm->n == 0)
+    {
         coorddef point = *skidpt;
         returnsm->cp = point;
         returnsm->slice = (sint16)slice;
@@ -121,7 +139,8 @@ void Skidmark::Add(tSkid *prevskid, coorddef *skidpt, CVECTOR *color, sint32 tir
 {
     FUNCTION_MARKER(0x800DEB98, "NFS4.EXE");
     Skidmark::Chunk *sm;
-    if (prevskid->nseg == 0) {
+    if (prevskid->nseg == 0)
+    {
         sm = CheckChunk(skidpt, 2, slice);
         sint32 n = sm->n;
         CalcStartSegment(&sm->seg[n], &sm->seg[n + 1], &sm->cp, &prevskid->pt, skidpt, tireWidth);
@@ -132,9 +151,12 @@ void Skidmark::Add(tSkid *prevskid, coorddef *skidpt, CVECTOR *color, sint32 tir
         n = sm->n;
         sm->seg[n + 1].type = type;
         sm->seg[n].type = type;
-    } else {
+    }
+    else
+    {
         sm = CheckChunk(skidpt, 2, slice);
-        if (prevskid->chunk == gUseSm) {
+        if (prevskid->chunk == gUseSm)
+        {
             CalcOneSegment(&sm->seg[sm->n], &sm->cp, &prevskid->pt, skidpt, tireWidth);
             CVECTOR currentColor = *color;
             sm->seg[sm->n].rgb = currentColor;
@@ -181,7 +203,8 @@ void Skidmark::AddStretch(Skidmark::Segment **save, sint32 *savechunk, tSkid *pr
 {
     FUNCTION_MARKER(0x800DEF6C, "NFS4.EXE");
     Skidmark::Chunk *sm;
-    if (prevskid->nseg == 0) {
+    if (prevskid->nseg == 0)
+    {
         sm = CheckChunk(skidpt, 2, slice);
         sint32 n = sm->n;
         CalcStartSegment(&sm->seg[n], &sm->seg[n + 1], &sm->cp, &prevskid->pt, skidpt, tireWidth);
@@ -192,9 +215,12 @@ void Skidmark::AddStretch(Skidmark::Segment **save, sint32 *savechunk, tSkid *pr
         n = sm->n;
         sm->seg[n + 1].type = type;
         sm->seg[n].type = type;
-    } else {
+    }
+    else
+    {
         sm = CheckChunk(skidpt, 2, slice);
-        if (prevskid->chunk == gUseSm) {
+        if (prevskid->chunk == gUseSm)
+        {
             CalcOneSegment(&sm->seg[sm->n], &sm->cp, &prevskid->pt, skidpt, tireWidth);
             CVECTOR currentColor = *color;
             sm->seg[sm->n].rgb = currentColor;
@@ -248,6 +274,51 @@ void Skidmark::EndStretch(Skidmark::Segment *save, sint32 savechunk, tSkid *prev
     prevskid->chunk = savechunk;
 }
 
+void Skidmark::CaptureRenderSource(HdSkidSource *source, const DRender::tView *view)
+{
+    memset(source, 0, sizeof(*source));
+    for (sint32 type = 0; type < 2; ++type)
+        if (gSkidMarkPixmap[type] != 0)
+        {
+            source->pixmaps[type] = *gSkidMarkPixmap[type];
+            source->pixmapValid[type] = true;
+            if (source->pixmaps[type].clut == 65535)
+                memcpy(source->palettes[type], gClutDepth[source->pixmaps[type].pad2], sizeof(source->palettes[type]));
+        }
+    if (gSm == 0 || gCountSm < 0 || gCountSm > 16)
+        return;
+    coorddef camera = view->cview.translation;
+    for (sint32 chunk = gCountSm - 1; chunk >= 0; --chunk)
+    {
+        const Chunk *sm = gSm + chunk;
+        coorddef center = sm->cp;
+        if (sm->n < 0 || sm->n > 24 || !BWorld::IsSliceInBuildList(sm->slice) || !Draw::CircleClip(&center, &camera, 0x320000))
+            continue;
+        for (sint32 i = 0; i < sm->n; ++i)
+        {
+            const Segment *segment = sm->seg + i;
+            uintptr_t next = (uintptr_t)segment->next, first = (uintptr_t)sm->seg;
+            if (next < first || next >= first + sizeof(sm->seg) || (next - first) % sizeof(Segment) != 0 || !source->pixmapValid[segment->type & 1])
+                continue;
+            HdSkidQuad *quad = source->quads + source->count++;
+            quad->owner = segment;
+            quad->type = segment->type;
+            quad->center.x = center.x / 1024.0f;
+            quad->center.y = center.y / 1024.0f;
+            quad->center.z = center.z / 1024.0f;
+            const SVECTOR *points[4] = {segment->svx, segment->svx + 1, segment->next->svx, segment->next->svx + 1};
+            CVECTOR solid = {64, 64, 64, 0};
+            for (sint32 point = 0; point < 4; ++point)
+            {
+                quad->points[point].x = quad->center.x + points[point]->vx / 16.0f;
+                quad->points[point].y = quad->center.y + points[point]->vy / 16.0f;
+                quad->points[point].z = quad->center.z + points[point]->vz / 16.0f;
+                quad->colors[point] = segment->type != 0 ? solid : point < 2 ? segment->rgb : segment->next->rgb;
+            }
+        }
+    }
+}
+
 void Skidmark::OnyxBuildFacets(DRender::tView *Vi)
 {
     FUNCTION_MARKER(0x800DF464, "NFS4.EXE");
@@ -259,7 +330,8 @@ void Skidmark::OnyxBuildFacets(DRender::tView *Vi)
     fskid->t = translation;
     fskid->count = count;
     fskid->smp = chunks;
-    for (sint32 row = 0; row < 3; ++row) {
+    for (sint32 row = 0; row < 3; ++row)
+    {
         sint32 t1 = Vi->cview.mrotationInv.m[row * 3];
         sint32 t2 = Vi->cview.mrotationInv.m[row * 3 + 1];
         sint32 t3 = Vi->cview.mrotationInv.m[row * 3 + 2];
@@ -273,10 +345,11 @@ void Skidmark::OnyxBuildFacets(DRender::tView *Vi)
 void Skidmark::InitSkidmark(void)
 {
     FUNCTION_MARKER(0x800DF504, "NFS4.EXE");
+    hd_reset_skids();
     gMaxSChunk = 16;
     if (GameSetup::gData.commMode == 1)
         gMaxSChunk = 8;
-    Skidmark::Chunk *chunks = (Skidmark::Chunk *)reservememadr( "SkidMark", ((gMaxSChunk * 688)), 0);
+    Skidmark::Chunk *chunks = (Skidmark::Chunk *)reservememadr("SkidMark", gMaxSChunk * sizeof(Skidmark::Chunk), 0);
     chunks->n = 0;
     gSm = chunks;
     gCountSm = 0;
@@ -286,6 +359,7 @@ void Skidmark::InitSkidmark(void)
 void Skidmark::RestartSkidmark(void)
 {
     FUNCTION_MARKER(0x800DF578, "NFS4.EXE");
+    hd_reset_skids();
     Skidmark::Chunk *chunks = gSm;
     gCountSm = 0;
     gUseSm = 0;
@@ -295,6 +369,7 @@ void Skidmark::RestartSkidmark(void)
 void Skidmark::KillSkidmark(void)
 {
     FUNCTION_MARKER(0x800DF58C, "NFS4.EXE");
+    hd_reset_skids();
     Skidmark::Chunk *chunks = gSm;
     if (chunks)
         purgememadr(chunks);

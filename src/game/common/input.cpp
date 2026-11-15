@@ -120,7 +120,7 @@ void Input::Update(void)
                 if ((mode == 0 || active[j + 6] != 0) && Device::gDeviceList[code & 255].devicefunc((uint32)((sint32)code >> 8)) > 64)
                 {
                     gPressTime[i][j] = (gPressTime[i][j] + 1);
-                    if (gPressTime[i][j] >= 6 && (gDBFlags[i] & mask) == 0)
+                    if (gPressTime[i][j] >= 12 && (gDBFlags[i] & mask) == 0)
                     {
                         acc = j + 1;
                         gDBFlags[i] |= mask;
@@ -157,7 +157,7 @@ void Input::Update(void)
                         gDBFlags[i] |= mask;
                     }
                 }
-                else if ((uint32)gPressTime[i][j] - 1 < 5)
+                else if (gPressTime[i][j] > 0 && gPressTime[i][j] < 12)
                 {
                     if ((gDBFlags[i] & mask) == 0)
                     {
@@ -239,9 +239,8 @@ void Input::Update(void)
         }
     }
     uint32 time = gTime;
-    gTime = (time + 2);
-    gInterfaceResults[(time + 2) & 31] = menukeys;
-    gInterfaceResults[(time + 3) & 31] = menukeys;
+    gTime = time + 1;
+    gInterfaceResults[(time + 1) & 31] = menukeys;
 }
 
 void Input::Store(void)

@@ -53,7 +53,7 @@ sint32 Device::Fail(sint32 port)
         failtime[index] = 0;
     else
     {
-        if (failtime[index] >= 9)
+        if (failtime[index] >= 18)
             return 1;
         ++failtime[index];
     }

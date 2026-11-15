@@ -2,8 +2,10 @@
 #include <string.h>
 #include "xport.h"
 #include "psx.h"
+#include "hd_ui.h"
 #include "eaclib/psx/eaclib.h"
 #include "eaclib/psx/textcrnt.h"
+#include "game/common/frame.h"
 #include "game/psx/font.h"
 #include "game/psx/rendercache.h"
 #include "game/psx/systemmemory.h"
@@ -17,7 +19,7 @@ typedef struct charactertbl FONTFILECHAR;
 static fontblit gCurrentBlitter;
 uint16 gFontClut;
 uint8 gFontSpaceWidth;
-sint32 colourRGB[16] = { 0, 8750469, 11184810, 12500480, 10526880, 17077, -4276736, 12521216, 10872411, 10838858, -5592406, 11494, 1158354, 797538, 6233856, 7102560 };
+sint32 colourRGB[16] = {0, 8750469, 11184810, 12500480, 10526880, 17077, -4276736, 12521216, 10872411, 10838858, -5592406, 11494, 1158354, 797538, 6233856, 7102560};
 cluttbl &shpfontclut = gSystemMemoryOwner.fontPalette;
 uint16 font::currentTPage;
 sint32 font::clutx = -1;
@@ -61,20 +63,28 @@ void Font::Blit(sint32 x, sint32 y, void *src, sint32 u, sint32 v, charactertbl 
     sint32 dv = (sint32)(packed << 4) >> 20;
     sint32 width = ch->width;
     sint32 height = ch->height;
+    uint32 row = (dv + (uint32)v) & 255;
+    uint32 uv = ((uint32)gFontClut << 16) | (row << 8) | u;
+    uint32 size = ((uint32)height << 16) | (uint16)width;
+    if (FramePresentation::DeferGlyph(sprt, xy, uv, font::tint | 0x02000000, size))
+    {
+        sprt->tag = getaddr(ot);
+        cprim->PrimPtr = reinterpret_cast<char *>(sprt + 1);
+        setaddr(ot, sprt);
+        return;
+    }
     setaddr(sprt, getaddr(ot));
     cprim->PrimPtr = reinterpret_cast<char *>(sprt + 1);
     setaddr(ot, sprt);
-    uint32 row = (dv + (uint32)v) & 255U;
     setlen(sprt, 4);
     uint32 tint = font::tint;
     memcpy(&sprt->p[0].xy, &xy, sizeof(xy));
     memcpy(&sprt->rgbc, &tint, sizeof(tint));
-    uint32 clut = gFontClut;
     sprt->w = (sint16)width;
     sprt->h = (sint16)height;
-    uint32 uv = (clut << 16) | (row << 8) | u;
     sprt->p[0].uv_attr = uv;
     SetSemiTrans(sprt, 1);
+    hd_ui_sprite(sprt);
 }
 
 void Font::ComputeColors(sint32 colour, sint32 forecolour, sint32 backcolour, char in_game)
@@ -132,7 +142,7 @@ void Font::ComputeColors(sint32 colour, sint32 forecolour, sint32 backcolour, ch
     DrawSync(0);
 }
 
-charactertbl * Font::textbsearch(sint32 key, char *base, uint32 nmemb, uint32 size)
+charactertbl *Font::textbsearch(sint32 key, char *base, uint32 nmemb, uint32 size)
 {
     FUNCTION_MARKER(0x800CB6A0, "NFS4.EXE");
     sint32 lim = nmemb;
@@ -153,13 +163,14 @@ charactertbl * Font::textbsearch(sint32 key, char *base, uint32 nmemb, uint32 si
     return 0;
 }
 
-charactertbl * Font::Getcharacter(sint32 targetindex)
+charactertbl *Font::Getcharacter(sint32 targetindex)
 {
     FUNCTION_MARKER(0x800CB740, "NFS4.EXE");
     char *base = currentfont.characters;
     uint32 count = currentfont.characterCount;
     uint32 index = targetindex - 32U;
-    if (index < count) {
+    if (index < count)
+    {
         charactertbl *ch = reinterpret_cast<charactertbl *>(base + index * 11U);
         if (geti(ch, 2) == (uint32)targetindex)
             return ch;
@@ -274,6 +285,7 @@ void Font::TextXY(char *string, sint32 x, sint32 y)
     cprim->PrimPtr = reinterpret_cast<char *>(dr_mode + 1);
     setaddr(ot, dr_mode);
     SetDrawMode(dr_mode, 0, 0, tpage, 0);
+    hd_ui_page(tpage);
 }
 
 void Font::GetUVWH(char code, sint32 *u, sint32 *v, sint32 *w, sint32 *h, sint32 *yoff)

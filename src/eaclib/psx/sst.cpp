@@ -1,9 +1,75 @@
 #include "xport.h"
 #include "eaclib/psx/internal.h"
 #include "sst.h"
+#ifdef AP_WEB
+    #include "psx_spu.h"
+#endif
 
 static bool soundStreamPaused;
 SoundStreamState sndss;
+#ifdef AP_WEB
+static XportVagStream *musicVag;
+static uint8 musicVagPatch[32];
+static uint8 musicVagData[64][4096];
+static bool musicVagUsed[64];
+static uint32 musicVagBlocks;
+static bool musicVagReady;
+
+static void service_vag(SoundStreamPrefix *stream)
+{
+    XportVagInfo info;
+    sint32 ready = xport_vag_info(musicVag, &info);
+    if (ready <= 0)
+        return;
+    SoundStreamRequestPrefix *request = stream->requests;
+    if (!musicVagReady)
+    {
+        sint32 available = xport_vag_available(musicVag);
+        if (available < 0 || ((uint64)available * 28 * 1000 < (uint64)info.sample_rate * (uint16)request->hold && (uint32)available * 28 < info.frames))
+            return;
+        uint32 frames;
+        iSNDpatchtohdr(musicVagPatch, &stream->nextFormat, reinterpret_cast<SoundAttributesPrefix *>(stream->nextAttributes), &frames);
+        request->total = ((info.frames + 27) / 28) * 28;
+        request->dataRate = iSNDplatformcalcdatarate(&stream->nextFormat);
+        request->hold = 0;
+        if (stream->state != 1 || memcmp(&stream->format, &stream->nextFormat, sizeof(stream->format)) != 0 || memcmp(stream->attributes, stream->nextAttributes, sizeof(stream->attributes)) != 0)
+        {
+            if (stream->requestHandle >= 0)
+                SNDPKTPLAY::stop(stream->packetHandle);
+            stream->format = stream->nextFormat;
+            memcpy(stream->attributes, stream->nextAttributes, sizeof(stream->attributes));
+            stream->requestHandle = SNDPKTPLAY::start(stream->packetHandle, &stream->format, stream->attributes, &stream->options);
+        }
+        stream->state = 1;
+        musicVagReady = true;
+    }
+    for (sint32 slot = 0; slot < 64 && SNDPKTPLAY::submitspace(stream->packetHandle) > 0; ++slot)
+    {
+        if (musicVagUsed[slot] || musicVagBlocks * 28 >= request->total)
+            continue;
+        uint8 *data = musicVagData[slot];
+        sint32 blocks = xport_vag_read(musicVag, data, data + 2048, 128);
+        if (blocks <= 0)
+            break;
+        if (blocks != 128)
+            memmove(data + blocks * 16, data + 2048, blocks * 16);
+        SoundPacketSubmit packet;
+        packet.frames = blocks * 28;
+        packet.channels[0] = data;
+        packet.channels[1] = data + blocks * 16;
+        sint32 id = SNDPKTPLAY::submit(stream->packetHandle, &packet);
+        if (id < 0)
+            break;
+        musicVagUsed[slot] = true;
+        musicVagBlocks += blocks;
+        request->queued += packet.frames;
+        ++request->queuedChunks;
+        request->lastPacket = id;
+        if (request->firstPacket < 0)
+            request->firstPacket = id;
+    }
+}
+#endif
 
 void StopSoundVoicesExcept(sint32 preservedHandle)
 {
@@ -54,6 +120,14 @@ extern "C" void iSNDstreamremoverequest(uint32 requestId)
 extern "C" void iSNDstreamreleasecallback(void *data)
 {
     FUNCTION_MARKER(0x800E8D90, "NFS4.EXE");
+#ifdef AP_WEB
+    for (sint32 slot = 0; slot < 64; ++slot)
+        if (data == musicVagData[slot])
+        {
+            musicVagUsed[slot] = false;
+            return;
+        }
+#endif
     uint32 *chunk;
     memcpy(&chunk, static_cast<uint8 *>(data) - sizeof(chunk), sizeof(chunk));
     uint8 index = *reinterpret_cast<uint8 *>(chunk);
@@ -168,17 +242,17 @@ extern "C" sint32 iSNDstreamparsechunk(SoundStreamPrefix *stream, uint32 *chunk)
     FUNCTION_MARKER(0x800E9270, "NFS4.EXE");
     switch (chunk[0])
     {
-    case 0x6C444353:
-        return iSNDstreamparsedata(stream, chunk);
-    case 0x6C484353:
-        return iSNDstreamparseheader(stream, chunk);
-    case 0x6C454353:
-        return iSNDstreamparseend(stream, chunk);
-    case 0x6C434353:
-        return iSNDstreamparsenumchunks(stream, chunk);
-    default:
-        STREAM::release(stream->streamHandle, chunk);
-        return 1;
+        case 0x6C444353:
+            return iSNDstreamparsedata(stream, chunk);
+        case 0x6C484353:
+            return iSNDstreamparseheader(stream, chunk);
+        case 0x6C454353:
+            return iSNDstreamparseend(stream, chunk);
+        case 0x6C434353:
+            return iSNDstreamparsenumchunks(stream, chunk);
+        default:
+            STREAM::release(stream->streamHandle, chunk);
+            return 1;
     }
 }
 
@@ -208,6 +282,10 @@ extern "C" void iSNDstreamhotroddatachunks(void)
 {
     FUNCTION_MARKER(0x800E9438, "NFS4.EXE");
     SoundStreamPrefix *stream = sndss.stream;
+#ifdef AP_WEB
+    if (musicVag)
+        return;
+#endif
     if (soundStreamPaused || stream == 0 || stream->requestCount == 0 || stream->state != 1 || iSNDstreamisheld(stream) != 0)
         return;
     SoundStreamRequestPrefix *request = &stream->requests[(sint8)stream->parseIndex];
@@ -239,6 +317,13 @@ extern "C" void iSNDstreamservice(...)
     SoundStreamPrefix *stream = sndss.stream;
     if (soundStreamPaused || stream == 0 || stream->requestCount == 0)
         goto done;
+#ifdef AP_WEB
+    if (musicVag)
+    {
+        service_vag(stream);
+        goto done;
+    }
+#endif
     if (stream->state == 2)
     {
         if (SNDPKTPLAY::framesoutstanding(stream->packetHandle) > 0)
@@ -403,6 +488,31 @@ sint32 SNDSTRM::queuefile(sint32 handle, sint32 delay, const char *filename, sin
     return iSNDstreamqueue(handle, delay, filename, offset, 0);
 }
 
+#ifdef AP_WEB
+sint32 SNDSTRM::queuevag(sint32 handle, sint32 delay, const char *filename, const uint8 *patch)
+{
+    SoundStreamPrefix *stream = iSNDstreamgetstreamptr(handle);
+    if (!stream || stream->requestCount || !patch)
+        return -13;
+    xport_vag_close(musicVag);
+    musicVag = xport_vag_open(filename);
+    if (!musicVag)
+        return -1;
+    memcpy(musicVagPatch, patch, sizeof(musicVagPatch));
+    musicVagBlocks = 0;
+    musicVagReady = false;
+    SoundStreamRequestPrefix *request = stream->requests;
+    memset(request, 0, sizeof(*request));
+    stream->unknown16 += 256;
+    request->id = stream->unknown16 | (uint32)handle;
+    request->firstPacket = request->lastPacket = -1;
+    request->hold = (sint16)delay;
+    stream->parseIndex = 0;
+    stream->requestCount = 1;
+    return request->id;
+}
+#endif
+
 sint32 SNDSTRM::purge(sint32 handle)
 {
     FUNCTION_MARKER(0x800E9C58, "NFS4.EXE");
@@ -413,6 +523,11 @@ sint32 SNDSTRM::purge(sint32 handle)
         return -8;
     if (stream->requestHandle >= 0)
         SNDPKTPLAY::stop(stream->packetHandle);
+#ifdef AP_WEB
+    xport_vag_close(musicVag);
+    musicVag = 0;
+    memset(musicVagUsed, 0, sizeof(musicVagUsed));
+#endif
     stream->requestHandle = -1;
     soundStreamPaused = false;
     if (stream->sharedStream == 0)

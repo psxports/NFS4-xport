@@ -32,6 +32,25 @@ struct Draw::FlareCache
     Draw::tCacheHeader head;
 };
 
+struct PreparedTrackHalo
+{
+    const void *owner;
+    uint32 occurrence;
+    coorddef start;
+    coorddef end;
+    CVECTOR colors[2];
+    sint32 requestedScale;
+    sint32 scale;
+    sint32 type;
+    sint32 flags;
+    bool hasEnd;
+    bool nativeVisible;
+    bool objectHalo;
+};
+
+struct HdSkySource;
+struct HdHaloTables;
+
 class Flare
 {
 public:
@@ -82,6 +101,15 @@ public:
     static void LensFlare(DVECTOR *screenPos, Draw::FlareCache *sd);
     static void Sun(SVECTOR *worldPos, Draw::FlareCache *sd);
     static void Moon(SVECTOR *worldPos, Draw::FlareCache *sd);
+    static void CaptureRenderSource(HdSkySource *source);
+    static void CaptureHaloSource(HdHaloTables *source);
+    static void BeginTrackPreparation(sint32 player);
+    static void SetTrackOwner(const void *owner);
+    static void EndTrackPreparation(void);
+    static bool IsTrackPreparation(void);
+    static void BeginTrackDrawing(sint32 player);
+    static const PreparedTrackHalo *GetTrackHalos(sint32 player, uint32 *count);
+    static void ResetTrackEffects(void);
 };
 
 extern FLARE_DEF gFlare_LensFlare;

@@ -2,10 +2,13 @@
 #include <stdio.h>
 #include <string.h>
 #include "xport.h"
+#include "hd.h"
 #include "psx.h"
 #include "eaclib/psx/eaclib.h"
 #include "game/common/audiocmn.h"
+#include "game/common/bworld.h"
 #include "game/common/cameraobj.h"
+#include "game/common/cars.h"
 #include "game/common/chunk.h"
 #include "game/common/gmesetup.h"
 #include "game/common/paths.h"
@@ -20,10 +23,11 @@
 #include "lib/psx/random.h"
 
 sint32 gNight_renderNight;
+static char preparedLightning[2];
 tNightInitCache *gNightInitCache;
 tCompRGB *gTableCache;
 char *nightfile;
-char CopCarTypeLights[6] = { 0, 0, 1, 0, 1, 1 };
+char CopCarTypeLights[6] = {0, 0, 1, 0, 1, 1};
 sint32 Night::gXDist;
 sint32 Night::gZNear;
 sint32 Night::gZDist;
@@ -45,7 +49,7 @@ Night::tLightingTable *Night::gCurrentNightColor;
 Night::tLightingTable *Night::gPlayerLightingTable;
 Night::tCopLightingTable *Night::gCopLightingTableRed;
 Night::tCopLightingTable *Night::gCopLightingTableBlue;
-char Night::gCopCountryLightTbl[2][5][2] = { { { 0, 1 }, { 0, 1 }, { 0, 1 }, { 0, 1 }, { 0, 1 } }, { { 1, 1 }, { 0, 0 }, { 1, 1 }, { 0, 1 }, { 0, 1 } } };
+char Night::gCopCountryLightTbl[2][5][2] = {{{0, 1}, {0, 1}, {0, 1}, {0, 1}, {0, 1}}, {{1, 1}, {0, 0}, {1, 1}, {0, 1}, {0, 1}}};
 sint32 Night::gLightningPauseAreas[16][2];
 sint32 Night::gPlayerHeadLightColor[2];
 sint32 Night::gWeatherColor[2];
@@ -102,7 +106,8 @@ void Night::CreateNightTableElement(sint32 colorIndex, sint32 colorH, sint32 bri
     newColor.cd = 0;
     sint32 bestIndex;
     sint32 diff = FindClosestColor(newColor, &bestIndex);
-    if (diff < 513 || (Chunk::numLight + 4) <= colorIndex || gTotalLights > 255) *colorval = (uint8)bestIndex;
+    if (diff < 513 || (Chunk::numLight + 4) <= colorIndex || gTotalLights > 255)
+        *colorval = (uint8)bestIndex;
     else
     {
         gTableCache[gTotalLights].r = (char)newColor.r;
@@ -196,7 +201,7 @@ void Night::SetCopColor(GameSetup::tCarData *carinfo)
     sint32 cartype = (carinfo->carType - 22);
     sint32 country = carinfo->Country;
     sint32 carTable = (uint8)CopCarTypeLights[cartype];
-    tCopLightingTable *copColors[2] = { gCopLightingTableRed, gCopLightingTableBlue };
+    tCopLightingTable *copColors[2] = {gCopLightingTableRed, gCopLightingTableBlue};
     sint32 col1 = (uint8)gCopCountryLightTbl[carTable][country][0];
     sint32 col2 = (uint8)gCopCountryLightTbl[carTable][country][1];
     tCopLightingTable *first = copColors[col1];
@@ -257,7 +262,7 @@ void Night::SetWeatherColors(sint32 colorIndex)
 void Night::GenerateAllLightTables(void)
 {
     FUNCTION_MARKER(0x800DBB50, "NFS4.EXE");
-    static char colorCreationTable[16] = { 0, 15, 7, 5, 11, 13, 3, 9, 1, 14, 10, 4, 2, 12, 6, 8 };
+    static char colorCreationTable[16] = {0, 15, 7, 5, 11, 13, 3, 9, 1, 14, 10, 4, 2, 12, 6, 8};
     sint32 numLights = Chunk::numLight;
     gNightInitCache = &gNativeRenderCache.night;
     gTableCache = gNightInitCache->table;
@@ -383,21 +388,68 @@ void Night::RestartNightDriving(void)
     }
 }
 
+void Night::UpdateState(DRender::tView *Vi)
+{
+    preparedLightning[Vi->player] = 0;
+    if (GameSetup::gData.Time == 0)
+        return;
+    gDrawLightning = 0;
+    if (GameSetup::gData.Weather == 1)
+    {
+        PauseLightningEffect(Vi->player);
+        if (Vi->player == 0)
+            DoLightningEffect(Vi);
+    }
+    preparedLightning[Vi->player] = gDrawLightning;
+}
+
+void Night::CaptureRenderSource(HdNightSource *source, const DRender::tView *view)
+{
+    memset(source, 0, sizeof(*source));
+    sint32 player = view->player;
+    if (player < 0 || player >= 2 || gNight_renderNight == 0 || gNightTbl == 0 || gPlayerLightingTable == 0 || Chunk::lightTable == 0)
+        return;
+    const BO::tNewtonObj *target = Camera::gInfo[player].target;
+    const Car::tObj *human = Cars::gList[player];
+    if (target == 0 || human == 0 || Cars::gHumanRaceCarList[player] == 0)
+        return;
+    source->target = target;
+    source->targetMatrix = gNightMat;
+    source->targetPosition = target->position;
+    source->humanPosition = Cars::gHumanRaceCarList[player]->N.position;
+    source->nearZ = Camera::GetMode(player) == 0 ? -512 : 128;
+    bool high = (reinterpret_cast<const Car::tObj *>(target)->control.lights & 4) != 0;
+    source->xShift = high ? 6 : 5;
+    source->zShift = high ? 7 : 6;
+    source->headlights = (human->control.lights & 6) != 0;
+    source->lightning = preparedLightning[player] != 0;
+    source->lightningType = gLightningType & 1;
+    memcpy(source->shape, gNightTbl, sizeof(source->shape));
+    memcpy(source->player, gPlayerLightingTable, sizeof(source->player));
+    memcpy(source->colors, Chunk::lightTable, sizeof(source->colors));
+    memcpy(source->additive, gAdditiveHeadlightColor, sizeof(source->additive));
+    for (sint32 type = 0; type < 2; ++type)
+        if (gWeatherLightingTable[type] != 0)
+            memcpy(source->weather[type], gWeatherLightingTable[type], sizeof(source->weather[type]));
+    if (BW::gCopCarObj != 0 && gCopColor[0] != 0 && gCopColor[1] != 0)
+    {
+        source->cop = &BW::gCopCarObj->N;
+        source->copPosition = BW::gCopCarObj->N.position;
+        source->copMatrix = gCopMat;
+        for (sint32 side = 0; side < 2; ++side)
+            memcpy(source->police[side], gCopColor[side], sizeof(source->police[side]));
+    }
+    source->active = true;
+}
+
 void Night::SetEnviroment(DRender::tView *Vi)
 {
     FUNCTION_MARKER(0x800DC0A8, "NFS4.EXE");
     if (GameSetup::gData.Time == 0)
         return;
     tLightingTable *playerTable = gPlayerLightingTable;
-    sint32 weather = GameSetup::gData.Weather;
-    gDrawLightning = 0;
+    gDrawLightning = preparedLightning[Vi->player];
     gCurrentNightColor = playerTable;
-    if (weather == 1)
-    {
-        PauseLightningEffect(Vi->player);
-        if (Vi->player == 0)
-            DoLightningEffect(Vi);
-    }
     gXDistShift = 10;
     gZDistShift = 12;
     Car::tObj *target = reinterpret_cast<Car::tObj *>(Camera::gInfo[Vi->player].target);
@@ -440,9 +492,12 @@ void Night::AdditiveNightCalc(VECTOR *v, CVECTOR *color)
     sint32 newR = color->r + addColor.r;
     sint32 newG = color->g + addColor.g;
     sint32 newB = color->b + addColor.b;
-    if (newR > 255) newR = 255;
-    if (newG > 255) newG = 255;
-    if (newB > 255) newB = 255;
+    if (newR > 255)
+        newR = 255;
+    if (newG > 255)
+        newG = 255;
+    if (newB > 255)
+        newB = 255;
     color->r = (uint8)newR;
     color->g = (uint8)newG;
     color->b = (uint8)newB;

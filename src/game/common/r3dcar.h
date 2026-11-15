@@ -10,6 +10,8 @@
 #include "game/common/transformer.h"
 #include "game/psx/draw.h"
 
+struct HdCarHaloSource;
+
 class R3DCar
 {
 public:
@@ -30,7 +32,7 @@ public:
     static sint32 shadowFlag;
     static sint16 yawCam;
     static sint32 Clock;
-    static sint32 ClockLast;
+    static uint64 ClockLast;
     static sint32 rightHandDrive;
     static sint32 InMenu;
     static char ObjectVisible[57];
@@ -38,6 +40,7 @@ public:
     static char LoadedSceneCountry[50];
     static sint16 LoadedSceneColor[2][50];
     static sint16 LoadedSceneVRam[2][50][2];
+    static Transformer::zScene *FullDetailScene[2][50];
     static sint32 PositionZ[9];
     static char ObjectInfo[57][6];
     static sint16 Suspension[10];
@@ -61,22 +64,28 @@ public:
     static tEnvMapInfo EnvMapInfo[28];
 
     static void ChangeTrafficColor(Car::tObj *carObj, sint32 newColorIndex);
+    static void GetEnvironmentIndices(Car::tObj *carObj, sint32 *environment, sint32 *shadow);
+    static void ReadRenderHaloType(const Car::tObj *car, sint32 visible, HdCarHaloSource *source);
+    static sint32 ReadRenderOrderOffset(const Car::tObj *car, sint32 part, sint32 detail, sint32 visible);
+    static void UpdateCarState(Car::tObj *carObj);
+    static void UpdateState(DRender::tView *views, sint32 count, bool advanceEffects);
     static void StartUp(void);
     static void PostStartUp(void);
     static void Restart(void);
     static void CleanUp(void);
-    static Transformer::zScene * ReadInCarData(char *filename, Car::tObj *carObj);
+    static Transformer::zScene *ReadInCarData(char *filename, Car::tObj *carObj, bool hostMemory = false);
     static void CalcCarDimensions(Car::tObj *carObj, Transformer::zScene *scene, sint32 carType);
     static void DeInstantiate3DCar(Car::tObj *carObj);
     static void DeInstantiate3DCarMenu(Car::tObj *carObj);
     static void GetFileName(char *infilename, char *filename, const char *suffix);
-    static char * LoadFileAdr(char *name);
+    static char *LoadFileAdr(char *name);
     static void GetCarName(char *filename, sint32 carType, sint32 country);
     static void Instantiate3DCar(Car::tObj *carObj, sint32 index);
     static sint32 Visibilty(Car::tObj *carObj, DRender::tView *Vi);
     static void TurnHeadLightOn(Car::tObj *carObj, sint32 tail);
     static void TurnHeadLightOff(Car::tObj *carObj, sint32 head);
     static void MATRIX3DT_Copy(sint32 *from, sint32 *to);
+    static sint32 PrepareRenderParts(Car::tObj *carObj, DRender::tView *Vi, sint32 detail, sint32 inside, matrixtdef *matrices, coorddef *positions, char *visible, bool fullDetail = false, const Transformer::zScene *scene = 0);
     static void InsertCarFacet(Car::tObj *carObj, DRender::tView *Vi);
     static void ReadInCarTextureMenu(Car::tObj *carObj, char *bigfile, sint32 reload, sint32 player);
     static void InsertCarFacetMenu(Car::tObj *carObj, DRender::tView *Vi);

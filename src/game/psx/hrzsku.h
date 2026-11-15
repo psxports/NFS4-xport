@@ -9,6 +9,8 @@
 #include "game/psx/draw.h"
 #include "game/psx/trackspec.h"
 
+struct HdSkySource;
+
 class Hrz
 {
 public:
@@ -16,6 +18,7 @@ public:
     static SVECTOR gLightningPosInSky;
     static CVECTOR gSaveCol[4];
 
+    static void CaptureRenderSource(HdSkySource *source);
     static void InitSkyColor(void);
     static void InitSky(void);
     static void Init2DRing(void);
@@ -24,6 +27,8 @@ public:
     static void KillHorizon(void);
     static void LightningAddFork(sint8 direction, sint8 column, sint8 row);
     static void CalculateLightning(void);
+    static void ResetRenderState(void);
+    static void UpdateState(bool advanceEffects);
     static void TextureQuad(DVECTOR *pt, char type, char bright, Draw::DCache *sd);
     static void SetLightingPosInSky(DRender::tView *Vi);
     static void BuildForkLightning(Draw::DCache *sd);

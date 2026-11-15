@@ -115,7 +115,8 @@ void tPListIterator::Increment(tPlayer)
     sint32 *value = fValue;
     *value = (((*value)) + 1);
     value = fValue;
-    if (fSelectionList[*value] == 0) *value = 0;
+    if (fSelectionList[*value] == 0)
+        *value = 0;
     AudioCmn::PlayPauseSound(5);
     gMPauseUpdateNextTime = 1;
 }
@@ -135,7 +136,8 @@ void tPListIterator::Decrement(tPlayer)
             next = fSelectionList[*value + 1];
         }
     }
-    else *value = (current - 1);
+    else
+        *value = (current - 1);
     AudioCmn::PlayPauseSound(5);
     gMPauseUpdateNextTime = 1;
 }
@@ -173,7 +175,8 @@ void tPListIteratorIndexed::Increment(tPlayer)
     *value = (((*value)) + 1);
     index = (uint8)*fIndex;
     value = &fValue[index];
-    if (fSelectionList[*value] == 0) *value = 0;
+    if (fSelectionList[*value] == 0)
+        *value = 0;
     AudioCmn::PlayPauseSound(5);
     gMPauseUpdateNextTime = 1;
 }
@@ -197,7 +200,8 @@ void tPListIteratorIndexed::Decrement(tPlayer)
             next = fSelectionList[values[(uint8)*index] + 1];
         }
     }
-    else *value = (current - 1);
+    else
+        *value = (current - 1);
     AudioCmn::PlayPauseSound(5);
     gMPauseUpdateNextTime = 1;
 }
@@ -310,23 +314,12 @@ void tPMenuItemLeftRightChoice::Draw(bool selected)
     sint32 y = gPause_CurrentY;
     if (!selected || GameSetup::gData.userSetting.language != 0)
         return;
-    Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
-    POLY_GT4 *prim = reinterpret_cast<POLY_GT4 *>(cprim->PrimPtr);
-    uint32 *ot = cprim->LastPrim;
-    setaddr(prim, getaddr(ot));
-    cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
-    setaddr(ot, prim);
     char *string = TextSys::Word(index);
     sint32 width = textpixels(string);
     sint32 left = ((x - width) - 8);
     y = (y + 5);
-    Hud::BuildGT4(prim, &HudPmx::gShapes[18], left, y, 0xBEBEUL);
-    prim = reinterpret_cast<POLY_GT4 *>(cprim->PrimPtr);
-    ot = cprim->LastPrim;
-    setaddr(prim, getaddr(ot));
-    cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
-    setaddr(ot, prim);
-    Hud::BuildGT4(prim, &HudPmx::gShapes[19], x + 4, y, 0xBEBEUL);
+    Hud::FBuildGT4(&HudPmx::gShapes[18], left, y, 0xBEBEUL);
+    Hud::FBuildGT4(&HudPmx::gShapes[19], x + 4, y, 0xBEBEUL);
 }
 
 tPMenuItemLeftRightSlider::tPMenuItemLeftRightSlider(uint32 textDescription, sint32 *dataPtr, char maxVal) : tPMenuItemInteractive(textDescription)
@@ -406,19 +399,8 @@ void tPMenuItemLeftRightSlider::Draw(bool selected)
             col = selected ? 0xBEBEUL : 0x808080UL;
         if (selected && GameSetup::gData.userSetting.language == 0)
         {
-            Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
-            POLY_GT4 *prim = reinterpret_cast<POLY_GT4 *>(cprim->PrimPtr);
-            uint32 *ot = cprim->LastPrim;
-            setaddr(prim, getaddr(ot));
-            cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
-            setaddr(ot, prim);
-            Hud::BuildGT4(prim, &HudPmx::gShapes[18], x + 53, y + 2, 0xBEBEUL);
-            prim = reinterpret_cast<POLY_GT4 *>(cprim->PrimPtr);
-            ot = cprim->LastPrim;
-            setaddr(prim, getaddr(ot));
-            cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
-            setaddr(ot, prim);
-            Hud::BuildGT4(prim, &HudPmx::gShapes[19], x + 144, y + 2, 0xBEBEUL);
+            Hud::FBuildGT4(&HudPmx::gShapes[18], x + 53, y + 2, 0xBEBEUL);
+            Hud::FBuildGT4(&HudPmx::gShapes[19], x + 144, y + 2, 0xBEBEUL);
         }
         sint32 xpos = x + 66 + i * 5;
         Hud::FBuildF4(0, xpos, y + 2, 3, 5, col, 0, 0);
@@ -612,67 +594,67 @@ void tPMenu::ProcessInput(tInputKeyType &keyval, tPMenuCommand &command)
         entry->ProcessInput(keyval, command);
     switch (keyval)
     {
-    case kInput_KeyType_Up:
-        AudioCmn::PlayPauseSound(3);
-        for (;;)
-        {
-            sint32 current = fCurrentItem;
-            if (current > 0)
-                fCurrentItem = current - 1;
-            else
+        case kInput_KeyType_Up:
+            AudioCmn::PlayPauseSound(3);
+            for (;;)
             {
-                tPMenuItem *next = fItemList[current + 1];
-                while (next != 0)
+                sint32 current = fCurrentItem;
+                if (current > 0)
+                    fCurrentItem = current - 1;
+                else
                 {
-                    current = fCurrentItem;
-                    fCurrentItem = current + 1;
-                    next = fItemList[current + 2];
+                    tPMenuItem *next = fItemList[current + 1];
+                    while (next != 0)
+                    {
+                        current = fCurrentItem;
+                        fCurrentItem = current + 1;
+                        next = fItemList[current + 2];
+                    }
                 }
-            }
-            entry = fItemList[fCurrentItem];
-            bool retry = !entry->IsNavigable();
-            if (!retry)
-            {
                 entry = fItemList[fCurrentItem];
-                retry = (entry->fFlags & 1) != 0;
+                bool retry = !entry->IsNavigable();
+                if (!retry)
+                {
+                    entry = fItemList[fCurrentItem];
+                    retry = (entry->fFlags & 1) != 0;
+                }
+                if (!retry)
+                    break;
             }
-            if (!retry)
-                break;
-        }
-        keyval = kInput_KeyType_AlreadyProcessed;
-        return;
-    case kInput_KeyType_Down:
-        AudioCmn::PlayPauseSound(3);
-        for (;;)
-        {
-            sint32 next = fCurrentItem + 1;
-            fCurrentItem = next;
-            if (fItemList[next] == 0)
-                fCurrentItem = 0;
-            entry = fItemList[fCurrentItem];
-            bool retry = !entry->IsNavigable();
-            if (!retry)
+            keyval = kInput_KeyType_AlreadyProcessed;
+            return;
+        case kInput_KeyType_Down:
+            AudioCmn::PlayPauseSound(3);
+            for (;;)
             {
+                sint32 next = fCurrentItem + 1;
+                fCurrentItem = next;
+                if (fItemList[next] == 0)
+                    fCurrentItem = 0;
                 entry = fItemList[fCurrentItem];
-                retry = (entry->fFlags & 1) != 0;
+                bool retry = !entry->IsNavigable();
+                if (!retry)
+                {
+                    entry = fItemList[fCurrentItem];
+                    retry = (entry->fFlags & 1) != 0;
+                }
+                if (!retry)
+                    break;
             }
-            if (!retry)
-                break;
-        }
-        keyval = kInput_KeyType_AlreadyProcessed;
-        return;
-    case kInput_KeyType_Start:
-        AudioCmn::PlayPauseSound(4);
-        command.type = kMPause_Continue;
-        keyval = kInput_KeyType_AlreadyProcessed;
-        return;
-    case kInput_KeyType_Triangle:
-        AudioCmn::PlayPauseSound(4);
-        command.type = kMPause_BackupMenu;
-        keyval = kInput_KeyType_AlreadyProcessed;
-        return;
-    default:
-        return;
+            keyval = kInput_KeyType_AlreadyProcessed;
+            return;
+        case kInput_KeyType_Start:
+            AudioCmn::PlayPauseSound(4);
+            command.type = kMPause_Continue;
+            keyval = kInput_KeyType_AlreadyProcessed;
+            return;
+        case kInput_KeyType_Triangle:
+            AudioCmn::PlayPauseSound(4);
+            command.type = kMPause_BackupMenu;
+            keyval = kInput_KeyType_AlreadyProcessed;
+            return;
+        default:
+            return;
     }
 }
 
@@ -684,7 +666,7 @@ void tPMenu::Draw(void)
     gPause_CurrentY = 98;
     heading->Draw(false);
     gPause_CurrentY = 117;
-    for (sint16 item = 1; ; item = (sint16)(item + 1))
+    for (sint16 item = 1;; item = (sint16)(item + 1))
     {
         tPMenuItem *entry = fItemList[item];
         if (entry == 0)

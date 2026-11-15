@@ -2,6 +2,7 @@
 #include <string.h>
 #include "xport.h"
 #include "psx.h"
+#include "hd_ui.h"
 #include "frontend/common/fetv.h"
 #include "frontend/psx/fetexture.h"
 #include "frontend/psx/mmeffect.h"
@@ -48,6 +49,7 @@ void DrawTVLines(tTVConfig &tv)
         videoFX->rgbc.b = 10;
         videoFX->rgbc.g = 10;
         videoFX->rgbc.r = 10;
+        hd_ui_f4(videoFX);
     }
     y = tv.fxThin;
     if (tv.y < tv.fxThin && tv.fxThin < tv.y + tv.h)
@@ -70,6 +72,7 @@ void DrawTVLines(tTVConfig &tv)
         videoFX->rgbc.b = 10;
         videoFX->rgbc.g = 10;
         videoFX->rgbc.r = 10;
+        hd_ui_f4(videoFX);
     }
     FeDraw_SetABRMode(1);
     if ((tv.flags & 0x20) != 0)
@@ -191,6 +194,7 @@ void DrawTV(tTVConfig &tv)
         texture->p[3].uv.v = (uint8)(noise->height + noise->shapey);
         texture->p[1].attr = (uint16)getTPage(noise->type & 3, 3, (uint16)noise->shapex, (uint16)noise->shapey);
         texture->p[0].attr = GetClut((noise->clutID & 63) << 4, noise->clutID >> 6);
+        hd_ui_ft4(texture);
         if ((tv.flags & 4) != 0)
         {
             uint16 axis = tv.flip_axis;
@@ -229,6 +233,7 @@ void DrawTV(tTVConfig &tv)
             reflection->p[3].uv.v = (uint8)(noise->height + noise->shapey - 1);
             reflection->p[1].attr = (uint16)getTPage(noise->type & 3, 3, (uint16)noise->shapex, (uint16)noise->shapey);
             reflection->p[0].attr = GetClut((noise->clutID & 63) << 4, noise->clutID >> 6);
+            hd_ui_gt4(reflection);
         }
     }
     if (tv.state != tv_StateOff)
@@ -260,6 +265,7 @@ void DrawTV(tTVConfig &tv)
         texture->p[3].uv.v = (uint8)(tv.v + tv.vh);
         texture->p[1].attr = tv.tpage;
         texture->p[0].attr = tv.clut;
+        hd_ui_ft4(texture);
         if ((tv.flags & 4) != 0)
         {
             uint16 axis = tv.flip_axis;
@@ -296,6 +302,7 @@ void DrawTV(tTVConfig &tv)
             reflection->p[3].uv.v = (uint8)(tv.v + tv.vh - 1);
             reflection->p[1].attr = tv.tpage;
             reflection->p[0].attr = tv.clut;
+            hd_ui_gt4(reflection);
         }
     }
 }
@@ -306,8 +313,8 @@ void InitTV(tTVConfig &tv, tTexture::ShapeInfo *textures, sint16 index)
     tTexture::ShapeInfo *shape = &textures[index];
     tv.state = tv_StateOff;
     tv.flags = 0;
-    tv.x = (sint16)-((uint16)shape->centerx);
-    tv.y = (sint16)-((uint16)shape->centery);
+    tv.x = (sint16) - ((uint16)shape->centerx);
+    tv.y = (sint16) - ((uint16)shape->centery);
     tv.w = shape->width;
     tv.h = shape->height;
     sint32 offset = (shape->shapex - (sint16)((uint16)shape->shapex & 0xFFC0)) * 16;

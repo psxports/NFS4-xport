@@ -3,6 +3,7 @@
 #include <string.h>
 #include "xport.h"
 #include "psx.h"
+#include "hd_sampling.h"
 #include "eaclib/psx/eaclib.h"
 #include "game/common/paths.h"
 #include "game/psx/draw.h"
@@ -230,11 +231,13 @@ void Texture::ProcessPaletteCopy(Texture::pal8bit *palCopy, sint32 palStart, sin
     PSX_RECT r;
     r.w = 16;
     r.h = 1;
+
     union
     {
         sint16 colors[16];
         uint32 alignment;
     } tmpPal;
+
     if (palStart >= palNum)
         return;
     Texture::pal8bit *palette = palCopy + palStart;
@@ -453,6 +456,8 @@ void Texture::LoadPmx(char *f, char *n, sint32 ctrl, sint32 rx, sint32 ry, sint3
         pmx->u3 = (uint8)(u + w);
         pmx->v3 = (uint8)(v + h);
     }
+    if (rx != -1)
+        hd_texture_loaded(pmx, u, v, shpptr->width, shpptr->height, x, y, bpp_real);
     shpptr->width = (sint16)bwidth;
     shpptr->height = (sint16)bheight;
     shpptr->shapex = bshapex;
@@ -465,57 +470,98 @@ void Texture::CloneUVPmx(Draw::tPixMap *pmx, sint32 mode, Draw::tPixMap *rpmx)
     Draw::tPixMap original = *pmx;
     *rpmx = original;
     uint8 u, v;
-    switch (mode) {
-    case 0:
-        u = pmx->u1; v = pmx->v1;
-        rpmx->u0 = u; rpmx->v0 = v;
-        u = pmx->u0; v = pmx->v0;
-        rpmx->u1 = u; rpmx->v1 = v;
-        u = pmx->u3; v = pmx->v3;
-        rpmx->u2 = u; rpmx->v2 = v;
-        u = pmx->u2; v = pmx->v2;
-        rpmx->u3 = u; rpmx->v3 = v;
-        break;
-    case 1:
-        u = pmx->u1; v = pmx->v1;
-        rpmx->u3 = u; rpmx->v3 = v;
-        u = pmx->u3; v = pmx->v3;
-        rpmx->u1 = u; rpmx->v1 = v;
-        u = pmx->u0; v = pmx->v0;
-        rpmx->u2 = u; rpmx->v2 = v;
-        u = pmx->u2; v = pmx->v2;
-        rpmx->u0 = u; rpmx->v0 = v;
-        break;
-    case 2:
-        u = pmx->u2; v = pmx->v2;
-        rpmx->u0 = u; rpmx->v0 = v;
-        u = pmx->u0; v = pmx->v0;
-        rpmx->u1 = u; rpmx->v1 = v;
-        u = pmx->u1; v = pmx->v1;
-        rpmx->u3 = u; rpmx->v3 = v;
-        u = pmx->u3; v = pmx->v3;
-        rpmx->u2 = u; rpmx->v2 = v;
-        break;
-    case 3:
-        u = pmx->u3; v = pmx->v3;
-        rpmx->u0 = u; rpmx->v0 = v;
-        u = pmx->u2; v = pmx->v2;
-        rpmx->u1 = u; rpmx->v1 = v;
-        u = pmx->u0; v = pmx->v0;
-        rpmx->u3 = u; rpmx->v3 = v;
-        u = pmx->u1; v = pmx->v1;
-        rpmx->u2 = u; rpmx->v2 = v;
-        break;
-    case 4:
-        u = pmx->u1; v = pmx->v1;
-        rpmx->u0 = u; rpmx->v0 = v;
-        u = pmx->u3; v = pmx->v3;
-        rpmx->u1 = u; rpmx->v1 = v;
-        u = pmx->u2; v = pmx->v2;
-        rpmx->u3 = u; rpmx->v3 = v;
-        u = pmx->u0; v = pmx->v0;
-        rpmx->u2 = u; rpmx->v2 = v;
-        break;
+    switch (mode)
+    {
+        case 0:
+            u = pmx->u1;
+            v = pmx->v1;
+            rpmx->u0 = u;
+            rpmx->v0 = v;
+            u = pmx->u0;
+            v = pmx->v0;
+            rpmx->u1 = u;
+            rpmx->v1 = v;
+            u = pmx->u3;
+            v = pmx->v3;
+            rpmx->u2 = u;
+            rpmx->v2 = v;
+            u = pmx->u2;
+            v = pmx->v2;
+            rpmx->u3 = u;
+            rpmx->v3 = v;
+            break;
+        case 1:
+            u = pmx->u1;
+            v = pmx->v1;
+            rpmx->u3 = u;
+            rpmx->v3 = v;
+            u = pmx->u3;
+            v = pmx->v3;
+            rpmx->u1 = u;
+            rpmx->v1 = v;
+            u = pmx->u0;
+            v = pmx->v0;
+            rpmx->u2 = u;
+            rpmx->v2 = v;
+            u = pmx->u2;
+            v = pmx->v2;
+            rpmx->u0 = u;
+            rpmx->v0 = v;
+            break;
+        case 2:
+            u = pmx->u2;
+            v = pmx->v2;
+            rpmx->u0 = u;
+            rpmx->v0 = v;
+            u = pmx->u0;
+            v = pmx->v0;
+            rpmx->u1 = u;
+            rpmx->v1 = v;
+            u = pmx->u1;
+            v = pmx->v1;
+            rpmx->u3 = u;
+            rpmx->v3 = v;
+            u = pmx->u3;
+            v = pmx->v3;
+            rpmx->u2 = u;
+            rpmx->v2 = v;
+            break;
+        case 3:
+            u = pmx->u3;
+            v = pmx->v3;
+            rpmx->u0 = u;
+            rpmx->v0 = v;
+            u = pmx->u2;
+            v = pmx->v2;
+            rpmx->u1 = u;
+            rpmx->v1 = v;
+            u = pmx->u0;
+            v = pmx->v0;
+            rpmx->u3 = u;
+            rpmx->v3 = v;
+            u = pmx->u1;
+            v = pmx->v1;
+            rpmx->u2 = u;
+            rpmx->v2 = v;
+            break;
+        case 4:
+            u = pmx->u1;
+            v = pmx->v1;
+            rpmx->u0 = u;
+            rpmx->v0 = v;
+            u = pmx->u3;
+            v = pmx->v3;
+            rpmx->u1 = u;
+            rpmx->v1 = v;
+            u = pmx->u2;
+            v = pmx->v2;
+            rpmx->u3 = u;
+            rpmx->v3 = v;
+            u = pmx->u0;
+            v = pmx->v0;
+            rpmx->u2 = u;
+            rpmx->v2 = v;
+            break;
     }
 }
 
@@ -586,8 +632,8 @@ void Texture::LoadMenuTexture(void)
     sprintf(name, "%sshow.psh", Paths_Paths[25]);
     char *shpfile = static_cast<char *>(loadfileadr(name, 0));
     ResetPaletteSharing();
-    static char shapeNames[6][8] = { "show", "shad", "lgt3", "lgta", "lgtb", "lgtc" };
-    static const sint32 slots[6] = { 0, 1, 3, 4, 5, 6 };
+    static char shapeNames[6][8] = {"show", "shad", "lgt3", "lgta", "lgtb", "lgtc"};
+    static const sint32 slots[6] = {0, 1, 3, 4, 5, 6};
     for (sint32 i = 0; i < 6; ++i)
     {
         Draw::tPixMap *pmx = &gMenuPixmapAlloc[i];

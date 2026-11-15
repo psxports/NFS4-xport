@@ -55,7 +55,7 @@ struct AudioCmn::tAsyncSfxSlot
     char *header;
 };
 
-static char SkidInitMaxFreq[71] = { 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+static char SkidInitMaxFreq[71] = {64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static sint32 PlayersRampedGasLevel[2];
 sint32 falseLapTrigCur;
 sint32 flaseLapTrigTrack;
@@ -83,43 +83,19 @@ sint32 NumSFXOn;
 char fReverbOn;
 char fReverbLevel;
 char carbankname[12];
-sint32 gBankNumLookupTable[71] = { 0, 2, 0, 2, 0, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 5, 5, 5, 3, 3, 3, 3, 5, 2, 2, 2, 2, 0, 1, 2, 2, 2, 2, 0, 0, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0 };
+sint32 gBankNumLookupTable[71] = {0, 2, 0, 2, 0, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 5, 5, 5, 3, 3, 3, 3, 5, 2, 2, 2, 2, 0, 1, 2, 2, 2, 2, 0, 0, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0};
 
-sint32 falseLapTrigNumsForward[10][2] =
-{
-    { 4, 7 },
-    { 4, 7 },
-    { 4, 7 },
-    { -1, -1 },
-    { 4, 7 },
-    { 4, 9 },
-    { 4, 9 },
-    { -1, -1 },
-    { -1, -1 },
-    { 4, 9 }
-};
+sint32 falseLapTrigNumsForward[10][2] = {{4, 7}, {4, 7}, {4, 7}, {-1, -1}, {4, 7}, {4, 9}, {4, 9}, {-1, -1}, {-1, -1}, {4, 9}};
 
-sint32 falseLapTrigNumsBackward[10][2] =
-{
-    { 4, 5 },
-    { 4, 5 },
-    { -1, -1 },
-    { -1, -1 },
-    { 4, 5 },
-    { 4, 5 },
-    { 4, 5 },
-    { -1, -1 },
-    { -1, -1 },
-    { 4, 5 }
-};
+sint32 falseLapTrigNumsBackward[10][2] = {{4, 5}, {4, 5}, {-1, -1}, {-1, -1}, {4, 5}, {4, 5}, {4, 5}, {-1, -1}, {-1, -1}, {4, 5}};
 
-char Xfade[129] = { 0, 3, 7, 10, 13, 16, 19, 22, 24, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 46, 48, 50, 51, 53, 54, 55, 57, 58, 60, 61, 62, 63, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 84, 85, 86, 87, 88, 88, 89, 90, 91, 91, 92, 93, 94, 94, 95, 96, 96, 97, 98, 98, 99, 100, 100, 101, 101, 102, 103, 103, 104, 104, 105, 106, 106, 107, 107, 108, 108, 109, 109, 110, 110, 111, 111, 112, 112, 113, 113, 114, 114, 115, 115, 116, 116, 117, 117, 118, 118, 119, 119, 119, 120, 120, 121, 121, 122, 122, 122, 123, 123, 124, 124, 125, 125, 125, 126, 127, 127 };
+char Xfade[129] = {0, 3, 7, 10, 13, 16, 19, 22, 24, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 46, 48, 50, 51, 53, 54, 55, 57, 58, 60, 61, 62, 63, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 84, 85, 86, 87, 88, 88, 89, 90, 91, 91, 92, 93, 94, 94, 95, 96, 96, 97, 98, 98, 99, 100, 100, 101, 101, 102, 103, 103, 104, 104, 105, 106, 106, 107, 107, 108, 108, 109, 109, 110, 110, 111, 111, 112, 112, 113, 113, 114, 114, 115, 115, 116, 116, 117, 117, 118, 118, 119, 119, 119, 120, 120, 121, 121, 122, 122, 122, 123, 123, 124, 124, 125, 125, 125, 126, 127, 127};
 sint32 bSirenOn[6];
-sint32 bSirenPitchingUp[6] = { 1, 1, 1, 1, 1, 1 };
+sint32 bSirenPitchingUp[6] = {1, 1, 1, 1, 1, 1};
 sint32 quickSirenActive[6];
-sint32 sirenPitchWidth[6] = { 32, 40, 28, 42, 28, 42 };
-sint32 sirenCurrentPitch[6] = { 32, 32, 32, 32, 32, 32 };
-sint32 slowSirenReps[6] = { 3, 3, 3, 3, 3, 3 };
+sint32 sirenPitchWidth[6] = {32, 40, 28, 42, 28, 42};
+sint32 sirenCurrentPitch[6] = {32, 32, 32, 32, 32, 32};
+sint32 slowSirenReps[6] = {3, 3, 3, 3, 3, 3};
 sint32 sirenCount[6];
 sint32 reachedSirenMin[6];
 sint32 quickSirenTimeCount[6];
@@ -149,7 +125,7 @@ sint32 AudioCmn::kAudioOn = 1;
 sint32 AudioCmn::kAudioStreamingOn = 1;
 sint32 AudioCmn::musicInteractive = 1;
 sint32 AudioCmn::gPlayerArrested[2];
-char *AudioCmn::LanguageName[7] = { xport_AudioCmn_LanguageName_string_0, xport_AudioCmn_LanguageName_string_1, xport_AudioCmn_LanguageName_string_2, xport_AudioCmn_LanguageName_string_3, xport_AudioCmn_LanguageName_string_4, xport_AudioCmn_LanguageName_string_0, xport_AudioCmn_LanguageName_string_0 };
+char *AudioCmn::LanguageName[7] = {xport_AudioCmn_LanguageName_string_0, xport_AudioCmn_LanguageName_string_1, xport_AudioCmn_LanguageName_string_2, xport_AudioCmn_LanguageName_string_3, xport_AudioCmn_LanguageName_string_4, xport_AudioCmn_LanguageName_string_0, xport_AudioCmn_LanguageName_string_0};
 void *AudioCmn::gLoadTables;
 void *AudioCmn::gCruiseTables;
 AudioCmn::tReTrig AudioCmn::gReTrig[2];
@@ -159,7 +135,8 @@ sint32 AudioCmn::MusicLevel(sint32 level)
 {
     FUNCTION_MARKER(0x80076420, "NFS4.EXE");
     sint32 curve = level;
-    if (level >= 86) {
+    if (level >= 86)
+    {
         sint32 scaled = ((level - 85) * 7);
         curve = scaled / 2 + 85;
     }
@@ -183,7 +160,8 @@ void AudioCmn::InitThunder(void)
 void AudioCmn::PlayThunder(sint32 intensity, sint32 azimuth)
 {
     FUNCTION_MARKER(0x800764A4, "NFS4.EXE");
-    if (ThunderAmp < intensity) {
+    if (ThunderAmp < intensity)
+    {
         sint32 delay = (135 - intensity);
         ThunderAmp = intensity;
         ThunderAzi = azimuth;
@@ -201,10 +179,13 @@ void AudioCmn::UpdateThunder(void)
     if (ThunderDel >= 0)
         return;
     PlaySound(gSndBnk[3].bnkID, 0x16, ThunderAzi, amp, 0x40);
-    if (ThunderAmp < 46) {
+    if (ThunderAmp < 46)
+    {
         uint32 draw = random();
         ThunderAmp = ((uint32)ThunderAmp + 2 - (draw & 7));
-    } else {
+    }
+    else
+    {
         uint32 draw = random();
         ThunderAmp = ((uint32)ThunderAmp + 3 - (draw & 15));
     }
@@ -214,7 +195,8 @@ void AudioCmn::UpdateThunder(void)
 void AudioCmn::InitAsyncSfx(void)
 {
     FUNCTION_MARKER(0x8007657C, "NFS4.EXE");
-    for (sint32 i = 0; i < 32; ++i) {
+    for (sint32 i = 0; i < 32; ++i)
+    {
         gSfxSlot[i].patch = -1;
         gSfxSlot[i].handle = -1;
         gSfxSlot[i].header = 0;
@@ -225,12 +207,15 @@ void AudioCmn::RemoveAsyncSfx(sint32 slot)
 {
     FUNCTION_MARKER(0x800765B4, "NFS4.EXE");
     tAsyncSfxSlot *s = &gSfxSlot[slot];
-    if (s->patch != -1) {
-        if (s->handle != -1) {
+    if (s->patch != -1)
+    {
+        if (s->handle != -1)
+        {
             cSNDbankremove(s->handle, 0);
             char *header = s->header;
             s->handle = -1;
-            if (header != 0) {
+            if (header != 0)
+            {
                 purgememadr(header);
                 s->header = 0;
             }
@@ -251,14 +236,18 @@ sint32 AudioCmn::RemoveOldestAsyncSfx(sint32 bank)
     FUNCTION_MARKER(0x80076674, "NFS4.EXE");
     sint32 oldest = -1;
     sint32 ticks = (simGlobal.gameTicks - 16);
-    for (sint32 i = 0; i < 32; ++i) {
-        if (gSfxSlot[i].patch != -1 && gSfxSlot[i].ticks < ticks) {
+    for (sint32 i = 0; i < 32; ++i)
+    {
+        if (gSfxSlot[i].patch != -1 && gSfxSlot[i].ticks < ticks)
+        {
             ticks = gSfxSlot[i].ticks;
             oldest = i;
         }
     }
-    if (oldest == -1) {
-        for (sint32 i = 0; i < 32; ++i) {
+    if (oldest == -1)
+    {
+        for (sint32 i = 0; i < 32; ++i)
+        {
             if (gSfxSlot[i].patch != -1 && gSfxSlot[i].bank < bank)
                 oldest = i;
         }
@@ -272,20 +261,24 @@ void AudioCmn::LoadAsyncSfx(sint32 bank, sint32 patch, void *pbank, sint32 size)
 {
     FUNCTION_MARKER(0x8007675C, "NFS4.EXE");
     sint32 slot;
-    for (slot = 0; slot < 32; ++slot) {
+    for (slot = 0; slot < 32; ++slot)
+    {
         if (gSfxSlot[slot].patch == patch && gSfxSlot[slot].bank == bank && gSfxSlot[slot].handle == -1)
             break;
     }
     if (slot == 32)
         return;
     tAsyncSfxSlot *s = &gSfxSlot[slot];
-    if (size != 0) {
+    if (size != 0)
+    {
         sint32 check;
-        for (;;) {
+        for (;;)
+        {
             sint32 available = SNDmemlargestunused(&check);
             if (size <= (available - 0x1000))
                 break;
-            if (RemoveOldestAsyncSfx(bank) == -1) {
+            if (RemoveOldestAsyncSfx(bank) == -1)
+            {
 #ifdef _DEBUG
                 if (bank == 2)
                     fputs("out of SPU ram on speech!\n", stdout);
@@ -296,10 +289,12 @@ void AudioCmn::LoadAsyncSfx(sint32 bank, sint32 patch, void *pbank, sint32 size)
             }
         }
         check = SNDbankadd(&s->handle, pbank);
-        if (check == 7) {
+        if (check == 7)
+        {
             sint32 headerSize = SNDbankheadersize(s->handle);
             s->header = (char *)reservememadr("SFXHDR", headerSize, 0x10);
-            if (s->header != 0) {
+            if (s->header != 0)
+            {
                 SNDbankheadercopy(s->header, s->handle);
                 s->patch = patch;
                 s->ticks = simGlobal.gameTicks;
@@ -340,22 +335,30 @@ sint32 ChooseImpactSample(sint32 force, s_type surface1, s_type surface2)
         return 19;
     if (surface1 == kTires && surface2 == kAsphalt)
         return 31;
-    if (surface1 == kCarBody) {
+    if (surface1 == kCarBody)
+    {
         if (surface2 == kWoodWall)
             return 30;
         if (surface2 == kGrassWall)
             return 29;
-        if (surface2 == kWall) {
+        if (surface2 == kWall)
+        {
             if (force > 110)
                 return 33;
             return (random() & 1) != 0 ? 37 : 32;
         }
-        if (surface2 == kWallSpark) {
-            switch (random() & 3) {
-            case 0: return 35;
-            case 1: return 34;
-            case 2: return 32;
-            default: return 37;
+        if (surface2 == kWallSpark)
+        {
+            switch (random() & 3)
+            {
+                case 0:
+                    return 35;
+                case 1:
+                    return 34;
+                case 2:
+                    return 32;
+                default:
+                    return 37;
             }
         }
         if (surface2 == kSign)
@@ -364,7 +367,8 @@ sint32 ChooseImpactSample(sint32 force, s_type surface1, s_type surface2)
     if (surface2 == kBlowOut)
         return 18;
     sint32 iSFXnum;
-    if (surface1 == kCarBody && (surface2 == kAsphalt || surface2 == kGravel)) {
+    if (surface1 == kCarBody && (surface2 == kAsphalt || surface2 == kGravel))
+    {
         if (force >= 81)
             iSFXnum = 33;
         else if (force >= 23)
@@ -375,11 +379,16 @@ sint32 ChooseImpactSample(sint32 force, s_type surface1, s_type surface2)
             iSFXnum = 29;
         if (iSFXnum != lastImpactSample)
             return iSFXnum;
-        switch (iSFXnum) {
-        case 29: return (random() & 1) != 0 ? 34 : 32;
-        case 32: return (random() & 1) != 0 ? 29 : 34;
-        case 34: return (random() & 1) != 0 ? 29 : 32;
-        default: return iSFXnum;
+        switch (iSFXnum)
+        {
+            case 29:
+                return (random() & 1) != 0 ? 34 : 32;
+            case 32:
+                return (random() & 1) != 0 ? 29 : 34;
+            case 34:
+                return (random() & 1) != 0 ? 29 : 32;
+            default:
+                return iSFXnum;
         }
     }
     if (force >= 91)
@@ -394,12 +403,18 @@ sint32 ChooseImpactSample(sint32 force, s_type surface1, s_type surface2)
         iSFXnum = 30;
     if (iSFXnum != lastImpactSample)
         return iSFXnum;
-    switch (iSFXnum) {
-    case 30: return 34;
-    case 32: return (random() & 1) != 0 ? 37 : 34;
-    case 34: return (random() & 1) != 0 ? 30 : 37;
-    case 37: return (random() & 1) != 0 ? 30 : 34;
-    default: return iSFXnum;
+    switch (iSFXnum)
+    {
+        case 30:
+            return 34;
+        case 32:
+            return (random() & 1) != 0 ? 37 : 34;
+        case 34:
+            return (random() & 1) != 0 ? 30 : 37;
+        case 37:
+            return (random() & 1) != 0 ? 30 : 34;
+        default:
+            return iSFXnum;
     }
 }
 
@@ -407,15 +422,30 @@ sint32 ChooseLoopedSample(s_type surface1, s_type surface2)
 {
     FUNCTION_MARKER(0x80077C94, "NFS4.EXE");
     sint32 SFXnum = 44;
-    if (surface1 == kTires) {
-        switch (surface2) {
-        case kAsphalt: SFXnum = 42; break;
-        case kWetAsphalt: SFXnum = 45; break;
-        case kRaceTireOnAsphalt: SFXnum = 46; break;
-        case kRainTireOnAsphalt: SFXnum = 47; break;
-        case kSnow: SFXnum = 43; break;
-        case kGravel: SFXnum = 41; break;
-        default: break;
+    if (surface1 == kTires)
+    {
+        switch (surface2)
+        {
+            case kAsphalt:
+                SFXnum = 42;
+                break;
+            case kWetAsphalt:
+                SFXnum = 45;
+                break;
+            case kRaceTireOnAsphalt:
+                SFXnum = 46;
+                break;
+            case kRainTireOnAsphalt:
+                SFXnum = 47;
+                break;
+            case kSnow:
+                SFXnum = 43;
+                break;
+            case kGravel:
+                SFXnum = 41;
+                break;
+            default:
+                break;
         }
     }
     if (surface1 == kCarBody && (surface2 == kAsphalt || surface2 == kWetAsphalt || surface2 == kGravel || surface2 == kSnow))
@@ -427,14 +457,17 @@ sint32 AudioCmn::GetAsyncSfx(sint32 bank, sint32 patch, bool checkonly)
 {
     FUNCTION_MARKER(0x80076900, "NFS4.EXE");
     sint32 slot;
-    for (slot = 0; slot < 32; ++slot) {
+    for (slot = 0; slot < 32; ++slot)
+    {
         tAsyncSfxSlot *s = &gSfxSlot[slot];
-        if (s->patch == patch && s->bank == bank) {
+        if (s->patch == patch && s->bank == bank)
+        {
             s->ticks = simGlobal.gameTicks;
             return s->handle;
         }
     }
-    for (slot = 0; slot < 32; ++slot) {
+    for (slot = 0; slot < 32; ++slot)
+    {
         if (gSfxSlot[slot].patch == -1)
             break;
     }
@@ -442,7 +475,8 @@ sint32 AudioCmn::GetAsyncSfx(sint32 bank, sint32 patch, bool checkonly)
         slot = RemoveOldestAsyncSfx(bank);
     if ((uint32)slot >= 32)
         return -1;
-    if (!checkonly) {
+    if (!checkonly)
+    {
         if (CopSpeak::SfxQueued() >= 6)
             return -1;
         CopSpeak::tRequest r;
@@ -462,19 +496,21 @@ sint32 AudioCmn::GetAsyncSfx(sint32 bank, sint32 patch, bool checkonly)
 void AudioCmn::Init(void)
 {
     FUNCTION_MARKER(0x80076A74, "NFS4.EXE");
-    if (kAudioOn != 0) {
+    if (kAudioOn != 0)
+    {
         InitChannelArray();
         sint32 temptrack = GameSetup::gData.track;
         audioBackwardsDirection = GameSetup::gData.reverseTrack;
         if ((temptrack & 0x10) != 0)
             temptrack = (temptrack & 0xf) + 5;
-        sint32 (*triggers)[2] = audioBackwardsDirection == 0 ? falseLapTrigNumsForward : falseLapTrigNumsBackward;
+        sint32(*triggers)[2] = audioBackwardsDirection == 0 ? falseLapTrigNumsForward : falseLapTrigNumsBackward;
         falseLapTrigCur = triggers[temptrack][0];
         flaseLapTrigTrack = triggers[temptrack][1];
         intensityFalseLapCounter = 0;
         falseLapCounter = 0;
     }
-    for (sint32 j = 0; j < 2; ++j) {
+    for (sint32 j = 0; j < 2; ++j)
+    {
         gReTrig[j].count = 0;
         fAmbientRangeON[j] = 0;
         fMysticWindON[j] = 0;
@@ -507,8 +543,10 @@ void AudioCmn::Reset(void)
     CopSpeak::Cancel();
     SPCH::ClearEventQueue();
     DeInitAsyncSfx();
-    for (sint32 i = 0; i < 71; ++i) {
-        if (gaChannel[i].Partial != -1) {
+    for (sint32 i = 0; i < 71; ++i)
+    {
+        if (gaChannel[i].Partial != -1)
+        {
             SNDstop(gaChannel[i].Partial);
             gaChannel[i].Partial = -1;
             gaChannel[i].SFXnum = -1;
@@ -517,26 +555,33 @@ void AudioCmn::Reset(void)
     if (fReverbOn != 0)
         ReverbOff();
     Init();
-    if (gMasterAmbientLevel > 0) {
+    if (gMasterAmbientLevel > 0)
+    {
         sint32 ticks = gettick();
         sint32 deadline = (ticks + 0x280);
         sint32 goodtogo = 0;
-        while (goodtogo == 0 && gettick() < deadline) {
+        while (goodtogo == 0 && gettick() < deadline)
+        {
             goodtogo = 1;
             CopSpeak::Server();
             systemtask(0);
             sint32 check;
-            if (SNDmemlargestunused(&check) > 0x8000) {
-                if (GameSetup::gData.raceType == 1) {
-                    for (sint32 i = 0; i < 4; ++i) {
+            if (SNDmemlargestunused(&check) > 0x8000)
+            {
+                if (GameSetup::gData.raceType == 1)
+                {
+                    for (sint32 i = 0; i < 4; ++i)
+                    {
                         if (GetAsyncSfx(2, i + 47, false) == -1)
                             goodtogo = 0;
                     }
                 }
                 if (GameSetup::gData.Weather == 1 && GetAsyncSfx(1, 0, false) == -1)
                     goodtogo = 0;
-                for (sint32 i = 0; i < GameSetup::gData.numCars; ++i) {
-                    if (GameSetup::gData.carInfo[i].carClass == 2) {
+                for (sint32 i = 0; i < GameSetup::gData.numCars; ++i)
+                {
+                    if (GameSetup::gData.carInfo[i].carClass == 2)
+                    {
                         sint32 patch = CopSpeak::GetEnginePatch(GameSetup::gData.carInfo[i].carType, 0);
                         if (patch >= 0 && GetAsyncSfx(1, patch, false) == -1)
                             goodtogo = 0;
@@ -555,15 +600,18 @@ void AudioCmn::Reset(void)
     SNDSTRM::setpriority(gMusicHandle, 255, 255);
     sint32 ticks = gettick();
     sint32 deadline = (ticks + 0x100);
-    sint32 earliest = (ticks + 0x40);
     gettick();
     AudioMus::Buffered();
     AudioMus::Threshold();
-    for (;;) {
+    for (;;)
+    {
         bool wait = false;
-        if (gettick() < earliest || AudioMus::Threshold() <= 0) {
+        if (AudioMus::Threshold() <= 0)
+        {
             wait = gettick() < deadline;
-        } else {
+        }
+        else
+        {
             sint32 buffered = AudioMus::Buffered();
             sint32 threshold = AudioMus::Threshold();
             if (buffered < threshold)
@@ -575,11 +623,14 @@ void AudioCmn::Reset(void)
     }
     sint32 buffered = AudioMus::Buffered();
     sint32 threshold = AudioMus::Threshold();
-    if (buffered < (threshold - 100)) {
+    if (buffered < (threshold - 100))
+    {
         GameSetup::gData.userSetting.musicLevel = 0;
         gMasterMusicLevel = 0;
         AudioMus::Volume(MusicLevel(0));
-    } else {
+    }
+    else
+    {
         gettick();
     }
     gettick();
@@ -597,8 +648,10 @@ void AudioCmn::DeInit(void)
     gMasterMusicLevel = GameSetup::gData.userSetting.musicLevel;
     AudioTrk::CleanUp();
     DeInitAsyncSfx();
-    for (sint32 i = 0; i < 71; ++i) {
-        if (gaChannel[i].Partial != -1) {
+    for (sint32 i = 0; i < 71; ++i)
+    {
+        if (gaChannel[i].Partial != -1)
+        {
             SNDstop(gaChannel[i].Partial);
             gaChannel[i].Partial = -1;
             gaChannel[i].SFXnum = -1;
@@ -615,7 +668,8 @@ void AudioCmn::DeInit(void)
 void AudioCmn::SetLevels(void)
 {
     FUNCTION_MARKER(0x8007701C, "NFS4.EXE");
-    if (Replay::ReplayInterface.statsScreen != 0) {
+    if (Replay::ReplayInterface.statsScreen != 0)
+    {
         sint32 scaled = ((uint32)GameSetup::gData.userSetting.sfxLevel << 6);
         gLastFade = 0x20;
         gMasterSFXLevel = scaled / 127;
@@ -625,10 +679,7 @@ void AudioCmn::SetLevels(void)
 sint32 AudioCmn::GetTimePhrase(sint32 time)
 {
     FUNCTION_MARKER(0x8007706C, "NFS4.EXE");
-    static sint8 compareTimes[25] = {
-        30, 12, 6, 5, 4, 3, 2, 1, 0, -1, -2, -3, -4,
-        -5, -6, -7, -8, -9, -10, -11, -12, -15, -20, -25, -30
-    };
+    static sint8 compareTimes[25] = {30, 12, 6, 5, 4, 3, 2, 1, 0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, -12, -15, -20, -25, -30};
     sint32 seconds = (time < 0 ? (time - 1) : time) >> 6;
     sint32 index = 0;
     while (index < 25 && seconds < compareTimes[index])
@@ -640,7 +691,8 @@ void AudioCmn::CheckState(Car::tObj *car)
 {
     FUNCTION_MARKER(0x800770BC, "NFS4.EXE");
     uint8 carnum = (uint8)car->carIndex;
-    if (GameSetup::gData.raceType == 1 || GameSetup::gData.raceType == 5) {
+    if (GameSetup::gData.raceType == 1 || GameSetup::gData.raceType == 5)
+    {
         if ((Cars::gHumanRaceCarList[0]->carFlags & 0x200) != 0)
             return;
         if (Cars::gNumHumanRaceCars == 2 && (Cars::gHumanRaceCarList[1]->carFlags & 0x200) != 0)
@@ -652,27 +704,34 @@ void AudioCmn::CheckState(Car::tObj *car)
     sint32 carspeed = car->currentSpeed;
     if (GameSetup::gData.reverseTrack != 0)
         carspeed = (-carspeed);
-    if (car->stats.lap < numLaps) {
+    if (car->stats.lap < numLaps)
+    {
         sint32 distance = fixedmult(carspeed, 0x50000);
         sint32 nextLapSlice = ((car->stats.lap + 1) * gNumSlices);
         sint32 projectedSlice = (car->stats.sliceTotal + (distance / 0x60000));
-        if (nextLapSlice < projectedSlice) {
+        if (nextLapSlice < projectedSlice)
+        {
             if (recordLapTime == 0 || (simGlobal.gameTicks - gtotallaptimes[carnum]) < recordLapTime)
                 GetAsyncSfx(2, 1, false);
             if (car->stats.lap != 0 && (simGlobal.gameTicks - gtotallaptimes[carnum]) < bestLapTime[carnum])
                 GetAsyncSfx(2, 0, false);
             sint32 opponents = Stats::GetNumOpponents();
-            if (opponents > 1) {
+            if (opponents > 1)
+            {
                 sint32 phrase;
-                if (opponents < 3 && car->stats.checkpointDisplay != 0) {
+                if (opponents < 3 && car->stats.checkpointDisplay != 0)
+                {
                     phrase = GetTimePhrase(-car->stats.checkpointDifference);
-                } else {
+                }
+                else
+                {
                     sint32 position = Stats::GetPosition(car);
                     if (position == opponents)
                         position = 8;
                     phrase = (position + 79);
                 }
-                if (GameSetup::gData.commMode == 1) {
+                if (GameSetup::gData.commMode == 1)
+                {
                     GetAsyncSfx(2, carnum + 51, false);
                     phrase = (phrase + ((carnum + 1) * 35));
                 }
@@ -680,7 +739,8 @@ void AudioCmn::CheckState(Car::tObj *car)
             }
             sint32 lap = car->stats.lap;
             numLaps = GameSetup::gData.numLaps;
-            if (lap < (numLaps - 1)) {
+            if (lap < (numLaps - 1))
+            {
                 sint32 phrase = lap < (numLaps - 2) ? (lap + 5) : 2;
                 GetAsyncSfx(2, phrase, false);
             }
@@ -691,19 +751,26 @@ void AudioCmn::CheckState(Car::tObj *car)
     CopSpeak::tRequest r;
     CopSpeak::InitRequest(&r);
     bool saidplayer = false;
-    if (GameSetup::gData.commMode == 1) {
+    if (GameSetup::gData.commMode == 1)
+    {
         sint32 lap = car->stats.lap;
         sint32 completedTime;
-        if (lap == 0) {
+        if (lap == 0)
+        {
             completedTime = car->stats.lapTime;
-        } else if ((uint32)lap - 1 < 4) {
+        }
+        else if ((uint32)lap - 1 < 4)
+        {
             completedTime = car->stats.time[lap - 1];
-        } else {
+        }
+        else
+        {
             uint32 timeOffset = (uint32)(offsetof(Car::tObj, stats) + offsetof(Car::tStats, time)) + (((uint32)lap - 1) << 2);
             const uint8 *carBytes = reinterpret_cast<const uint8 *>(car);
             memcpy(&completedTime, carBytes + timeOffset, sizeof(completedTime));
         }
-        if (completedTime < bestLapTime[car->carIndex]) {
+        if (completedTime < bestLapTime[car->carIndex])
+        {
             r.phrase = carnum + 51;
             CopSpeak::Request(&r);
             saidplayer = true;
@@ -711,54 +778,75 @@ void AudioCmn::CheckState(Car::tObj *car)
     }
     sint32 lap = car->stats.lap;
     sint32 completedTime;
-    if (lap == 0) {
+    if (lap == 0)
+    {
         completedTime = car->stats.lapTime;
-    } else if ((uint32)lap - 1 < 4) {
+    }
+    else if ((uint32)lap - 1 < 4)
+    {
         completedTime = car->stats.time[lap - 1];
-    } else {
+    }
+    else
+    {
         uint32 timeOffset = (uint32)(offsetof(Car::tObj, stats) + offsetof(Car::tStats, time)) + (((uint32)lap - 1) << 2);
         const uint8 *carBytes = reinterpret_cast<const uint8 *>(car);
         memcpy(&completedTime, carBytes + timeOffset, sizeof(completedTime));
     }
-    if (recordLapTime == 0 || completedTime < recordLapTime) {
+    if (recordLapTime == 0 || completedTime < recordLapTime)
+    {
         r.phrase = 1;
         bestLapTime[car->carIndex] = completedTime;
         recordLapTime = completedTime;
         CopSpeak::Request(&r);
-    } else if (completedTime < bestLapTime[car->carIndex]) {
+    }
+    else if (completedTime < bestLapTime[car->carIndex])
+    {
         r.phrase = 0;
         bestLapTime[car->carIndex] = completedTime;
         CopSpeak::Request(&r);
     }
     sint32 opponents = Stats::GetNumOpponents();
-    if (opponents > 1) {
+    if (opponents > 1)
+    {
         sint32 position = Stats::GetPosition(car);
-        if (car->lap < GameSetup::gData.numLaps) {
-            if (opponents < 3 && car->stats.checkpointDisplay != 0) {
+        if (car->lap < GameSetup::gData.numLaps)
+        {
+            if (opponents < 3 && car->stats.checkpointDisplay != 0)
+            {
                 sint32 phrase = GetTimePhrase(-car->stats.checkpointDifference);
-                if (GameSetup::gData.commMode == 1 && !saidplayer && ((uint32)phrase - 59 < 3 || (uint32)phrase - 63 < 15)) {
+                if (GameSetup::gData.commMode == 1 && !saidplayer && ((uint32)phrase - 59 < 3 || (uint32)phrase - 63 < 15))
+                {
                     r.phrase = carnum + 51;
                     CopSpeak::Request(&r);
                     saidplayer = true;
                 }
                 r.phrase = phrase;
-            } else {
+            }
+            else
+            {
                 r.phrase = position == opponents ? 87 : (position + 78);
             }
             if (GameSetup::gData.commMode == 1 && !saidplayer)
                 r.phrase = (r.phrase + ((carnum + 1) * 35));
-        } else if (GameSetup::gData.commMode != 1 || saidplayer) {
+        }
+        else if (GameSetup::gData.commMode != 1 || saidplayer)
+        {
             r.phrase = position == opponents && position >= 3 ? 18 : (position + 10);
-        } else if (position == opponents && position >= 3) {
+        }
+        else if (position == opponents && position >= 3)
+        {
             r.phrase = carnum == 0 ? 26 : 34;
-        } else {
+        }
+        else
+        {
             r.phrase = (position + ((carnum == 0 ? 18 : 26)));
         }
         CopSpeak::Request(&r);
     }
     lap = car->stats.lap;
     numLaps = GameSetup::gData.numLaps;
-    if (lap < numLaps) {
+    if (lap < numLaps)
+    {
         r.phrase = lap < (numLaps - 1) ? (lap + 4) : 2;
         CopSpeak::Request(&r);
     }
@@ -790,10 +878,7 @@ void AudioCmn::LoadGameSamples(void)
     char filename[100];
     strcpy(filename, Paths_Paths[28]);
     strcat(filename, "Gen");
-    const char *TrackGenBank[11] = {
-        "eng", "brt", "eng", "fre", "eng", "brt",
-        "ger", "brt", "eng", "eng", "eng"
-    };
+    const char *TrackGenBank[11] = {"eng", "brt", "eng", "fre", "eng", "brt", "ger", "brt", "eng", "eng", "eng"};
     strcat(filename, TrackGenBank[GameSetup::gData.track]);
     LoadBank(filename, 3);
     gSndBnk[5].bnkID = -2;
@@ -803,7 +888,8 @@ void AudioCmn::LoadGameSamples(void)
 void AudioCmn::InitChannelArray(void)
 {
     FUNCTION_MARKER(0x800778B0, "NFS4.EXE");
-    for (sint32 i = 0; i < 71; ++i) {
+    for (sint32 i = 0; i < 71; ++i)
+    {
         gaChannel[i].Partial = -1;
         gaChannel[i].SFXnum = -1;
     }
@@ -820,12 +906,14 @@ void AudioCmn::SFX(sint32 sndPlayer, s_type surface1, s_type surface2, sint32 tw
         amplitude = ((0x1324 - Distsq) * 127) / 0x1324;
     sint32 iSFXnumber;
     sint32 frequency;
-    if (sndPlayer < 0) {
+    if (sndPlayer < 0)
+    {
         sint32 force = (tweakedForce * 127) / 0xa0000;
         if (force >= 128)
             force = 127;
         iSFXnumber = ChooseImpactSample(force, surface1, surface2);
-        if (iSFXnumber == 31) {
+        if (iSFXnumber == 31)
+        {
             sint32 tempAmp = (amplitude * force) / 127;
             tempAmp = ((uint32)tempAmp << 1);
             if (tempAmp > 127)
@@ -833,7 +921,9 @@ void AudioCmn::SFX(sint32 sndPlayer, s_type surface1, s_type surface2, sint32 tw
             PlaySFX(49, 31, 64, 0x10000, amplitude, azimuth);
             amplitude = tempAmp;
             iSFXnumber = 35;
-        } else if (iSFXnumber == 18) {
+        }
+        else if (iSFXnumber == 18)
+        {
             PlaySound(gSndBnk[3].bnkID, 18, azimuth, 127, 64);
             PlaySound(gSndBnk[3].bnkID, 22, azimuth, 127, 64);
             PlaySound(gSndBnk[3].bnkID, 35, azimuth, amplitude, 64);
@@ -841,11 +931,15 @@ void AudioCmn::SFX(sint32 sndPlayer, s_type surface1, s_type surface2, sint32 tw
         }
         sndPlayer = 49;
         frequency = 64;
-    } else {
-        if (tweakedForce <= 0) {
+    }
+    else
+    {
+        if (tweakedForce <= 0)
+        {
             freeVoiceChannel(sndPlayer);
             uint32 carIndex = (uint32)sndPlayer - 18;
-            if (carIndex < 2) {
+            if (carIndex < 2)
+            {
                 freeVoiceChannel(((sndPlayer + 4)));
                 Cars::gList[carIndex]->audioDamageScrape = 0;
             }
@@ -854,23 +948,29 @@ void AudioCmn::SFX(sint32 sndPlayer, s_type surface1, s_type surface2, sint32 tw
         iSFXnumber = ChooseLoopedSample(surface1, surface2);
         frequency = scaleFrequency(sndPlayer, iSFXnumber, tweakedForce);
         uint32 carIndex = (uint32)sndPlayer - 18;
-        if (carIndex < 2) {
+        if (carIndex < 2)
+        {
             sint32 force = (tweakedForce * 127) / 0xa0000;
             if (force >= 128)
                 force = 127;
             amplitude = (amplitude * force) >> 7;
-            if (amplitude < 31) {
+            if (amplitude < 31)
+            {
                 freeVoiceChannel(sndPlayer + 4);
                 Cars::gList[carIndex]->audioDamageScrape = 0;
-            } else {
+            }
+            else
+            {
                 Car::tObj *c = Cars::gList[carIndex];
-                if (c->carInfo->carType < 28 && ((c->render.currentRoll > 0 && c->N.damage[7] > 0x1e0000) || (c->render.currentRoll < 0 && c->N.damage[3] > 0x1e0000))) {
+                if (c->carInfo->carType < 28 && ((c->render.currentRoll > 0 && c->N.damage[7] > 0x1e0000) || (c->render.currentRoll < 0 && c->N.damage[3] > 0x1e0000)))
+                {
                     PlaySFX(sndPlayer + 4, 40, (frequency + 10), 0x10000, (amplitude * 3), azimuth);
                     c->audioDamageScrape = amplitude;
                 }
             }
         }
-        if (iSFXnumber == 44) {
+        if (iSFXnumber == 44)
+        {
             frequency = (frequency - 60);
             if (frequency < 0)
                 frequency = 0;
@@ -884,7 +984,8 @@ void freeVoiceChannel(sint32 sndPlayer)
     FUNCTION_MARKER(0x800780D0, "NFS4.EXE");
     if (AudioCmn::kAudioOn == 0 || sndPlayer == -1)
         return;
-    if (gaChannel[sndPlayer].Partial != -1) {
+    if (gaChannel[sndPlayer].Partial != -1)
+    {
         SNDautovol(gaChannel[sndPlayer].Partial, 5, -1);
         gaChannel[sndPlayer].Partial = -1;
         gaChannel[sndPlayer].SFXnum = -1;
@@ -899,21 +1000,36 @@ sint32 AudioCmn::PlayDoppleredSound(sint32 bhandle, sint32 patchNum, sint32 azim
     SNDplaysetdef(&playopts);
     playopts.bhandle = (char)bhandle;
     sint32 volume;
-    if (patchNum == 125) {
+    if (patchNum == 125)
+    {
         volume = (gMasterSFXLevel * vol) >> 7;
-    } else if (bhandle == -4) {
+    }
+    else if (bhandle == -4)
+    {
         volume = (gMasterFENarrationLevel * 129) >> 7;
-    } else if (bhandle == gSndBnk[2].bnkID) {
+    }
+    else if (bhandle == gSndBnk[2].bnkID)
+    {
         volume = (gMasterAmbientLevel * (vol * 39)) >> 14;
-    } else if (bhandle == gSndBnk[5].bnkID) {
+    }
+    else if (bhandle == gSndBnk[5].bnkID)
+    {
         volume = (gMasterAmbientLevel * (vol * 130)) >> 14;
-    } else if (patchNum == 22 || patchNum == 18) {
+    }
+    else if (patchNum == 22 || patchNum == 18)
+    {
         volume = (gMasterSFXLevel * vol) >> 7;
-    } else if (patchNum == 3 && (bhandle == gSndBnk[0].bnkID || bhandle == gSndBnk[2].bnkID)) {
+    }
+    else if (patchNum == 3 && (bhandle == gSndBnk[0].bnkID || bhandle == gSndBnk[2].bnkID))
+    {
         volume = (gMasterSFXLevel * (vol * 127)) >> 14;
-    } else if (patchNum == 0) {
+    }
+    else if (patchNum == 0)
+    {
         volume = (gMasterEngineLevel * (vol * 14)) >> 14;
-    } else {
+    }
+    else
+    {
         volume = (gMasterSFXLevel * (vol * 39)) >> 14;
     }
     playopts.vol = (char)volume;
@@ -921,16 +1037,24 @@ sint32 AudioCmn::PlayDoppleredSound(sint32 bhandle, sint32 patchNum, sint32 azim
     playopts.bend = (char)bend;
     playopts.pitchmult = (uint16)(doppler >> 4);
     playopts.use3dpos = Audio::direct3davail != 0;
-    if (Audio::direct3davail != 0) {
+    if (Audio::direct3davail != 0)
+    {
         playopts.azimuth = (uint16)azimuth;
-    } else if (gStereoMode == 0) {
+    }
+    else if (gStereoMode == 0)
+    {
         playopts.pan = 64;
-    } else if ((uint32)azimuth - 0x4000 <= 0x7fff) {
+    }
+    else if ((uint32)azimuth - 0x4000 <= 0x7fff)
+    {
         playopts.pan = (char)((0xbfff - azimuth) >> 8);
-    } else {
+    }
+    else
+    {
         playopts.pan = (char)(((uint32)azimuth + 0x4000) >> 8);
     }
-    if ((sint8)playopts.bhandle < -1) {
+    if ((sint8)playopts.bhandle < -1)
+    {
         sint32 bank = (sint8)playopts.bhandle == -4 ? 2 : ((sint8)playopts.bhandle == -3 ? 1 : 0);
         playopts.bhandle = (char)GetAsyncSfx(bank, patchNum, false);
         playopts.patnum = 0;
@@ -970,11 +1094,14 @@ void SirenOn(sint32 sirennum, sint32 supercop)
         return;
     bSirenOn[sirennum] = 1;
     quickSirenActive[sirennum] = 1;
-    if (supercop == 0) {
+    if (supercop == 0)
+    {
         sirenCount[sirennum] = gQuickSirenCount;
         quickSirenOn(sirennum);
         gQuickSirenCount = (gQuickSirenCount + 1);
-    } else {
+    }
+    else
+    {
         sirenCount[sirennum] = -1;
         SuperCopSirenOn(sirennum);
     }
@@ -998,7 +1125,8 @@ void UpdateSiren(sint32 sirennum, sint32 amp, sint32 dop, sint32 azimuth, sint32
     FUNCTION_MARKER(0x8007995C, "NFS4.EXE");
     if (bSirenOn[sirennum] == 0)
         return;
-    if (SNDover(gaChannel[sirennum + 43].Partial) != 0) {
+    if (SNDover(gaChannel[sirennum + 43].Partial) != 0)
+    {
         if (supercop == 0)
             quickSirenOn(sirennum);
         else
@@ -1014,9 +1142,12 @@ void UpdateSiren(sint32 sirennum, sint32 amp, sint32 dop, sint32 azimuth, sint32
     uint32 scale = sirenCount[sirennum] == -1 ? 37 : 47;
     sint32 volume = (sint32)(gMasterAmbientLevel * (amp * scale)) >> 14;
     SNDvol(gaChannel[sirennum + 43].Partial, volume);
-    if (Audio::direct3davail != 0) {
+    if (Audio::direct3davail != 0)
+    {
         SND3dpos(gaChannel[sirennum + 43].Partial, azimuth, 0);
-    } else if (gStereoMode != 0) {
+    }
+    else if (gStereoMode != 0)
+    {
         sint32 pan;
         if ((uint32)azimuth - 0x4000 <= 0x7fff)
             pan = (0xbfff - azimuth);
@@ -1040,57 +1171,90 @@ sint32 AudioCmn::PlaySFX(sint32 sndPlayer, sint32 iSFXnum, sint32 iFreqIn, sint3
     if (iAmp > 127)
         iAmp = 127;
     sint32 PatchBank;
-    if ((uint32)sndPlayer - 28 < 4 || (uint32)sndPlayer - 50 < 4 || sndPlayer == 36 || sndPlayer == 54 || (uint32)sndPlayer - 55 < 16) {
+    if ((uint32)sndPlayer - 28 < 4 || (uint32)sndPlayer - 50 < 4 || sndPlayer == 36 || sndPlayer == 54 || (uint32)sndPlayer - 55 < 16)
+    {
         PatchBank = gSndBnk[5].bnkID;
-    } else if ((uint32)sndPlayer - 10 < 8 || (uint32)sndPlayer - 26 < 2) {
+    }
+    else if ((uint32)sndPlayer - 10 < 8 || (uint32)sndPlayer - 26 < 2)
+    {
         PatchBank = gSndBnk[2].bnkID;
-    } else if (iSFXnum == 125) {
+    }
+    else if (iSFXnum == 125)
+    {
         PatchBank = gSndBnk[5].bnkID;
-    } else if (iSFXnum == 8 || iSFXnum == 10 || iSFXnum == 11) {
+    }
+    else if (iSFXnum == 8 || iSFXnum == 10 || iSFXnum == 11)
+    {
         PatchBank = gSndBnk[3].bnkID;
-    } else {
+    }
+    else
+    {
         PatchBank = gSndBnk[(uint8)gBankNumLookupTable[sndPlayer]].bnkID;
     }
-    if (sndPlayer == 49) {
+    if (sndPlayer == 49)
+    {
         gaChannel[49].Partial = PlayDoppleredSound(PatchBank, iSFXnum, azimuth, iAmp, iFreq, iDopplerIn);
         gaChannel[49].SFXnum = iSFXnum;
         NumSFXOn = (NumSFXOn - 1);
         return gaChannel[sndPlayer].Partial;
     }
-    if (gaChannel[sndPlayer].SFXnum == iSFXnum) {
-        if (SNDover(gaChannel[sndPlayer].Partial) != 0) {
+    if (gaChannel[sndPlayer].SFXnum == iSFXnum)
+    {
+        if (SNDover(gaChannel[sndPlayer].Partial) != 0)
+        {
             gaChannel[sndPlayer].Partial = -1;
             gaChannel[sndPlayer].SFXnum = -1;
         }
-        if (PatchBank < -1 && GetAsyncSfx(PatchBank == -3 ? 1 : 0, iSFXnum, false) == -1) {
+        if (PatchBank < -1 && GetAsyncSfx(PatchBank == -3 ? 1 : 0, iSFXnum, false) == -1)
+        {
             gaChannel[sndPlayer].Partial = -1;
             gaChannel[sndPlayer].SFXnum = -1;
         }
-        if (gaChannel[sndPlayer].SFXnum == iSFXnum) {
+        if (gaChannel[sndPlayer].SFXnum == iSFXnum)
+        {
             sint32 iPartial = gaChannel[sndPlayer].Partial;
-            if (iPartial == -1) {
+            if (iPartial == -1)
+            {
                 gaChannel[sndPlayer].SFXnum = -1;
-            } else {
+            }
+            else
+            {
                 sint32 volume;
-                if (iSFXnum == 125) {
+                if (iSFXnum == 125)
+                {
                     volume = (gMasterSFXLevel * iAmp) >> 7;
-                } else if (PatchBank == gSndBnk[2].bnkID) {
+                }
+                else if (PatchBank == gSndBnk[2].bnkID)
+                {
                     volume = (gMasterAmbientLevel * (iAmp * 39)) >> 14;
-                } else if (PatchBank == gSndBnk[5].bnkID) {
+                }
+                else if (PatchBank == gSndBnk[5].bnkID)
+                {
                     volume = (gMasterAmbientLevel * (iAmp * 130)) >> 14;
-                } else if (iSFXnum == 99) {
+                }
+                else if (iSFXnum == 99)
+                {
                     volume = (gMasterAmbientLevel * (iAmp * 39)) >> 14;
-                } else if (iSFXnum == 3 && (PatchBank == gSndBnk[0].bnkID || PatchBank == gSndBnk[2].bnkID)) {
+                }
+                else if (iSFXnum == 3 && (PatchBank == gSndBnk[0].bnkID || PatchBank == gSndBnk[2].bnkID))
+                {
                     volume = (gMasterSFXLevel * (iAmp * 127)) >> 14;
-                } else if (iSFXnum == 0) {
+                }
+                else if (iSFXnum == 0)
+                {
                     volume = (gMasterEngineLevel * (iAmp * 14)) >> 14;
-                } else {
+                }
+                else
+                {
                     volume = (gMasterSFXLevel * (iAmp * 39)) >> 14;
                 }
                 SNDvol(iPartial, volume);
-                if (Audio::direct3davail != 0) {
+                if (Audio::direct3davail != 0)
+                {
                     SND3dpos(gaChannel[sndPlayer].Partial, azimuth, 0);
-                } else if (gStereoMode != 0) {
+                }
+                else if (gStereoMode != 0)
+                {
                     uint32 pan;
                     if ((uint32)azimuth - 0x4000 <= 0x7fff)
                         pan = 0xbfff - (uint32)azimuth;
@@ -1104,7 +1268,8 @@ sint32 AudioCmn::PlaySFX(sint32 sndPlayer, sint32 iSFXnum, sint32 iFreqIn, sint3
             return gaChannel[sndPlayer].Partial;
         }
     }
-    if (gaChannel[sndPlayer].Partial != -1) {
+    if (gaChannel[sndPlayer].Partial != -1)
+    {
         SNDstop(gaChannel[sndPlayer].Partial);
         NumSFXOn = (NumSFXOn - 1);
     }
@@ -1122,7 +1287,8 @@ void AudioCmn::SoundCar(Car::tObj *car, sint32 dst, sint32 iFreqIn, sint32 doppl
         return;
     sint32 numerator = 0x08000000;
     sint32 distanceOffset = 0x20000;
-    if (Camera::gInfo[car->carIndex].mode == 12) {
+    if (Camera::gInfo[car->carIndex].mode == 12)
+    {
         numerator = 0x10000000;
         distanceOffset = 0x10000;
     }
@@ -1148,8 +1314,10 @@ void AudioCmn::SoundCar(Car::tObj *car, sint32 dst, sint32 iFreqIn, sint32 doppl
         freq = 0;
     sint32 roadSurface = car->N.driveSurfaceType;
     bool tuntrig = BWorldSm::TunnelFlagSm(&car->N.simRoadInfo);
-    if (tuntrig) {
-        if (GameSetup::gData.commMode != 1 && (uint8)fReverbLevel < 100) {
+    if (tuntrig)
+    {
+        if (GameSetup::gData.commMode != 1 && (uint8)fReverbLevel < 100)
+        {
             sint32 level = (uint8)fReverbLevel + 10;
             if (level > 100)
                 level = 100;
@@ -1159,11 +1327,15 @@ void AudioCmn::SoundCar(Car::tObj *car, sint32 dst, sint32 iFreqIn, sint32 doppl
         }
         roadNoiseAmp = (roadNoiseAmp + 20);
         roadNoiseFreq = 94;
-    } else if ((uint8)fReverbLevel < 32) {
+    }
+    else if ((uint8)fReverbLevel < 32)
+    {
         fReverbLevel = 32;
         SNDfxmasterlevel(0, 32);
         fReverbOn = 1;
-    } else if ((uint8)fReverbLevel > 32) {
+    }
+    else if ((uint8)fReverbLevel > 32)
+    {
         sint32 level = (uint8)fReverbLevel - 5;
         if (level < 32)
             level = 32;
@@ -1174,55 +1346,66 @@ void AudioCmn::SoundCar(Car::tObj *car, sint32 dst, sint32 iFreqIn, sint32 doppl
     sint32 PlayerPan = 0;
     if (SPSC)
         PlayerPan = car->carIndex == 0 ? 0xc002 : 0x3ffe;
-    if (car->blowout != 0) {
+    if (car->blowout != 0)
+    {
         roadSurface = 4;
         cobblestoneAmp = ((uint32)cobblestoneAmp << 1);
     }
-    if (dst < 0x460000) {
+    if (dst < 0x460000)
+    {
         sint32 squareDistance = fixedmult(dst, dst);
         sint32 attenuation = (0x13240000 - squareDistance) / 0x1324;
         cobblestoneAmp = (attenuation * cobblestoneAmp) / 0x10000;
-    } else {
+    }
+    else
+    {
         cobblestoneAmp = 0;
     }
     static char cobbleCount = 0;
-    switch (roadSurface) {
-    case 2:
-    case 10:
-    case 11:
-    case 13:
-        roadNoiseAmp = (roadNoiseAmp + (roadNoiseAmp / 4));
-        roadNoiseFreq = 24;
-        break;
-    case 4:
-    case 7:
-    case 12:
-        cobbleCount = (char)((uint8)cobbleCount + 1);
-        cobbleCount = (char)((uint8)cobbleCount % cobbleMod);
-        if ((uint8)cobbleCount == 0 && car->N.objAltitude < 0x3333 && gMasterSFXLevel > 0)
-            PlaySound(gSndBnk[3].bnkID, 29, SPSC ? PlayerPan : 0, cobblestoneAmp / 2, roadSurface == 7 ? 40 : 64);
-        break;
-    default:
-        break;
+    switch (roadSurface)
+    {
+        case 2:
+        case 10:
+        case 11:
+        case 13:
+            roadNoiseAmp = (roadNoiseAmp + (roadNoiseAmp / 4));
+            roadNoiseFreq = 24;
+            break;
+        case 4:
+        case 7:
+        case 12:
+            cobbleCount = (char)((uint8)cobbleCount + 1);
+            cobbleCount = (char)((uint8)cobbleCount % cobbleMod);
+            if ((uint8)cobbleCount == 0 && car->N.objAltitude < 0x3333 && gMasterSFXLevel > 0)
+                PlaySound(gSndBnk[3].bnkID, 29, SPSC ? PlayerPan : 0, cobblestoneAmp / 2, roadSurface == 7 ? 40 : 64);
+            break;
+        default:
+            break;
     }
     if (gMasterEngineLevel == 0)
         return;
     sint32 mode = Camera::gInfo[car->carIndex].mode;
     sint32 cam;
-    if (mode >= 0 && mode < 2) {
+    if (mode >= 0 && mode < 2)
+    {
         cam = 0;
-    } else {
+    }
+    else
+    {
         cam = mode >= 2 && mode < 5 ? 1 : 2;
         roadNoiseAmp >>= 1;
     }
     sint32 previousGas = PlayersRampedGasLevel[car->carIndex];
     sint32 gasTarget = (uint8)car->control.gasLevel;
-    if (previousGas < gasTarget) {
+    if (previousGas < gasTarget)
+    {
         sint32 step = (gasTarget - previousGas) / 2;
         if (step <= 0)
             step = 1;
         PlayersRampedGasLevel[car->carIndex] = (previousGas + step);
-    } else if (gasTarget < previousGas) {
+    }
+    else if (gasTarget < previousGas)
+    {
         sint32 step = (gasTarget - previousGas) / 8;
         if (step >= 0)
             step = -1;
@@ -1242,7 +1425,8 @@ void AudioCmn::SoundCar(Car::tObj *car, sint32 dst, sint32 iFreqIn, sint32 doppl
         wetNoiseAmp = 127;
     sint32 wetNoiseFreq = (72 - ((wetNoiseAmp >> 3)));
     sint32 iAmpIn = roadNoiseAmp < 128 ? roadNoiseAmp : 127;
-    if (relvel != 0 || Camera::gInfo[car->carIndex].mode == 11) {
+    if (relvel != 0 || Camera::gInfo[car->carIndex].mode == 11)
+    {
         sint32 dividend = ((uint32)loadAmp << 16);
         if (doppler == 0 || (doppler == -1 && dividend == INT_MIN))
             abort();
@@ -1254,13 +1438,15 @@ void AudioCmn::SoundCar(Car::tObj *car, sint32 dst, sint32 iFreqIn, sint32 doppl
         freeVoiceChannel(sndPlayer);
     else
         PlaySFX(sndPlayer, roadNoisePatch, roadNoiseFreq, doppler, iAmpIn, azimuth);
-    if (car->carIndex == 0) {
+    if (car->carIndex == 0)
+    {
         if (GameSetup::gData.Weather == 1 && wetNoiseAmp != 0)
             PlaySFX(26, 0, wetNoiseFreq, doppler, wetNoiseAmp, 0);
         else
             freeVoiceChannel(26);
     }
-    if (car->control.gearShiftTimer != 0 && (uint8)car->control.lastGear < (uint8)car->control.gear && (uint8)car->control.lastGear != 1 && CurCarGasLevel != 0) {
+    if (car->control.gearShiftTimer != 0 && (uint8)car->control.lastGear < (uint8)car->control.gear && (uint8)car->control.lastGear != 1 && CurCarGasLevel != 0)
+    {
         sint32 timer = (uint8)car->control.gearShiftTimer;
         sint32 dividend = (loadAmp * timer);
         sint32 divisor = car->specs->gearShiftDelay;
@@ -1295,14 +1481,16 @@ void AudioCmn::TrafficSFX(sint32 iChan, sint32 iSFXnum, sint32 freq, sint32 dopp
         player = iChan < 8 ? 0 : 1;
     sint32 numerator = 0x08000000;
     sint32 offset = 0x20000;
-    if (Camera::gInfo[player].mode == 12) {
+    if (Camera::gInfo[player].mode == 12)
+    {
         numerator = 0x10000000;
         offset = 0x10000;
     }
     sint32 iAmpIn = fixeddiv(numerator, ((dst + offset))) / 0x10000;
     sint32 engineChannel = (iChan + 4);
     sint32 exhaustChannel = (iChan + 8);
-    if (iAmpIn == 0 && iChan != -1) {
+    if (iAmpIn == 0 && iChan != -1)
+    {
         if (gaChannel[iChan].Partial != -1)
             freeVoiceChannel(iChan);
         if (gaChannel[engineChannel].Partial != -1)
@@ -1336,10 +1524,13 @@ void AudioCmn::TrafficSkidSFX(sint32 sndPlayer, s_type surface1, s_type surface2
     sint32 iAmpIn = 0;
     if (Distsq < 0x1324)
         iAmpIn = ((0x1324 - Distsq) * 127) / 0x1324;
-    if (iAmpIn == 0 && sndPlayer != -1) {
+    if (iAmpIn == 0 && sndPlayer != -1)
+    {
         if (gaChannel[sndPlayer].Partial != -1)
             freeVoiceChannel(sndPlayer);
-    } else {
+    }
+    else
+    {
         SFX(sndPlayer, surface1, surface2, force, Distsq, azimuth);
     }
 }
@@ -1354,7 +1545,8 @@ void AudioCmn::PlayerHornOn(sint32 carIndex, sint32 Distsq, sint32 iFreqIn, sint
         iAmpIn = ((0x1324 - Distsq) * 127) / 0x1324;
     sint32 sfx = 3;
     sint32 player = 41;
-    if (GameSetup::gData.commMode == 1) {
+    if (GameSetup::gData.commMode == 1)
+    {
         sfx = 10;
         if (carIndex != 0)
             player = 42;
@@ -1415,14 +1607,15 @@ void AudioCmn::Pause(void)
 {
     FUNCTION_MARKER(0x80079B60, "NFS4.EXE");
     CopSpeak::SilenceCop(0, 0);
-    for (sint32 i = 0; i < 71; ++i) {
+    for (sint32 i = 0; i < 71; ++i)
+    {
         if (gaChannel[i].Partial != -1)
             SNDvol(gaChannel[i].Partial, 0);
     }
     sint32 musicVoice = AudioMus::SetPaused(true);
     if (fReverbOn != 0)
         ReverbOff();
-    const AudioEng::tState silent = { 0, 0x1000, 0, 0, 0, 0, 0 };
+    const AudioEng::tState silent = {0, 0x1000, 0, 0, 0, 0, 0};
     for (sint32 player = 0; player < 2; ++player)
         if (!AudioEng::TryQueueState(player, silent))
             break;
@@ -1437,7 +1630,8 @@ void AudioCmn::UnPause(void)
     SNDmastervol(127);
     sint32 level = gMasterMusicLevel;
     sint32 curve = level;
-    if (level >= 86) {
+    if (level >= 86)
+    {
         sint32 scaled = ((level - 85) * 7);
         curve = scaled / 2 + 85;
     }
@@ -1456,8 +1650,10 @@ void AudioCmn::UnPauseAndQuit(void)
     CopSpeak::Cancel();
     SNDmastervol(0);
     AudioMus::StopSong(0);
-    for (sint32 i = 0; i < 71; ++i) {
-        if (gaChannel[i].Partial != -1) {
+    for (sint32 i = 0; i < 71; ++i)
+    {
+        if (gaChannel[i].Partial != -1)
+        {
             SNDstop(gaChannel[i].Partial);
             gaChannel[i].Partial = -1;
             gaChannel[i].SFXnum = -1;
@@ -1481,8 +1677,10 @@ void AudioCmn::UnPauseAndRestart(void)
     SNDmastervol(0);
     DeInitAsyncSfx();
     AudioMus::StopSong(0);
-    for (sint32 i = 0; i < 71; ++i) {
-        if (gaChannel[i].Partial != -1) {
+    for (sint32 i = 0; i < 71; ++i)
+    {
+        if (gaChannel[i].Partial != -1)
+        {
             SNDstop(gaChannel[i].Partial);
             gaChannel[i].Partial = -1;
             gaChannel[i].SFXnum = -1;

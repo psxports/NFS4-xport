@@ -1,12 +1,16 @@
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 #include "xport.h"
 #include "psx.h"
 #include "psx_gte.h"
+#include "hd.h"
+#include "hd_ui.h"
 #include "eaclib/psx/eaclib.h"
 #include "game/common/bworld.h"
 #include "game/common/camera.h"
 #include "game/common/genericpmx.h"
+#include "game/common/frame.h"
 #include "game/common/gmesetup.h"
 #include "game/common/mathnfs.h"
 #include "game/common/r3dcar.h"
@@ -18,152 +22,180 @@
 #include "game/psx/trackspec.h"
 #include "lib/psx/random.h"
 
+struct PreparedTrackEffects
+{
+    PreparedTrackHalo *halos;
+    uint32 count;
+    uint32 capacity;
+    uint32 cursor;
+    uint32 matched;
+    uint32 missing;
+    PreparedTrackHalo *previous;
+    uint32 previousCount;
+    uint32 previousCapacity;
+};
+
+uint32 hd_ui_halo_deferred;
+uint32 hd_frontend_halo_deferred;
+
+static PreparedTrackEffects trackEffects[2];
+static bool preparingTrackEffects;
+static bool capturingUiHalo;
+static sint32 trackEffectsPlayer;
+static const void *trackHaloOwner;
+
 sint32 gscale = 4096;
 FLARE_DEF gFlare_LensFlare;
-CVECTOR gfrgb = { 255, 255, 255, 0 };
-CVECTOR gfrgb2 = { 64, 64, 128, 0 };
-sint16 gfSpikePt0[8] = { 3, 3, 0, 0, 1, 1, 2, 2 };
-sint16 gfSpikePt1[8] = { 1, 2, 2, 3, 3, 0, 0, 1 };
-sint16 gfSpikePt2[8] = { 4, 5, 6, 7, 8, 9, 10, 11 };
-sint16 gfOctPt1[8] = { 4, 5, 6, 7, 8, 9, 10, 11 };
-sint16 gfOctPt2[8] = { 5, 6, 7, 8, 9, 10, 11, 4 };
-sint16 gfHexPt1[6] = { 0, 1, 2, 3, 4, 5 };
-sint16 gfHexPt2[6] = { 1, 2, 3, 4, 5, 0 };
+CVECTOR gfrgb = {255, 255, 255, 0};
+CVECTOR gfrgb2 = {64, 64, 128, 0};
+sint16 gfSpikePt0[8] = {3, 3, 0, 0, 1, 1, 2, 2};
+sint16 gfSpikePt1[8] = {1, 2, 2, 3, 3, 0, 0, 1};
+sint16 gfSpikePt2[8] = {4, 5, 6, 7, 8, 9, 10, 11};
+sint16 gfOctPt1[8] = {4, 5, 6, 7, 8, 9, 10, 11};
+sint16 gfOctPt2[8] = {5, 6, 7, 8, 9, 10, 11, 4};
+sint16 gfHexPt1[6] = {0, 1, 2, 3, 4, 5};
+sint16 gfHexPt2[6] = {1, 2, 3, 4, 5, 0};
 
-SVECTOR gOv[4] =
-{
+SVECTOR gOv[4] = {
     {-2, 0, 0, 0},
     {2, 0, 0, 0},
     {-2, 256, 0, 0},
     {2, 256, 0, 0},
 };
 
-SVECTOR Flare::gSpikes[4] =
-{
+SVECTOR Flare::gSpikes[4] = {
     {0, -45, 0, 0},
     {45, 0, 0, 0},
     {0, 45, 0, 0},
     {-45, 0, 0, 0},
 };
 
-SVECTOR Flare::gOct[8] =
-{
-    {0, -256, 0, 0},
-    {180, -180, 0, 0},
-    {256, 0, 0, 0},
-    {180, 180, 0, 0},
-    {0, 256, 0, 0},
-    {-180, 180, 0, 0},
-    {-256, 0, 0, 0},
-    {-180, -180, 0, 0},
+SVECTOR Flare::gOct[8] = {
+    {0, -256, 0, 0}, {180, -180, 0, 0}, {256, 0, 0, 0}, {180, 180, 0, 0}, {0, 256, 0, 0}, {-180, 180, 0, 0}, {-256, 0, 0, 0}, {-180, -180, 0, 0},
 };
 
-SVECTOR Flare::gSmallOct[8] =
-{
-    {0, -45, 0, 0},
-    {31, -31, 0, 0},
-    {45, 0, 0, 0},
-    {31, 31, 0, 0},
-    {0, 45, 0, 0},
-    {-31, 31, 0, 0},
-    {-45, 0, 0, 0},
-    {-31, -31, 0, 0},
+SVECTOR Flare::gSmallOct[8] = {
+    {0, -45, 0, 0}, {31, -31, 0, 0}, {45, 0, 0, 0}, {31, 31, 0, 0}, {0, 45, 0, 0}, {-31, 31, 0, 0}, {-45, 0, 0, 0}, {-31, -31, 0, 0},
 };
 
-SVECTOR Flare::gHex[6] =
-{
-    {-256, 0, 0, 0},
-    {-128, -221, 0, 0},
-    {128, -221, 0, 0},
-    {256, 0, 0, 0},
-    {128, 221, 0, 0},
-    {-128, 221, 0, 0},
+SVECTOR Flare::gHex[6] = {
+    {-256, 0, 0, 0}, {-128, -221, 0, 0}, {128, -221, 0, 0}, {256, 0, 0, 0}, {128, 221, 0, 0}, {-128, 221, 0, 0},
 };
 
-SVECTOR Flare::gReflectHex[6] =
-{
-    {256, 0, 0, 0},
-    {128, 221, 0, 0},
-    {-128, 221, 0, 0},
-    {-256, 0, 0, 0},
-    {-256, -512, 0, 0},
-    {256, -512, 0, 0},
+SVECTOR Flare::gReflectHex[6] = {
+    {256, 0, 0, 0}, {128, 221, 0, 0}, {-128, 221, 0, 0}, {-256, 0, 0, 0}, {-256, -512, 0, 0}, {256, -512, 0, 0},
 };
 
-SVECTOR Flare::gQuad[4] =
-{
+SVECTOR Flare::gQuad[4] = {
     {0, -256, 0, 0},
     {256, 0, 0, 0},
     {0, 256, 0, 0},
     {-256, 0, 0, 0},
 };
 
-SVECTOR Flare::gLensOct[8] =
-{
-    {0, -256, 0, 0},
-    {180, -180, 0, 0},
-    {-180, -180, 0, 0},
-    {256, 0, 0, 0},
-    {-256, 0, 0, 0},
-    {180, 180, 0, 0},
-    {-180, 180, 0, 0},
-    {0, 256, 0, 0},
+SVECTOR Flare::gLensOct[8] = {
+    {0, -256, 0, 0}, {180, -180, 0, 0}, {-180, -180, 0, 0}, {256, 0, 0, 0}, {-256, 0, 0, 0}, {180, 180, 0, 0}, {-180, 180, 0, 0}, {0, 256, 0, 0},
 };
 
-Flare::tInfo Flare::gType[34] =
-{
-    {8421504, 8421504, 1024, 0},
-    {3158064, 8421504, 0, 3},
-    {526440, 394792, 1, 13},
-    {8421504, 3158064, 0, 13},
-    {4222912, 526528, 0, 13},
-    {4222912, 526528, 0, 13},
-    {7368816, 1052696, 0, 13},
-    {526464, 526376, 0, 13},
-    {526464, 526376, 0, 12},
-    {557184, 534568, 0, 12},
-    {8390664, 2623496, 0, 12},
-    {3158064, 8421504, 0, 3},
-    {526440, 394792, 2, 13},
-    {8421504, 3158064, 1, 13},
-    {4222912, 526528, 1, 13},
-    {4222912, 526528, 1, 13},
-    {7368816, 1052696, 1, 13},
-    {526464, 526376, 1, 13},
-    {526464, 526376, 1, 12},
-    {557184, 534568, 1, 12},
-    {8390664, 2623496, 1, 12},
-    {526464, 526376, 0, 0},
-    {662658, 132116, 675, 136},
-    {48830, 17990, 0, 0},
-    {12632256, 0, 770, 4},
-    {3688552, 2105376, 1795, 12},
-    {6314040, 1579032, 3594, 12},
-    {2123920, 1581088, 3594, 12},
-    {2123920, 1581088, 1281, 8},
-    {6318248, 2105376, 734, 8},
-    {13158600, 2105376, 16384, 9},
-    {2123920, 1581088, 1281, 24},
-    {7572224, 0, 1024, 12},
-    {16711680, 0, 256, 8},
+Flare::tInfo Flare::gType[34] = {
+    {8421504, 8421504, 1024, 0}, {3158064, 8421504, 0, 3}, {526440, 394792, 1, 13}, {8421504, 3158064, 0, 13}, {4222912, 526528, 0, 13}, {4222912, 526528, 0, 13}, {7368816, 1052696, 0, 13}, {526464, 526376, 0, 13}, {526464, 526376, 0, 12}, {557184, 534568, 0, 12}, {8390664, 2623496, 0, 12}, {3158064, 8421504, 0, 3}, {526440, 394792, 2, 13}, {8421504, 3158064, 1, 13}, {4222912, 526528, 1, 13}, {4222912, 526528, 1, 13}, {7368816, 1052696, 1, 13}, {526464, 526376, 1, 13}, {526464, 526376, 1, 12}, {557184, 534568, 1, 12}, {8390664, 2623496, 1, 12}, {526464, 526376, 0, 0}, {662658, 132116, 675, 136}, {48830, 17990, 0, 0}, {12632256, 0, 770, 4}, {3688552, 2105376, 1795, 12}, {6314040, 1579032, 3594, 12}, {2123920, 1581088, 3594, 12}, {2123920, 1581088, 1281, 8}, {6318248, 2105376, 734, 8}, {13158600, 2105376, 16384, 9}, {2123920, 1581088, 1281, 24}, {7572224, 0, 1024, 12}, {16711680, 0, 256, 8},
 };
 
-FLARE_PIECE_DEF Flare::SunFlarePieces[9] =
-{
-    {0, 19660, {25, 10, 0, 0}, 1},
-    {-9830, 65536, {16, 5, 0, 0}, 0},
-    {-16384, 6553, {15, 15, 3, 0}, 0},
-    {9830, 26214, {21, 10, 0, 0}, 2},
-    {29491, 26214, {6, 6, 20, 0}, 0},
-    {49152, 19660, {21, 15, 8, 0}, 4},
-    {55705, 13107, {10, 20, 31, 0}, 2},
-    {65536, 6553, {10, 20, 10, 0}, 0},
-    {75366, 19660, {31, 15, 16, 0}, 2},
+FLARE_PIECE_DEF Flare::SunFlarePieces[9] = {
+    {0, 19660, {25, 10, 0, 0}, 1}, {-9830, 65536, {16, 5, 0, 0}, 0}, {-16384, 6553, {15, 15, 3, 0}, 0}, {9830, 26214, {21, 10, 0, 0}, 2}, {29491, 26214, {6, 6, 20, 0}, 0}, {49152, 19660, {21, 15, 8, 0}, 4}, {55705, 13107, {10, 20, 31, 0}, 2}, {65536, 6553, {10, 20, 10, 0}, 0}, {75366, 19660, {31, 15, 16, 0}, 2},
 };
+
+void Flare::CaptureHaloSource(HdHaloTables *source)
+{
+    for (sint32 i = 0; i < 34; ++i)
+    {
+        memcpy(&source->styles[i].halo, &gType[i].chalo, 4);
+        memcpy(&source->styles[i].beam, &gType[i].cbeam, 4);
+        source->styles[i].scale = gType[i].scale;
+        source->styles[i].flags = gType[i].flags;
+    }
+    memcpy(source->spikes, gSpikes, sizeof(source->spikes));
+    memcpy(source->octagon, gOct, sizeof(source->octagon));
+    memcpy(source->hexagon, gHex, sizeof(source->hexagon));
+    memcpy(source->reflection, gReflectHex, sizeof(source->reflection));
+    memcpy(source->quad, gQuad, sizeof(source->quad));
+    for (sint32 i = 0; i < 8; ++i)
+    {
+        source->spikeFrom[i] = (uint8)gfSpikePt0[i];
+        source->spikeTo[i] = (uint8)gfSpikePt1[i];
+    }
+}
+
+void Flare::CaptureRenderSource(HdSkySource *source)
+{
+    source->sunBeamColor = TrackSpec::gSpec.skyspec.sunBeamColor;
+    source->lensSize = gFlare_LensFlare.size;
+    memcpy(source->lensSpikes, gSpikes, sizeof(source->lensSpikes));
+    memcpy(source->lensOctagon, gLensOct, sizeof(source->lensOctagon));
+    for (sint32 i = 0; i < 8; ++i)
+    {
+        source->lensSpikeFrom[i] = (uint8)gfSpikePt0[i];
+        source->lensSpikeTo[i] = (uint8)gfSpikePt1[i];
+    }
+    for (sint32 i = 0; i < 2; ++i)
+    {
+        source->lensPixmapValid[i] = gFlarePixmap[i] != 0;
+        if (source->lensPixmapValid[i])
+            source->lensPixmaps[i] = *gFlarePixmap[i];
+    }
+    for (sint32 i = 0; i < 9; ++i)
+    {
+        HdLensPiece *piece = source->lensPieces + i;
+        const FLARE_PIECE_DEF *original = gFlare_LensFlare.piece != 0 ? gFlare_LensFlare.piece + i : SunFlarePieces + i;
+        piece->distance = original->distance;
+        piece->size = original->size;
+        piece->color = i == 0 ? TrackSpec::gSpec.skyspec.sunHaloColor : original->color;
+        piece->type = (uint8)original->type;
+    }
+}
+
+static bool defer_frontend_halo(const uint32 position[4], const uint32 color[4], uint8 code, sint32 otz)
+{
+    if (capturingUiHalo || R3DCar::InMenu == 0)
+        return false;
+    Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
+    uint32 *marker = (uint32 *)cprim->PrimPtr;
+    bool line = (code & 0xE0) == 0x40;
+    if (!(line ? FramePresentation::DeferOriginalLine(marker, position, color, code) : FramePresentation::DeferOriginalPolygon(marker, position, color, code)))
+        return false;
+    uint32 *ot = cprim->LastPrim + otz;
+    *marker = getaddr(ot);
+    setaddr(ot, marker);
+    cprim->PrimPtr += line ? sizeof(LINE_G2) : ((code & 8) != 0 ? sizeof(POLY_G4) : sizeof(POLY_G3));
+    ++hd_frontend_halo_deferred;
+    return true;
+}
+
+static bool defer_ui_halo(const uint32 position[4], const uint32 color[4], uint8 code, sint32 otz)
+{
+    if (!capturingUiHalo)
+        return false;
+    Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
+    uint32 *marker = (uint32 *)cprim->PrimPtr;
+    if (!FramePresentation::DeferColored(marker, position, color, code))
+        return false;
+    uint32 *ot = cprim->LastPrim + otz;
+    *marker = getaddr(ot);
+    setaddr(ot, marker);
+    cprim->PrimPtr += code == 0x32 ? sizeof(POLY_G3) : sizeof(LINE_G2);
+    ++hd_ui_halo_deferred;
+    return true;
+}
 
 void Flare::Tri(sint32 *cp, sint32 *p1, sint32 *p2, sint32 otz)
 {
     FUNCTION_MARKER(0x800CBCB0, "NFS4.EXE");
+    uint32 color;
+    memcpy(&color, &gfrgb, sizeof(color));
+    uint32 position[4] = {(uint32)*p2, (uint32)*cp, (uint32)*p1, 0};
+    uint32 colors[4] = {0x32000000, color, 0, 0};
+    if (defer_ui_halo(position, colors, 0x32, otz) || defer_frontend_halo(position, colors, 0x32, otz))
+        return;
     Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
     POLY_G3 *prim = (POLY_G3 *)cprim->PrimPtr;
     uint32 *ot = cprim->LastPrim + otz;
@@ -171,14 +203,14 @@ void Flare::Tri(sint32 *cp, sint32 *p1, sint32 *p2, sint32 otz)
     cprim->PrimPtr = (char *)(prim + 1);
     setaddr(ot, prim);
     prim->p[0].rgbc.rgbc = 0x32000000;
-    uint32 color;
-    memcpy(&color, &gfrgb, sizeof(color));
     prim->p[2].rgbc.rgbc = 0;
     setlen(prim, 6);
     prim->p[1].rgbc.rgbc = color;
     prim->p[0].xy.xy = *p2;
     prim->p[1].xy.xy = *cp;
     prim->p[2].xy.xy = *p1;
+    if (capturingUiHalo)
+        hd_ui_queue(prim);
 }
 
 void Flare::SetMatrix(matrixtdef *m)
@@ -201,7 +233,7 @@ void Flare::SetMatrix(matrixtdef *m)
 void Flare::IdentMatrix(MATRIX *mtx)
 {
     FUNCTION_MARKER(0x800CBDF8, "NFS4.EXE");
-    const uint32 words[5] = { 0x1000, 0, 0x1000, 0, 0x1000 };
+    const uint32 words[5] = {0x1000, 0, 0x1000, 0, 0x1000};
     memcpy(mtx, words, sizeof(words));
 }
 
@@ -220,6 +252,10 @@ void Flare::OctFlare(sint32 *center, sint32 otz)
     Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
     for (sint32 i = 7; i >= 0; --i)
     {
+        uint32 position[4] = {(uint32)flare_dvxy[gfOctPt2[i]], (uint32)*center, (uint32)flare_dvxy[gfOctPt1[i]], 0};
+        uint32 color[4] = {0x32000000, rgb1, 0, 0};
+        if (defer_frontend_halo(position, color, 0x32, otz))
+            continue;
         uint32 *ot = cprim->LastPrim + otz;
         POLY_G3 *prim = reinterpret_cast<POLY_G3 *>(cprim->PrimPtr);
         setaddr(prim, getaddr(ot));
@@ -261,23 +297,34 @@ void Flare::OctFlareSpikes(sint32 *center, sint32 otz)
         sint32 id0 = gfSpikePt0[i];
         sint32 id1 = gfSpikePt1[i];
         sint32 id2 = gfSpikePt2[i];
-        POLY_G4 *prim4 = (POLY_G4 *)cprim->PrimPtr;
-        uint32 *ot = cprim->LastPrim + otz;
-        setaddr(prim4, getaddr(ot));
-        cprim->PrimPtr = (char *)(prim4 + 1);
-        setaddr(ot, prim4);
-        prim4->p[0].rgbc.rgbc = 0x3A000000;
-        setlen(prim4, 8);
-        prim4->p[1].rgbc.rgbc = rgb2;
-        prim4->p[2].rgbc.rgbc = 0;
-        prim4->p[3].rgbc.rgbc = 0;
-        uint32 xy0 = flare_dvxy[id0];
-        prim4->p[1].xy.xy = cent;
-        prim4->p[0].xy.xy = xy0;
-        prim4->p[2].xy.xy = flare_dvxy[id2];
-        prim4->p[3].xy.xy = flare_dvxy[id1];
+        uint32 position4[4] = {(uint32)flare_dvxy[id0], (uint32)cent, (uint32)flare_dvxy[id2], (uint32)flare_dvxy[id1]};
+        uint32 color4[4] = {0x3A000000, rgb2, 0, 0};
+        uint32 xy0;
+        uint32 *ot;
+        if (!defer_frontend_halo(position4, color4, 0x3A, otz))
+        {
+            POLY_G4 *prim4 = (POLY_G4 *)cprim->PrimPtr;
+            ot = cprim->LastPrim + otz;
+            setaddr(prim4, getaddr(ot));
+            cprim->PrimPtr = (char *)(prim4 + 1);
+            setaddr(ot, prim4);
+            prim4->p[0].rgbc.rgbc = 0x3A000000;
+            setlen(prim4, 8);
+            prim4->p[1].rgbc.rgbc = rgb2;
+            prim4->p[2].rgbc.rgbc = 0;
+            prim4->p[3].rgbc.rgbc = 0;
+            xy0 = flare_dvxy[id0];
+            prim4->p[1].xy.xy = cent;
+            prim4->p[0].xy.xy = xy0;
+            prim4->p[2].xy.xy = flare_dvxy[id2];
+            prim4->p[3].xy.xy = flare_dvxy[id1];
+        }
         id0 = gfOctPt1[i];
         id1 = gfOctPt2[i];
+        uint32 position3[4] = {(uint32)flare_dvxy[id0], (uint32)cent, (uint32)flare_dvxy[id1], 0};
+        uint32 color3[4] = {0x32000000, rgb1, 0, 0};
+        if (defer_frontend_halo(position3, color3, 0x32, otz))
+            continue;
         POLY_G3 *prim3 = (POLY_G3 *)cprim->PrimPtr;
         ot = cprim->LastPrim + otz;
         setaddr(prim3, getaddr(ot));
@@ -313,6 +360,12 @@ void Flare::Spikes(sint32 *center, sint32 otz)
     Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
     for (sint32 i = 7; i >= 0; --i)
     {
+        uint32 beam;
+        memcpy(&beam, &gfrgb2, sizeof(beam));
+        uint32 position[4] = {(uint32)flare_dvxy[gfSpikePt0[i]], (uint32)*center, (uint32)flare_dvxy[gfSpikePt2[i]], (uint32)flare_dvxy[gfSpikePt1[i]]};
+        uint32 color[4] = {0x3A000000, beam, 0, 0};
+        if (defer_frontend_halo(position, color, 0x3A, otz))
+            continue;
         uint32 *ot = cprim->LastPrim + otz;
         POLY_G4 *prim = reinterpret_cast<POLY_G4 *>(cprim->PrimPtr);
         setaddr(prim, getaddr(ot));
@@ -469,7 +522,7 @@ void Flare::CarShapedHalo(sint32 type, COORD16 *ptCenter, COORD16 *pt1, COORD16 
     {
         sint32 reflectionScale = (scaled + (sizeOuter >> 7));
         CVECTOR save = gfrgb;
-        uint32 words[5] = { (uint32)reflectionScale, 0, (uint32)reflectionScale, 0, 0 };
+        uint32 words[5] = {(uint32)reflectionScale, 0, (uint32)reflectionScale, 0, 0};
         MATRIX scalemat, mtx;
         memcpy(&scalemat, words, sizeof(words));
         gfrgb.r >>= 1;
@@ -492,7 +545,7 @@ void Flare::CarShapedHalo(sint32 type, COORD16 *ptCenter, COORD16 *pt1, COORD16 
     else
     {
         sint32 radius = gscale;
-        uint32 words[5] = { radius + (uint32)(sizeOuter >> 5), 0, (uint32)radius, 0, 0 };
+        uint32 words[5] = {radius + (uint32)(sizeOuter >> 5), 0, (uint32)radius, 0, 0};
         MATRIX scalemat, mtx, mtx2;
         memcpy(&scalemat, words, sizeof(words));
         IdentMatrix(&mtx);
@@ -534,9 +587,129 @@ void Flare::CarShapedHalo(sint32 type, COORD16 *ptCenter, COORD16 *pt1, COORD16 
     SetDrawMode(aprim, 0, (flags & 0x40) != 0, 0x120, 0);
 }
 
+void Flare::BeginTrackPreparation(sint32 player)
+{
+    trackEffectsPlayer = player;
+    PreparedTrackEffects *effects = trackEffects + player;
+    PreparedTrackHalo *halos = effects->previous;
+    effects->previous = effects->halos;
+    effects->halos = halos;
+    effects->previousCount = effects->count;
+    uint32 capacity = effects->previousCapacity;
+    effects->previousCapacity = effects->capacity;
+    effects->capacity = capacity;
+    effects->count = 0;
+    effects->cursor = 0;
+    preparingTrackEffects = true;
+    trackHaloOwner = 0;
+}
+
+void Flare::SetTrackOwner(const void *owner)
+{
+    trackHaloOwner = owner;
+}
+
+void Flare::EndTrackPreparation(void)
+{
+    preparingTrackEffects = false;
+}
+
+bool Flare::IsTrackPreparation(void)
+{
+    return preparingTrackEffects;
+}
+
+void Flare::BeginTrackDrawing(sint32 player)
+{
+    trackEffectsPlayer = player;
+    trackEffects[player].cursor = 0;
+    trackEffects[player].matched = 0;
+    trackEffects[player].missing = 0;
+}
+
+const PreparedTrackHalo *Flare::GetTrackHalos(sint32 player, uint32 *count)
+{
+    *count = trackEffects[player].count;
+    return trackEffects[player].halos;
+}
+
+void Flare::ResetTrackEffects(void)
+{
+    for (sint32 player = 0; player < 2; ++player)
+    {
+        free(trackEffects[player].halos);
+        free(trackEffects[player].previous);
+        memset(&trackEffects[player], 0, sizeof(trackEffects[player]));
+    }
+    preparingTrackEffects = false;
+}
+
+static void store_track_halo(sint32 requestedScale, sint32 scale, sint32 type, sint32 flags, const coorddef *start, const coorddef *end, const CVECTOR *colors, bool nativeVisible)
+{
+    PreparedTrackEffects *effects = &trackEffects[trackEffectsPlayer];
+    if (effects->count == effects->capacity)
+    {
+        uint32 capacity = effects->capacity == 0 ? 32 : effects->capacity * 2;
+        PreparedTrackHalo *halos = (PreparedTrackHalo *)realloc(effects->halos, capacity * sizeof(*halos));
+        if (halos == 0)
+        {
+            xport_message_error("NFS4", "Cannot capture track light effects: out of memory");
+            exit(EXIT_FAILURE);
+        }
+        effects->halos = halos;
+        effects->capacity = capacity;
+    }
+    PreparedTrackHalo *halo = &effects->halos[effects->count++];
+    memset(halo, 0, sizeof(*halo));
+    halo->owner = trackHaloOwner != 0 ? trackHaloOwner : start;
+    halo->objectHalo = trackHaloOwner != 0;
+    for (uint32 i = 0; i + 1 < effects->count; ++i)
+        if (effects->halos[i].owner == halo->owner && effects->halos[i].type == type)
+            ++halo->occurrence;
+    halo->start = *start;
+    if (end != 0)
+        halo->end = *end;
+    halo->hasEnd = end != 0;
+    halo->requestedScale = requestedScale;
+    halo->scale = scale;
+    halo->type = type;
+    halo->flags = flags;
+    memcpy(halo->colors, colors, sizeof(halo->colors));
+    halo->nativeVisible = nativeVisible;
+    if (!nativeVisible)
+        for (uint32 i = 0; i < effects->previousCount; ++i)
+        {
+            const PreparedTrackHalo *previous = effects->previous + i;
+            if (previous->owner == halo->owner && previous->occurrence == halo->occurrence && previous->type == type && previous->flags == flags && previous->requestedScale == requestedScale && previous->hasEnd == halo->hasEnd && previous->objectHalo == halo->objectHalo)
+            {
+                halo->scale = previous->scale;
+                memcpy(halo->colors, previous->colors, sizeof(halo->colors));
+                break;
+            }
+        }
+}
+
+static const PreparedTrackHalo *find_track_halo(sint32 requestedScale, sint32 type, const coorddef *start, const coorddef *end)
+{
+    PreparedTrackEffects *effects = &trackEffects[trackEffectsPlayer];
+    for (uint32 i = effects->cursor; i < effects->count; ++i)
+    {
+        const PreparedTrackHalo *halo = &effects->halos[i];
+        if (halo->nativeVisible && halo->type == type && halo->requestedScale == requestedScale && halo->hasEnd == (end != 0) && memcmp(&halo->start, start, sizeof(*start)) == 0 && (end == 0 || memcmp(&halo->end, end, sizeof(*end)) == 0))
+        {
+            effects->cursor = i + 1;
+            ++effects->matched;
+            return halo;
+        }
+    }
+    ++effects->missing;
+    return 0;
+}
+
 void Flare::Halo2(DRender::tView *Vi, sint32 scale, sint32 type, coorddef *fpt, coorddef *fpt2, Draw::FlareCache *sd)
 {
     FUNCTION_MARKER(0x800CD530, "NFS4.EXE");
+    sint32 requestedScale = scale;
     sint32 flare_type = (uint8)type;
     sint32 flags = gType[flare_type].flags;
     sint32 angleZ = 0;
@@ -574,25 +747,41 @@ void Flare::Halo2(DRender::tView *Vi, sint32 scale, sint32 type, coorddef *fpt, 
         scale = gType[flare_type].scale;
     VECTOR diff;
     gte_stlvnl(&diff);
-    if (diff.vx > diff.vz || -diff.vx > diff.vz || diff.vz < 128)
-        return;
+    bool clipped = diff.vx > diff.vz || -diff.vx > diff.vz || diff.vz < 128;
     DVECTOR sp;
     gte_stsxy(&sp);
     sint32 otz;
     gte_stsz(&otz);
     otz = (otz >> 2) >> 1;
-    if (otz < 0 || otz > (Draw::gViewOtSize - 3))
-        return;
-    if ((flags & 0x80) != 0)
+    if (clipped || otz < 0 || otz > (Draw::gViewOtSize - 3))
     {
-        uint32 sample = random() % 20U;
-        scale = (scale + sample * 4U);
-        color[0].r = (uint8)(color[0].r + sample);
-        color[0].g = (uint8)(color[0].g + sample);
-        color[0].b = (uint8)(color[0].b + sample);
-        color[1].r = (uint8)(color[1].r + sample);
-        color[1].g = (uint8)(color[1].g + sample);
-        color[1].b = (uint8)(color[1].b + sample);
+        if (preparingTrackEffects)
+            store_track_halo(requestedScale, scale, type, flags, fpt, fpt2, color, false);
+        return;
+    }
+    if (!preparingTrackEffects)
+    {
+        const PreparedTrackHalo *halo = find_track_halo(requestedScale, type, fpt, fpt2);
+        if (halo == 0)
+            return;
+        scale = halo->scale;
+        memcpy(color, halo->colors, sizeof(color));
+    }
+    else
+    {
+        if ((flags & 0x80) != 0)
+        {
+            uint32 sample = random() % 20U;
+            scale = (scale + sample * 4U);
+            color[0].r = (uint8)(color[0].r + sample);
+            color[0].g = (uint8)(color[0].g + sample);
+            color[0].b = (uint8)(color[0].b + sample);
+            color[1].r = (uint8)(color[1].r + sample);
+            color[1].g = (uint8)(color[1].g + sample);
+            color[1].b = (uint8)(color[1].b + sample);
+        }
+        store_track_halo(requestedScale, scale, type, flags, fpt, fpt2, color, true);
+        return;
     }
     if ((flags & 8) != 0)
         angleZ = (sp.vx + sp.vy) * 4;
@@ -641,7 +830,7 @@ void Flare::Halo2(DRender::tView *Vi, sint32 scale, sint32 type, coorddef *fpt, 
                 z /= 4;
         }
         MATRIX scalemat;
-        const uint32 scaleWords[5] = { (uint32)gscale, 0, (uint32)gscale, 0, 0 };
+        const uint32 scaleWords[5] = {(uint32)gscale, 0, (uint32)gscale, 0, 0};
         memcpy(&scalemat, scaleWords, sizeof(scaleWords));
         MATRIX mtx;
         IdentMatrix(&mtx);
@@ -664,7 +853,7 @@ void Flare::Halo2(DRender::tView *Vi, sint32 scale, sint32 type, coorddef *fpt, 
         uint32 distance = isqrt(difx * (uint32)difx + dify * (uint32)dify);
         MATRIX scalemat;
         uint32 outer = gscale + (uint32)((sint32)(distance * diff.vz) >> 4);
-        const uint32 scaleWords[5] = { outer, 0, (uint32)gscale, 0, 0 };
+        const uint32 scaleWords[5] = {outer, 0, (uint32)gscale, 0, 0};
         memcpy(&scalemat, scaleWords, sizeof(scaleWords));
         MATRIX mtx, mtx2;
         IdentMatrix(&mtx);
@@ -719,13 +908,17 @@ void Flare::_2DSpike(sint32 *center, sint32 *end, sint32 otz)
     sint32 pt[2];
     pt[0] = *center;
     pt[1] = *end;
+    uint32 colorWord;
+    memcpy(&colorWord, &gfrgb2, sizeof(colorWord));
+    uint32 position[4] = {(uint32)pt[0], (uint32)pt[1], 0, 0};
+    uint32 colors[4] = {colorWord, 0, 0, 0};
+    if (defer_ui_halo(position, colors, 0x52, otz))
+        return;
     Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
     uint32 *ot = cprim->LastPrim + otz;
     LINE_G2 *prim = reinterpret_cast<LINE_G2 *>(cprim->PrimPtr);
     setaddr(prim, getaddr(ot));
     setaddr(ot, prim);
-    uint32 colorWord;
-    memcpy(&colorWord, &gfrgb2, 4);
     cprim->PrimPtr = reinterpret_cast<char *>(prim + 1);
     setlen(prim, 4);
     prim->p[1].rgbc.rgbc = 0;
@@ -733,6 +926,8 @@ void Flare::_2DSpike(sint32 *center, sint32 *end, sint32 otz)
     prim->p[0].rgbc.code = 0x52;
     prim->p[0].xy.xy = pt[0];
     prim->p[1].xy.xy = pt[1];
+    if (capturingUiHalo)
+        hd_ui_queue(prim);
 }
 
 void Flare::_2DHalo(sint32 x, sint32 y, sint32 scalex, sint32 scaley, sint32 type)
@@ -744,6 +939,8 @@ void Flare::_2DHalo(sint32 x, sint32 y, sint32 scalex, sint32 scaley, sint32 typ
     Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
     if ((uintptr_t)cprim->PrimPtr >= (uintptr_t)cprim->MPrimPtr - 0x1000U)
         return;
+    bool previousCapture = capturingUiHalo;
+    capturingUiHalo = true;
     memcpy(&gfrgb, &gType[(uint8)type].chalo, 4);
     memcpy(&gfrgb2, &gType[(uint8)type].cbeam, 4);
     {
@@ -753,6 +950,7 @@ void Flare::_2DHalo(sint32 x, sint32 y, sint32 scalex, sint32 scaley, sint32 typ
         cprim->PrimPtr = reinterpret_cast<char *>(aprim + 1);
         setaddr(ot, aprim);
         SetDrawMode(aprim, 0, 0, 0x120, 0);
+        hd_ui_queue(aprim);
     }
     DVECTOR octring[8];
     for (sint32 i = 0; i < 8; ++i)
@@ -796,7 +994,9 @@ void Flare::_2DHalo(sint32 x, sint32 y, sint32 scalex, sint32 scaley, sint32 typ
         cprim->PrimPtr = reinterpret_cast<char *>(aprim + 1);
         setaddr(ot, aprim);
         SetDrawMode(aprim, 0, 1, 0x120, 0);
+        hd_ui_queue(aprim);
     }
+    capturingUiHalo = previousCapture;
 }
 
 void Flare::PreCalcHexLightBeam(sint32 *center, sint32 otz)
@@ -808,19 +1008,34 @@ void Flare::PreCalcHexLightBeam(sint32 *center, sint32 otz)
     for (sint32 i = 0; i < 8; ++i)
     {
         gte_ldv0(&gOct[i]);
+        bool projected = false;
+        if (R3DCar::InMenu != 0 && FramePresentation::WantsHd())
+        {
+            xport_gte_execute(0x180001);
+            gte_stsxy(&pt[1]);
+            projected = true;
+            uint32 beam;
+            memcpy(&beam, &gfrgb2, sizeof(beam));
+            uint32 position[4] = {(uint32)pt[0], (uint32)pt[1], 0, 0};
+            uint32 color[4] = {beam, 0, 0, 0};
+            if (defer_frontend_halo(position, color, 0x52, otz))
+                continue;
+        }
         LINE_G2 *prim = (LINE_G2 *)cprim->PrimPtr;
         uint32 *ot = cprim->LastPrim + otz;
         setaddr(prim, getaddr(ot));
         cprim->PrimPtr = (char *)(prim + 1);
         setaddr(ot, prim);
-        xport_gte_execute(0x180001);
+        if (!projected)
+            xport_gte_execute(0x180001);
         uint32 color;
         memcpy(&color, &gfrgb2, sizeof(color));
         setlen(prim, 4);
         prim->p[1].rgbc.rgbc = 0;
         prim->p[0].rgbc.rgbc = color;
         setcode(prim, 0x52);
-        gte_stsxy(&pt[1]);
+        if (!projected)
+            gte_stsxy(&pt[1]);
         prim->p[0].xy.xy = pt[0];
         prim->p[1].xy.xy = pt[1];
     }
@@ -1044,7 +1259,7 @@ void Flare::LensFlare(DVECTOR *screenPos, Draw::FlareCache *sd)
     pt[3].vy = (sint16)(sy + 3);
     sint32 packed[4];
     memcpy(packed, pt, sizeof(pt));
-    CVECTOR white = { 255, 255, 255, 0 };
+    CVECTOR white = {255, 255, 255, 0};
     sint32 angleZ = (sx + sy) * 8;
     sint32 angleZ2 = (sx + sy) * 6;
     QuadNotTransparent(packed, &white, (Draw::gViewOtSize - 2));
@@ -1064,7 +1279,7 @@ void Flare::LensFlare(DVECTOR *screenPos, Draw::FlareCache *sd)
     if (flareVis == 0)
         return;
     MATRIX scalemat;
-    uint32 scaleWords[5] = { (uint32)flareVis << 7, 0, (uint32)flareVis << 6, 0, 0 };
+    uint32 scaleWords[5] = {(uint32)flareVis << 7, 0, (uint32)flareVis << 6, 0, 0};
     memcpy(&scalemat, scaleWords, sizeof(scaleWords));
     memcpy(&gfrgb2, &TrackSpec::gSpec.skyspec.sunBeamColor, 4);
     MATRIX mtx;
@@ -1124,19 +1339,19 @@ void Flare::LensFlare(DVECTOR *screenPos, Draw::FlareCache *sd)
         col.b = (uint8)((uint32)piece->color.b * flareVis / 25U);
         switch ((uint8)piece->type)
         {
-        case 0:
-        case 1:
-            SingleColorTex(&pxy, &col, width, width, piece->type, 0);
-            break;
-        case 2:
-            SingleColorHex(&pxy, &col, width, width, 0);
-            break;
-        case 3:
-            SingleColorOct(&pxy, &col, width, width, 0);
-            break;
-        case 4:
-            SingleColorOctRing(&pxy, &col, width, width, 0);
-            break;
+            case 0:
+            case 1:
+                SingleColorTex(&pxy, &col, width, width, piece->type, 0);
+                break;
+            case 2:
+                SingleColorHex(&pxy, &col, width, width, 0);
+                break;
+            case 3:
+                SingleColorOct(&pxy, &col, width, width, 0);
+                break;
+            case 4:
+                SingleColorOctRing(&pxy, &col, width, width, 0);
+                break;
         }
     }
     Draw::PrimStruct *cprim = &DrawC::carCache.head.cprim;
@@ -1190,7 +1405,7 @@ void Flare::Sun(SVECTOR *worldPos, Draw::FlareCache *sd)
         SetDrawMode(aprim, 0, 0, 0x120, 0);
     }
     MATRIX scalemat;
-    const uint32 rotationWords[5] = { 0x400, 0, 0x400, 0, 0 };
+    const uint32 rotationWords[5] = {0x400, 0, 0x400, 0, 0};
     memcpy(&scalemat, rotationWords, sizeof(rotationWords));
     gte_SetRotMatrix(&scalemat);
     if ((TrackSpec::gSpec.skyspec.flags & 0x100) == 0)

@@ -28,6 +28,7 @@
 #include "game/common/clock.h"
 #include "game/common/copspeak.h"
 #include "game/common/dashhud.h"
+#include "game/common/frame.h"
 #include "game/common/gmesetup.h"
 #include "game/common/minfront.h"
 #include "game/common/mpause.h"
@@ -96,20 +97,7 @@ char gTournamentFinishOrder[12];
 char befuddleTemp[10];
 
 char befuddleExtensions[14][4] = {
-    { 113, 112, 108, 0 },
-    { 97, 105, 105, 0 },
-    { 115, 112, 100, 0 },
-    { 113, 97, 108, 0 },
-    { 115, 97, 108, 0 },
-    { 100, 116, 97, 0 },
-    { 113, 112, 115, 0 },
-    { 105, 110, 102, 0 },
-    { 113, 100, 97, 0 },
-    { 99, 97, 114, 0 },
-    { 113, 97, 115, 0 },
-    { 113, 100, 116, 0 },
-    { 115, 112, 108, 0 },
-    { 115, 112, 101, 0 },
+    {113, 112, 108, 0}, {97, 105, 105, 0}, {115, 112, 100, 0}, {113, 97, 108, 0}, {115, 97, 108, 0}, {100, 116, 97, 0}, {113, 112, 115, 0}, {105, 110, 102, 0}, {113, 100, 97, 0}, {99, 97, 114, 0}, {113, 97, 115, 0}, {113, 100, 116, 0}, {115, 112, 108, 0}, {115, 112, 101, 0},
 };
 
 char finishOrder[8];
@@ -165,6 +153,7 @@ void Nfs2::ResetGame(void)
 {
     FUNCTION_MARKER(0x800A3EA8, "NFS4.EXE");
 
+    FramePresentationHold presentationHold;
     Replay::ResetReplay();
     BWorld::Restart();
     Sim::Restart();
@@ -245,13 +234,16 @@ void NFS4::LoadPerps(void)
 void Nfs2::GameModuleStartUp(sint32 *FrontEndDataStream)
 {
     FUNCTION_MARKER(0x800A41A8, "NFS4.EXE");
-    Audio::InitDriver(0, 0);
-    restoretextdraw();
-    Platform::InitMemory();
-    Platform::ResetDCTBuffer();
-    GameSetup::StartUp(FrontEndDataStream);
-    Replay::InitReplay();
-    BefuddleCode();
+    {
+        FramePresentationHold presentationHold;
+        Audio::InitDriver(0, 0);
+        restoretextdraw();
+        Platform::InitMemory();
+        Platform::ResetDCTBuffer();
+        GameSetup::StartUp(FrontEndDataStream);
+        Replay::InitReplay();
+        BefuddleCode();
+    }
     Loading::DrawLoadingScreen();
     Loading::UpdateLoadingScreen(1);
     NFS4::LoadPerps();
@@ -293,6 +285,7 @@ void Nfs2::GameModuleStartUp(sint32 *FrontEndDataStream)
 void Nfs2::CleanUpGameModule(void)
 {
     FUNCTION_MARKER(0x800A4354, "NFS4.EXE");
+    FramePresentationHold presentationHold;
     Render::KillTrackRender();
     MPause::KillMPause();
     for (sint16 k = 0; k < GameSetup::gData.numCars; k = (sint16)((uint16)k + 1))
@@ -339,7 +332,7 @@ void NFS4::LoadingIcon(void)
     if (lang > 5)
         lang = 0;
     shapetbl *shp = static_cast<shapetbl *>(shapepointer(ldfile, lang));
-    PSX_RECT r = { 0, 0, 1024, 512 };
+    PSX_RECT r = {0, 0, 1024, 512};
     ClearImage(&r, 0, 0, 0);
     DrawSync(0);
     initlinkmode(0, 100, 0);
@@ -412,31 +405,34 @@ sint32 Nfs4Main(void)
             simVar.restartGame = 0;
             Nfs2::ResetGame();
             Sim::MainGameLoop();
-            if (GameSetup::gData.replayMode < 2 || GameSetup::gData.instantReplay != 0)
             {
-                if (simVar.restartGame == 0 || GameSetup::gData.instantReplay != 0)
+                FramePresentationHold presentationHold;
+                if (GameSetup::gData.replayMode < 2 || GameSetup::gData.instantReplay != 0)
                 {
-                    GameSetup::gData.replayMode = 2;
-                    if (GameSetup::gData.instantReplay == 0)
+                    if (simVar.restartGame == 0 || GameSetup::gData.instantReplay != 0)
                     {
-                        Replay::ReplayInterface.statsScreen = 1;
-                        sint32 opponents = Stats::GetNumOpponents();
-                        if (opponents > 1 && ((GameSetup::gData.raceType != 1 && GameSetup::gData.raceType != 5) || ((Cars::gHumanRaceCarList[0]->carFlags & 0x200U) == 0 && (Cars::gNumHumanRaceCars != 2 || (Cars::gHumanRaceCarList[1]->carFlags & 0x200U) == 0))))
+                        GameSetup::gData.replayMode = 2;
+                        if (GameSetup::gData.instantReplay == 0)
                         {
-                            static char win[] = "win*";
-                            static char lose[] = "lose*";
-                            AudioMus::PlaySong(Cars::gHumanRaceCarList[0]->stats.finalPosition == 1 ? win : lose);
+                            Replay::ReplayInterface.statsScreen = 1;
+                            sint32 opponents = Stats::GetNumOpponents();
+                            if (opponents > 1 && ((GameSetup::gData.raceType != 1 && GameSetup::gData.raceType != 5) || ((Cars::gHumanRaceCarList[0]->carFlags & 0x200U) == 0 && (Cars::gNumHumanRaceCars != 2 || (Cars::gHumanRaceCarList[1]->carFlags & 0x200U) == 0))))
+                            {
+                                static char win[] = "win*";
+                                static char lose[] = "lose*";
+                                AudioMus::PlaySong(Cars::gHumanRaceCarList[0]->stats.finalPosition == 1 ? win : lose);
+                            }
                         }
+                        else
+                            Replay::ReplayInterface.statsScreen = 0;
+                        Replay::ReplayMode = 2;
+                        simVar.restartGame = 1;
+                        GameSetup::gData.instantReplay = 0;
                     }
-                    else
-                        Replay::ReplayInterface.statsScreen = 0;
-                    Replay::ReplayMode = 2;
-                    simVar.restartGame = 1;
-                    GameSetup::gData.instantReplay = 0;
                 }
+                else
+                    Replay::ReplayInterface.statsScreen = 0;
             }
-            else
-                Replay::ReplayInterface.statsScreen = 0;
         }
         Nfs2::CleanUpGameModule();
         NFS4::LoadingIcon();

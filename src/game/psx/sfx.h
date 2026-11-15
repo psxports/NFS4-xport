@@ -9,6 +9,7 @@
 #include "game/psx/draw.h"
 
 struct sfxsouffle;
+struct HdSouffleSource;
 
 class Sfx
 {
@@ -26,6 +27,7 @@ public:
     static void AdditivePrim(Draw::tPixMap *pmx, SVECTOR *pt, sint32 mode, sint32 offset, tCache *sd);
     static void BuildSouffleFacet(DRender::tView *Vi, Souffle::tISouffle *is);
     static void Add(Souffle::tISouffle *is);
+    static void CaptureRenderSource(const Souffle::tISouffle *is, HdSouffleSource *source);
 };
 
 #endif

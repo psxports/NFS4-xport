@@ -7,6 +7,8 @@
 #include "game/common/renderview.h"
 #include "game/psx/draw.h"
 
+struct HdNightSource;
+
 struct tCompRGB
 {
     char r;
@@ -79,6 +81,8 @@ public:
     static void KillNightDriving(void);
     static void RestartNightDriving(void);
     static void SetEnviroment(DRender::tView *Vi);
+    static void UpdateState(DRender::tView *Vi);
+    static void CaptureRenderSource(HdNightSource *source, const DRender::tView *view);
     static void AdditiveNightCalc(VECTOR *v, CVECTOR *color);
     static void NightCopCalc(VECTOR *v, sint16 *idx);
     static void NightCalc(VECTOR *v, sint16 *idx, Draw::tGiveShelbyMoreCache *sd);
