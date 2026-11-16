@@ -32,4 +32,8 @@ void hd_frontend_release(void);
 bool hd_frontend_preview(void);
 bool hd_frontend_preview_at(uint32 phase);
 
+bool hd_frontend_halo_buffer_begin(uint32 slot, uint32 faces);
+uint32 hd_frontend_halo_buffer_geometry(uint32 slot, uint32 first, const COORD16 *points, sint16 flag, sint32 type, const float matrix[3][4], bool mirror, float x, float y, float depthBias);
+bool hd_frontend_halo_buffer_render(uint32 slot, uint32 count, const float mapping[4]);
+
 #endif

@@ -11,7 +11,7 @@ enum
     HD_LIGHTING_FIRST_TRACK = 6,
     HD_LIGHTING_TRACKS = 12,
     HD_LIGHTING_MAP_SIZE = 1024,
-    HD_LIGHTING_SUN_CASCADES = 3,
+    HD_LIGHTING_SUN_CASCADES = 2,
     HD_LIGHTING_HEAD_LAYER = HD_LIGHTING_SUN_CASCADES * 2,
     HD_LIGHTING_LAMPS = 18,
     HD_LIGHTING_LAYERS = HD_LIGHTING_HEAD_LAYER + HD_LIGHTING_LAMPS,
@@ -33,6 +33,7 @@ struct HdLightingProjection
     sint32 owner;
     uint32 layer;
     bool active;
+    const HdLightingProjection *covered;
 };
 
 struct HdLightingLamp
@@ -80,14 +81,13 @@ bool hd_lighting_spot(HdLightingProjection *projection, const HdLightingLamp *la
     "float hdSunVisibility=1.0,hdSunDirect=1.0;vec3 hdLampEnergy=vec3(0.0);void hdLightingPrepareNormal(vec3 normal){" \
     "float n2=dot(normal,normal);normal*=inversesqrt(max(n2,0.00000001));" \
     "if(uDraw[21].x<0.5)return;" \
-    "vec4 settings=hdLightRecord(12);if(settings.x>0.0&&uDraw[21].z<0.5){vec4 nearClip=hdLightProject(0),midClip=hdLightProject(4),farClip=hdLightProject(8);" \
-    "vec3 nearP=hdLightCoord(nearClip),midP=hdLightCoord(midClip),farP=hdLightCoord(farClip);" \
-    "vec2 nearG=vidShadowGradient(dFdx(nearP),dFdy(nearP)),midG=vidShadowGradient(dFdx(midP),dFdy(midP)),farG=vidShadowGradient(dFdx(farP),dFdy(farP));" \
-    "float nearBlend=hdLightCascadeBlend(nearClip),midBlend=hdLightCascadeBlend(midClip),nearVisibility=1.0,midVisibility=1.0,farVisibility=1.0;" \
-    "if(nearBlend<1.0)nearVisibility=hdLightSample(nearClip,settings.y,nearP,nearG);" \
-    "if(nearBlend>0.0&&midBlend<1.0)midVisibility=hdLightSample(midClip,settings.y+1.0,midP,midG);" \
-    "if(nearBlend>0.0&&midBlend>0.0)farVisibility=hdLightSample(farClip,settings.z,farP,farG);" \
-    "float visibility=mix(nearVisibility,mix(midVisibility,farVisibility,midBlend),nearBlend);" \
+    "vec4 settings=hdLightRecord(12);if(settings.x>0.0&&uDraw[21].z<0.5){vec4 nearClip=hdLightProject(0),farClip=hdLightProject(4);" \
+    "vec3 nearP=hdLightCoord(nearClip),farP=hdLightCoord(farClip);" \
+    "vec2 nearG=vidShadowGradient(dFdx(nearP),dFdy(nearP)),farG=vidShadowGradient(dFdx(farP),dFdy(farP));" \
+    "float blend=hdLightCascadeBlend(nearClip),nearVisibility=1.0,farVisibility=1.0;" \
+    "if(blend<1.0)nearVisibility=hdLightSample(nearClip,settings.y,nearP,nearG);" \
+    "if(blend>0.0)farVisibility=hdLightSample(farClip,settings.z,farP,farG);" \
+    "float visibility=mix(nearVisibility,farVisibility,blend);" \
     "hdSunDirect=visibility;hdSunVisibility=1.0-settings.x*(1.0-visibility);}vec3 energy=vec3(0.0);" \
     "for(int lamp=0;lamp<18;++lamp){if(lamp>=int(settings.w))break;int index=16+lamp*8;vec4 clip=hdLightProject(index);" \
     "vec4 origin=hdLightRecord(index+4),axis=hdLightRecord(index+5),color=hdLightRecord(index+6);" \

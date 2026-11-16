@@ -11,6 +11,9 @@
 #include "eaclib/psx/sstrstat.h"
 #include "eaclib/psx/sststat.h"
 #include "game/common/audiomus.h"
+#ifdef AP_WEB
+#include "game/common/music_catalogs.h"
+#endif
 #include "game/common/paths.h"
 #include "game/psx/audio.h"
 #include "game/psx/hud.h"
@@ -527,11 +530,15 @@ void AudioMus::SysStartUp(sint32 buffersize, sint32 spusize, char *songs)
     char *buffer = (char *)reservememadr("Music Buffer", size, 0);
     g->streambuffer = buffer;
     DriverStartUp(buffersize, spusize);
-#ifdef AP_WEB
-    sprintf(g->bigfilename, "%szzz%s.idx", Paths_Paths[27], songs);
-    char *header = (char *)loadfileadr(g->bigfilename, 0);
-#else
     sprintf(g->bigfilename, "%szzz%s.viv", Paths_Paths[27], songs);
+#ifdef AP_WEB
+    bool menu = strcmp(songs, "amus") == 0;
+    const uint8 *catalog = menu ? webZZZZAMUSCatalog : webZZZZYMUSCatalog;
+    size_t catalogSize = menu ? sizeof(webZZZZAMUSCatalog) : sizeof(webZZZZYMUSCatalog);
+    char *header = (char *)reservememadr("Music Catalog", catalogSize, 0);
+    if (header != 0)
+        memcpy(header, catalog, catalogSize);
+#else
     char *header = loadbigfileheader(g->bigfilename, 0);
 #endif
     g->bigfileheader = header;

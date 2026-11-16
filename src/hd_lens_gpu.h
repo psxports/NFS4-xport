@@ -9,6 +9,8 @@ void hd_lens_gpu_release(void);
 VID_TARGET *hd_lens_gpu_target(void);
 bool hd_lens_gpu_resolve(VID_TARGET *destination, bool offscreen, VID_RECT viewport, const float *clear, float x, float y, bool eligible, bool paused, sint32 tick);
 void hd_lens_gpu_pass(sint32 pass, float phase, float centerX, float centerY);
+bool hd_lens_gpu_param_pass(sint32 pass, float phase, float x, float y, float width, float height, float ratio, VID_TEXTURE *parameters);
 void hd_lens_gpu_complete(bool success);
+bool hd_lens_gpu_may_be_visible(float phase);
 
 #endif

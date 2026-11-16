@@ -794,30 +794,8 @@ static bool hd_frontend_halos(sint32 slot)
             faces += model->parts[i].count / 3;
     if (faces == 0)
         return true;
-    if (menuHaloShader == 0)
-        menuHaloShader = vid_shader_create(menuHaloVertex, menuHaloFragment);
-    if (menuHaloShader == 0)
+    if (!hd_frontend_halo_buffer_begin(slot, faces))
         return false;
-    if (menuHaloMaterial == 0)
-    {
-        menuHaloMaterial = vid_mat_create();
-        if (menuHaloMaterial == 0)
-            return false;
-        VID_MATERIAL_DATA *material = vid_mat_data(menuHaloMaterial);
-        material->shader = menuHaloShader;
-        material->blend = VID_BLEND_ADD;
-        material->depth_test = 1;
-        vid_mat_commit(menuHaloMaterial);
-    }
-    if (menuHaloCapacities[slot] < faces * 90)
-    {
-        vid_mesh_free(menuHaloMeshes[slot]);
-        menuHaloMeshes[slot] = vid_mesh_create_2d(faces * 90);
-        menuHaloCapacities[slot] = menuHaloMeshes[slot] != 0 ? faces * 90 : 0;
-    }
-    if (menuHaloMeshes[slot] == 0)
-        return false;
-    VID_VERTEX2D *vertices = vid_mesh_data_2d(menuHaloMeshes[slot]);
     uint32 used = 0;
     for (sint32 part = 0; part < 57; ++part)
         if (haloComplete[slot].active[part])
@@ -836,19 +814,17 @@ static bool hd_frontend_halos(sint32 slot)
                     points[i].y = geometry->vertices[face + i].pos[1];
                     points[i].z = geometry->vertices[face + i].pos[2];
                 }
-                uint32 added = hd_frontend_halo_geometry(vertices + used, points, flag, type, pass->matrices[part], pass->mirror[part] != 0, pass->x, pass->y, (float)haloComplete[slot].sortOffsets[part] * 4);
-                used += added;
+                uint32 added = hd_frontend_halo_buffer_geometry(slot, used, points, flag, type, pass->matrices[part], pass->mirror[part] != 0, pass->x, pass->y, (float)haloComplete[slot].sortOffsets[part] * 4);
+                if (added != 0)
+                    used += 72;
                 if (added != 0)
                     ++hd_frontend_halo_faces;
             }
         }
-    vid_mesh_commit(menuHaloMeshes[slot]);
     hd_frontend_halo_vertices += used;
     if (used == 0)
         return true;
-    vid_uniforms(menuMapping, 1);
-    vid_pass(menuHaloMaterial);
-    return vid_submit(menuHaloMeshes[slot], 0, 0, used) != 0;
+    return hd_frontend_halo_buffer_render(slot, used, menuMapping);
 }
 
 static int hd_frontend_draw_compare(const void *left, const void *right)

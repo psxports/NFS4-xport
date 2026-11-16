@@ -91,6 +91,7 @@ static bool hd_lighting_basis(const VEC3F *forward, VEC3F basis[3])
 void hd_lighting_orthographic(HdLightingProjection *projection, const VEC3F *center, const VEC3F *sun, float radius, bool snap, const VEC3F *right)
 {
     projection->active = false;
+    projection->covered = 0;
     VEC3F direction = {-sun->x, -sun->y, -sun->z};
     VEC3F basis[3];
     if (!(radius > 0) || !hd_lighting_basis(&direction, basis))
@@ -128,6 +129,7 @@ void hd_lighting_orthographic(HdLightingProjection *projection, const VEC3F *cen
 bool hd_lighting_spot(HdLightingProjection *projection, const HdLightingLamp *lamp)
 {
     projection->active = false;
+    projection->covered = 0;
     VEC3F basis[3];
     const float nearPlane = 4;
     if (!lamp->active || !(lamp->range > nearPlane) || !hd_lighting_basis(&lamp->direction, basis))
@@ -196,7 +198,7 @@ void hd_lighting_sun(sint32 view, const MATRIXF *camera, const VEC3F *sun, bool 
         direction.x = direction.z = 0;
         direction.y = 1;
     }
-    const float radii[HD_LIGHTING_SUN_CASCADES] = {512, 4096, distance > 16384 ? distance : 16384};
+    const float radii[HD_LIGHTING_SUN_CASCADES] = {512, 6144};
     for (sint32 cascade = 0; cascade < HD_LIGHTING_SUN_CASCADES; ++cascade)
     {
         VEC3F center;
@@ -204,6 +206,7 @@ void hd_lighting_sun(sint32 view, const MATRIXF *camera, const VEC3F *sun, bool 
             center.v[axis] = camera->t[axis] + (cascade == HD_LIGHTING_SUN_CASCADES - 1 ? 0 : camera->m[axis][2] * radii[cascade] * 0.6f);
         HdLightingProjection *projection = projections + view * HD_LIGHTING_SUN_CASCADES + cascade;
         hd_lighting_orthographic(projection, &center, &direction, radii[cascade], cascade != 0, &right);
+        projection->covered = cascade == 0 ? 0 : projections + view * HD_LIGHTING_SUN_CASCADES;
         memcpy(records[view] + cascade * 4, projection->rows, sizeof(projection->rows));
     }
     records[view][12][0] = projections[view * HD_LIGHTING_SUN_CASCADES].active ? hd_shadow_strength : 0;
@@ -241,18 +244,20 @@ bool hd_lighting_capture(HdLightingCaster draw, void *context)
 {
     if (!hd_lighting_resources() || draw == 0)
         return false;
+    bool begun = false;
     for (uint32 layer = 0; layer < HD_LIGHTING_LAYERS; ++layer)
     {
         const HdLightingProjection *projection = projections + layer;
         if (!projection->active)
             continue;
-        if (!vid_begin(0, 0, 0))
+        if (!begun && !vid_begin(0, 0, 0))
             return false;
-        if (!vid_target_select_depth_layer(lightingDepth, layer))
+        if (!(begun ? vid_target_next_part(layer) : vid_target_select_depth_layer(lightingDepth, layer)))
         {
             vid_cancel();
             return false;
         }
+        begun = true;
         VID_RECT viewport = {0, 0, HD_LIGHTING_MAP_SIZE, HD_LIGHTING_MAP_SIZE};
         vid_viewport(viewport);
         if (projection->active && !draw(context, projection))
@@ -260,10 +265,10 @@ bool hd_lighting_capture(HdLightingCaster draw, void *context)
             vid_cancel();
             return false;
         }
-        if (!vid_end())
-            return false;
         ++hd_lighting_captures;
     }
+    if (begun && !vid_end())
+        return false;
     memcpy(vid_tex_data(lightingData), records, sizeof(records));
     vid_tex_commit(lightingData);
     lightingReady = true;

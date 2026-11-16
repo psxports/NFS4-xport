@@ -16,6 +16,8 @@
 #include "hd_lens_gpu.h"
 #include "hd_lighting.h"
 #include "hd_sampling.h"
+#include "hd_param_quads.h"
+#include "hd_halo_buffers.h"
 #include "hd_ui.h"
 #include "hd_world_vertex.h"
 #include "game/common/anim.h"
@@ -58,6 +60,7 @@ struct HdSceneFrame
     VID_TARGET *image;
     VID_MATERIAL *material;
     VID_GEOMETRY *mesh;
+    float uniforms[2][4];
     sint32 width;
     sint32 height;
     bool ready;
@@ -155,6 +158,7 @@ static HdTrackHaloCommand *trackHaloCommands[2];
 static uint32 trackHaloCommandCapacities[2];
 static HdTrackHaloState trackHaloStates[2];
 static VID_GEOMETRY *trackHaloMeshes[2];
+static HdHaloBuffer trackHaloGpu[2];
 static uint32 trackHaloCapacities[2];
 static VID_MATERIAL *trackHaloMaterial;
 uint32 hd_track_halos_enabled = 1;
@@ -298,6 +302,7 @@ static bool poseHistoryValid;
 static bool poseForce = true;
 static bool poseCapture = true;
 static VID_GEOMETRY *lensMesh;
+static HdParamQuads lensGpuGeometry;
 static bool lensGpuFrame;
 static bool lensMarkerValid;
 static float lensCenterX;
@@ -321,7 +326,14 @@ struct HdSkidState
 
 static HdSkidState skidStates[2];
 static VID_GEOMETRY *skidMeshes[2];
+static HdParamQuads skidGpu[2];
+static HdSkidQuad skidGpuKeys[2][HD_SKID_QUADS];
+static bool skidGpuActive[2][HD_SKID_QUADS];
+static uint32 skidGpuSlots[2][HD_SKID_QUADS];
+static uint64 skidCaptureRevision[2];
+static uint64 skidParamRevision[2];
 static VID_MATERIAL *skidMaterials[5];
+static VID_MATERIAL *skidCompositeMaterial;
 uint32 hd_skid_quads;
 uint32 hd_skids_enabled = 1;
 
@@ -340,6 +352,7 @@ void hd_capture_skids(sint32 player, const DRender::tView *view)
     if (!state->valid)
         state->previous = state->current;
     state->valid = true;
+    ++skidCaptureRevision[player];
 }
 
 struct HdSouffleState
@@ -351,7 +364,9 @@ struct HdSouffleState
 
 static HdSouffleState souffleStates[HD_SOUFFLE_PARTICLES];
 static VID_GEOMETRY *souffleMeshes[2];
+static HdParamQuads souffleGpu;
 static VID_MATERIAL *souffleMaterials[6];
+static VID_MATERIAL *souffleCompositeMaterial;
 uint32 hd_souffle_enabled = 1;
 uint32 hd_souffle_quads;
 uint32 hd_souffle_filtered_quads;
@@ -946,8 +961,10 @@ struct HdWeatherState
 
 static HdWeatherState weatherStates[2];
 static VID_GEOMETRY *weatherMeshes[2];
+static HdParamQuads weatherGpu[2];
 static VID_SHADER *weatherShader;
 static VID_MATERIAL *weatherMaterials[5];
+static VID_MATERIAL *weatherCompositeMaterial;
 uint32 hd_weather_enabled = 1;
 uint32 hd_weather_snow_quads;
 uint32 hd_weather_rain_lines;
@@ -972,6 +989,9 @@ struct HdWorldChunk
     bool quadTopology;
     VID_VERTEX16 *sourceVertices;
     float radius;
+    VEC3F boundsMin;
+    VEC3F boundsMax;
+    bool boundsValid;
     uint32 surfaceCount;
     bool line;
     bool noNight;
@@ -981,6 +1001,7 @@ struct HdWorldChunk
     struct HdWorldFace *faces;
     VID_INDEX *twoSidedIndices;
     uint32 twoSidedCount;
+    sint16 carVariant;
 };
 
 struct HdWorldSemiCommand
@@ -1050,6 +1071,7 @@ struct HdCarSurface;
 
 struct HdCarPart
 {
+    uint32 batchFirst;
     HdCarPartPose poses[4];
     const Transformer::zObj *object;
     HdWorldChunk geometry;
@@ -1058,13 +1080,26 @@ struct HdCarPart
     uint64 renderGeneration[4];
     HdCarSurface *renderSurfaces[4];
     uint64 surfaceGeneration[4];
-    VID_INDEX *shadowIndices;
-    uint32 shadowCount;
-    uint64 shadowGeneration;
+    uint64 surfaceRevision[4];
 };
 
 struct HdCarModel
 {
+    VID_GEOMETRY *batchMesh;
+    VID_INDEX *casterIndices;
+    uint32 casterCount;
+    uint64 casterMask;
+    uint64 casterRevisions[57];
+    uint64 casterGeneration;
+    HdWorldChunk casterBounds;
+    bool casterReady;
+    VID_INDEX *opaqueIndices[8][2];
+    uint32 opaqueCounts[8][2];
+    uint64 opaqueMasks[8][2];
+    uint64 opaqueRevisions[8][57];
+    sint16 opaqueDetails[8];
+    bool opaqueReady[8];
+    uint32 batchCapacity;
     const Car::tObj *source;
     const Transformer::zScene *scene;
     const BO::tNewtonObj *object;
@@ -1115,6 +1150,10 @@ struct HdCarSurface
     bool semi;
     bool valid;
     bool castsShadow;
+    bool opaque;
+    uint8 coverage;
+    uint64 coverageSignature;
+    bool coverageValid;
 };
 
 struct HdLineFace
@@ -1129,6 +1168,7 @@ struct HdLineChunk
     HdWorldChunk geometry;
     HdLineFace *faces;
     uint32 count;
+    uint32 first;
 };
 
 struct HdLineDraw
@@ -1147,10 +1187,20 @@ static HdWorldChunk spikeGeometry;
 static VID_TEXTURE *roadMetadata;
 static VID_MATERIAL *roadMaterials[2][6];
 static VID_MATERIAL *roadCompositeMaterials[2];
+static HdWorldChunk roadBatch;
+static VID_INDEX *roadBatchIndices[2];
+static uint32 *roadBatchStarts[2];
+static uint32 roadIndexModes;
+static VID_MATERIAL *roadBatchMaterials[2][6];
+static VID_MATERIAL *roadBatchCompositeMaterials[2];
 
 static HdCarModel carModels[9];
 static HdHaloTables haloTables;
 static VID_GEOMETRY *carHaloMeshes[2];
+static HdHaloBuffer carHaloGpu[2];
+static HdHaloBuffer frontendHaloGpu[4];
+static VID_MATERIAL *frontendHaloBase;
+static uint32 haloBufferOffset;
 static uint32 carHaloCapacities[2];
 static VID_MATERIAL *carHaloMaterial;
 uint32 hd_car_halos_enabled = 1;
@@ -1159,6 +1209,7 @@ uint32 hd_car_halo_reflections;
 uint32 hd_car_halo_vertices;
 uint32 hd_car_halo_reflections_enabled = 1;
 static VID_SHADER *carShader;
+static VID_TEXTURE *carTransforms;
 static VID_MATERIAL *carMaterial[2];
 static VID_MATERIAL *carEffectMaterials[5][2];
 static VID_MATERIAL *carSemiMaterials[4][2];
@@ -1255,6 +1306,8 @@ struct HdStaticWorldEntry
     MATRIXF model;
     uint32 first;
     uint32 count;
+    uint32 firstIndex;
+    uint32 indexCount;
     sint32 definition;
     sint16 light;
     CVECTOR color;
@@ -1276,12 +1329,23 @@ struct HdBillboardBank
 };
 
 static HdBillboardBank billboardBanks[2];
+static HdBillboardBank fixedBillboards;
+static VID_INDEX *fixedBillboardIndices;
+static uint32 *fixedBillboardOrder;
+static uint32 *fixedBillboardStarts;
+static HdBillboardBank movingBillboards;
+static VID_INDEX *movingBillboardIndices;
+static VID_TEXTURE *movingBillboardParameters;
+static VID_SHADER *movingBillboardShader;
+static VID_MATERIAL *movingBillboardMaterials[2];
+static float movingBillboardPhase;
+static VID_SHADER *billboardShader;
+static VID_MATERIAL *billboardMaterials[2];
 static VID_INDEX *billboardIndices[8][2];
 static uint32 billboardCounts[8][2];
 uint32 hd_billboard_batch_draws[8];
 uint32 hd_billboard_batch_objects[8];
-static VID_INDEX *staticWorldIndices[8][2];
-static uint32 staticWorldCounts[8][2];
+static VID_INDEX *staticWorldIndices;
 static VID_MATERIAL *staticWorldMaterials[2];
 uint32 hd_static_batch_draws[8];
 uint32 hd_static_batch_objects[8];
@@ -1298,8 +1362,15 @@ static sint32 worldChunkCount;
 static VID_SHADER *skyShader;
 static VID_MATERIAL *skyMaterial;
 static VID_GEOMETRY *skyMeshes[2];
+static HdParamQuads skyGpu;
 static uint32 skyCapacities[2];
 static VID_GEOMETRY *celestialMeshes[2];
+static HdParamQuads celestialGpu[2];
+static MATRIXF celestialCameras[2];
+static HdViewPose celestialViews[2];
+static VID_RECT celestialViewports[2];
+static float celestialHeights[2];
+static float celestialPhases[2];
 
 struct HdCelestialCommand
 {
@@ -1321,10 +1392,8 @@ static VID_MATERIAL *worldBatchMaterial;
 static HdWorldChunk worldBatch;
 static VEC3F worldBatchOrigin;
 static uint32 *worldBatchStarts;
-static uint32 *worldBatchTopology;
 static bool worldBatchReady;
-static VID_INDEX *worldBatchIndices[8];
-static uint32 worldBatchCounts[8];
+static VID_INDEX *worldBatchIndices;
 static uint64 worldSemiRevision = 1;
 static uint64 worldSemiSignature;
 uint32 hd_world_batch_draws[8];
@@ -1402,28 +1471,53 @@ static const char skyFragment[] = "flat in uvec4 vSkyTex;flat in ivec4 vRegion;\
 static const char worldVertex[] = HD_WORLD_VERTEX_GLSL("layout(location=5) in uvec4 aTex;float hdWorldDepth(){return aExtra.w;}\n");
 static const char worldBatchVertex[] = HD_WORLD_VERTEX_GLSL("layout(location=1) in vec2 aUV;\n#define aTex uvec4(uint(aUV.x),uint(aUV.y),uint(aN.w),uint(aExtra.w))\nfloat hdWorldDepth(){return aPos.w;}\n");
 
-static const char worldFragment[] = "uniform vec4 uDraw[26];in vec3 vAtmospherePosition;flat in uvec4 vPmx; flat in uvec2 vWindow;flat in ivec4 vRegion;const uvec2 vWindowOrigin=uvec2(0u);\n" HD_BOUNDED_WINDOW_GLSL VID_PSX_SAMPLING_GLSL HD_VRAM_WORD_GLSL HD_PSX_COLOR_GLSL HD_FOG_BODY_GLSL HD_LIGHTING_FRAGMENT_GLSL HD_WORLD_CULL_GLSL "vec3 hdWorldShade(vec3 color){vec3 light=(vPmx.w&1u)!=0u?vec3(1.0):vColor.rgb*(255.0/128.0);return hdFog(hdLighting(clamp(color*light,0.0,1.0),color));}\n"
-                                    "void main(){hdLightingPrepare();if(hdWorldBackFace(vPmx.w))discard;\n"
+static const char billboardVertex[] = HD_WORLD_VERTEX_GLSL("layout(location=1) in vec2 aUV;\n"
+    "#define aTex uvec4(uint(aUV.x),(uint(aExtra.w)>>17)&3u,uint(aN.w),uint(aExtra.w)&131071u)\n"
+    "vec2 billboardFacing;vec3 billboardAxis(){return vec3(aPos.x,aColor.w,aPos.z);}"
+    "vec3 billboardRotate(vec3 p,bool normal){float x=normal?aColor.z:aColor.y,z=normal?aColor.y:aColor.z;return vec3(billboardFacing.y*p.x+billboardFacing.x*p.z*x,p.y,-billboardFacing.x*p.x*z+billboardFacing.y*p.z);}"
+    "vec3 billboardPosition(){vec2 d=aPos.xz+uDraw[17].xz;float n=dot(d,d);billboardFacing=n>0.00000001?d*inversesqrt(n):vec2(0.0,1.0);return aPos.xyz+billboardRotate(vec3(aN.x,0.0,aN.z),false);}"
+    "vec3 billboardLight(){return billboardAxis()+billboardRotate(vec3(aPos.w,aN.y,aUV.y),false);}"
+    "vec4 billboardColor(){uint c=uint(aColor.x);return vec4(vec3(c&255u,(c>>8)&255u,(c>>16)&255u)/255.0,1.0);}"
+    "float hdWorldDepth(){return float(uint(aExtra.w)>>19)*0.25;}\n"
+    "#define HD_WORLD_POSITION billboardPosition()\n#define HD_WORLD_NORMAL billboardRotate(aExtra.xyz,true)\n#define HD_WORLD_LIGHT_POINT billboardLight()\n#define HD_WORLD_COLOR billboardColor()\n");
+
+static const char movingBillboardVertex[] = HD_WORLD_VERTEX_GLSL("layout(location=1)in vec2 aUV;uniform sampler2D uAux7;vec3 movingAxis,movingScale;vec2 movingFacing;float movingLight,movingColor;\n"
+    "#define aTex uvec4(uint(aUV.x),(uint(aExtra.w)>>17)&3u,uint(movingLight>=0.0?movingLight:aN.w),(uint(aExtra.w)&131071u)|(movingLight>=0.0?65536u:0u))\n"
+    "vec3 movingRotate(vec3 p){return vec3(movingFacing.y*p.x+movingFacing.x*p.z,p.y,-movingFacing.x*p.x+movingFacing.y*p.z);}"
+    "vec3 movingPosition(){int row=int(aColor.w),column=(row&31)*4;row>>=5;vec4 before=texelFetch(uAux7,ivec2(column,row),0),now=texelFetch(uAux7,ivec2(column+1,row),0),s0=texelFetch(uAux7,ivec2(column+2,row),0),s1=texelFetch(uAux7,ivec2(column+3,row),0);"
+    "movingAxis=mix(before.xyz,now.xyz,uDraw[4].w);movingScale=mix(s0.xyz,s1.xyz,uDraw[4].w);movingLight=s0.w;movingColor=s1.w;vec2 d=movingAxis.xz+uDraw[17].xz;float n=dot(d,d);movingFacing=n>0.00000001?d*inversesqrt(n):vec2(0.0,1.0);return movingAxis+movingRotate(vec3(aN.x,aPos.y,aN.z))*movingScale;}"
+    "vec3 movingNormal(){vec3 n=movingRotate(aExtra.xyz);return n*vec3(movingScale.y*movingScale.z,movingScale.x*movingScale.z,movingScale.x*movingScale.y);}"
+    "vec3 movingPoint(){return movingAxis+movingRotate(vec3(aPos.w,aN.y,aUV.y))*movingScale;}"
+    "vec4 movingRgb(){uint c=uint(movingLight>=0.0?movingColor:aColor.x);return vec4(vec3(c&255u,(c>>8)&255u,(c>>16)&255u)/255.0,1.0);}"
+    "float hdWorldDepth(){return float(uint(aExtra.w)>>19)*0.25;}\n"
+    "#define HD_WORLD_POSITION movingPosition()\n#define HD_WORLD_NORMAL movingNormal()\n#define HD_WORLD_LIGHT_POINT movingPoint()\n#define HD_WORLD_COLOR movingRgb()\n");
+
+static const char worldFragment[] = "uniform vec4 uDraw[26];in vec3 vAtmospherePosition;flat in uvec4 vPmx; flat in uvec2 vWindow;flat in ivec4 vRegion;const uvec2 vWindowOrigin=uvec2(0u);\n" HD_BOUNDED_WINDOW_GLSL VID_PSX_SAMPLING_GLSL HD_VRAM_WORD_GLSL HD_PSX_COLOR_GLSL HD_PSX_PREMULTIPLIED_GLSL HD_FOG_BODY_GLSL HD_LIGHTING_FRAGMENT_GLSL HD_WORLD_CULL_GLSL "bool hdPremultipliedAdd=false;vec3 hdWorldShade(vec3 color){vec3 light=(vPmx.w&1u)!=0u?vec3(1.0):vColor.rgb*(255.0/128.0);vec3 lit=clamp(color*light,0.0,1.0);return hdPremultipliedAdd?lit*(1.0-hdFogAmount()):hdFog(hdLighting(lit,color));}\n"
+                                    "void main(){bool additivePass=uParams[1].z>0.5&&((vPmx.y>>5)&3u)!=0u;if(!additivePass)hdLightingPrepare();if(hdWorldBackFace(vPmx.w))discard;\n"
                                     "bool semi=(vPmx.w&2u)!=0u;uint stp=uint(uParams[0].x);\n"
                                     "if(uParams[0].z<0.5){if(semi&&stp==0u)discard;}\n"
                                     "else if(uParams[0].z<1.5){stp=semi?1u:0u;}\n"
-                                    "else{if(!semi||((vPmx.y>>5)&3u)!=uint(uParams[0].w))discard;stp=2u;}\n"
+                                    "else{if(!semi||(uParams[1].z<0.5&&((vPmx.y>>5)&3u)!=uint(uParams[0].w)))discard;stp=2u;}\n"
                                     "ivec2 pixel=ivec2(uvec2(ivec2(floor(vUV)))&(~vWindow)&uvec2(255u));\n"
-                                    "uint word=vidPsxDecode(vPmx.y,vPmx.x,pixel);"
+                                    "uint word=vidPsxDecode(vPmx.y,vPmx.x,pixel);hdPremultipliedAdd=(uParams[1].z>0.5||uParams[1].w>0.5)&&((vPmx.y>>5)&3u)!=0u&&(word&32768u)!=0u;"
                                     "if(uParams[1].w>0.5){bool blend=(word&32768u)!=0u;vec4 color=hdPsxColor(vUV,vPmx.y,vPmx.x,vRegion,blend?2u:1u,word);"
-                                    "if(color.a==0.0)discard;outColor=vec4(hdWorldShade(color.rgb),blend?0.5:1.0);return;}"
+                                    "if(color.a==0.0)discard;outColor=hdPsxPremultiplied(hdWorldShade(color.rgb),(vPmx.y>>5)&3u,blend);return;}"
                                     "vec4 color=hdPsxColor(vUV,vPmx.y,vPmx.x,vRegion,stp,word);\n"
                                     "if(color.a==0.0)discard;\n"
-                                    "outColor=vec4(hdWorldShade(color.rgb),uParams[0].y); }\n";
+                                    "outColor=uParams[1].z>0.5?hdPsxPremultiplied(hdWorldShade(color.rgb),(vPmx.y>>5)&3u,true):vec4(hdWorldShade(color.rgb),uParams[0].y); }\n";
 
 static void hd_release_car(HdCarModel *car)
 {
+    vid_mesh_free(car->batchMesh);
+    vid_index_free(car->casterIndices);
+    for (sint32 bank = 0; bank < 8; ++bank)
+        for (sint32 side = 0; side < 2; ++side)
+            vid_index_free(car->opaqueIndices[bank][side]);
     for (sint32 part = 0; part < 57; ++part)
     {
         vid_mesh_free(car->parts[part].geometry.mesh);
         vid_index_free(car->parts[part].geometry.indices);
         free(car->parts[part].facets);
-        vid_index_free(car->parts[part].shadowIndices);
         for (sint32 detail = 0; detail < 4; ++detail)
             free(car->parts[part].renderSurfaces[detail]);
     }
@@ -1658,6 +1752,16 @@ void hd_capture_weather(void)
 
 static void hd_road_release(void)
 {
+    for (sint32 mode = 0; mode < 2; ++mode)
+    {
+        vid_index_free(roadBatchIndices[mode]);
+        roadBatchIndices[mode] = 0;
+        free(roadBatchStarts[mode]);
+        roadBatchStarts[mode] = 0;
+    }
+    roadIndexModes = 0;
+    vid_mesh_free(roadBatch.mesh);
+    memset(&roadBatch, 0, sizeof(roadBatch));
     for (sint32 chunk = 0; chunk < roadChunkCount; ++chunk)
     {
         vid_mesh_free(roadChunks[chunk].geometry.mesh);
@@ -1816,6 +1920,24 @@ void hd_release_level(void)
         skyMeshes[player] = 0;
         skyCapacities[player] = 0;
     }
+    for (sint32 slot = 0; slot < 4; ++slot)
+        hd_halo_buffer_free(frontendHaloGpu + slot);
+    vid_mat_free(frontendHaloBase);
+    frontendHaloBase = 0;
+    haloBufferCapture = 0;
+    hd_param_free(&lensGpuGeometry);
+    hd_param_free(&souffleGpu);
+    hd_param_free(&skyGpu);
+    for (sint32 player = 0; player < 2; ++player)
+    {
+        hd_param_free(skidGpu + player);
+        hd_param_free(weatherGpu + player);
+        hd_param_free(celestialGpu + player);
+        hd_halo_buffer_free(carHaloGpu + player);
+        hd_halo_buffer_free(trackHaloGpu + player);
+        skidParamRevision[player] = 0;
+        memset(skidGpuActive[player], 0, sizeof(skidGpuActive[player]));
+    }
     memset(&skyCurrent, 0, sizeof(skyCurrent));
     memset(&skyPrevious, 0, sizeof(skyPrevious));
     skyReset = true;
@@ -1833,6 +1955,26 @@ void hd_release_level(void)
         free(billboardBanks[player].entries);
     }
     memset(billboardBanks, 0, sizeof(billboardBanks));
+    vid_mesh_free(movingBillboards.mesh);
+    vid_index_free(movingBillboardIndices);
+    vid_tex_free(movingBillboardParameters);
+    free(movingBillboards.entries);
+    memset(&movingBillboards, 0, sizeof(movingBillboards));
+    movingBillboardIndices = 0;
+    movingBillboardParameters = 0;
+    for (sint32 side = 0; side < 2; ++side)
+    {
+        vid_mat_free(movingBillboardMaterials[side]);
+        movingBillboardMaterials[side] = 0;
+    }
+    vid_mesh_free(fixedBillboards.mesh);
+    vid_index_free(fixedBillboardIndices);
+    free(fixedBillboards.entries);
+    free(fixedBillboardOrder);
+    free(fixedBillboardStarts);
+    fixedBillboardOrder = fixedBillboardStarts = 0;
+    memset(&fixedBillboards, 0, sizeof(fixedBillboards));
+    fixedBillboardIndices = 0;
     for (sint32 bank = 0; bank < 8; ++bank)
         for (sint32 side = 0; side < 2; ++side)
         {
@@ -1840,24 +1982,13 @@ void hd_release_level(void)
             billboardIndices[bank][side] = 0;
             billboardCounts[bank][side] = 0;
         }
-    for (sint32 bank = 0; bank < 8; ++bank)
-        for (sint32 side = 0; side < 2; ++side)
-        {
-            vid_index_free(staticWorldIndices[bank][side]);
-            staticWorldIndices[bank][side] = 0;
-            staticWorldCounts[bank][side] = 0;
-        }
+    vid_index_free(staticWorldIndices);
+    staticWorldIndices = 0;
     free(worldBatchStarts);
     worldBatchStarts = 0;
-    free(worldBatchTopology);
-    worldBatchTopology = 0;
     worldBatchReady = false;
-    for (sint32 bank = 0; bank < 8; ++bank)
-    {
-        vid_index_free(worldBatchIndices[bank]);
-        worldBatchIndices[bank] = 0;
-        worldBatchCounts[bank] = 0;
-    }
+    vid_index_free(worldBatchIndices);
+    worldBatchIndices = 0;
     free(worldChunks);
     worldChunks = 0;
     worldChunkCount = 0;
@@ -1868,6 +1999,15 @@ void hd_release_level(void)
 static void hd_free(void)
 {
     hd_car_normals_forget(0);
+    for (sint32 orientation = 0; orientation < 2; ++orientation)
+    {
+        vid_mat_free(billboardMaterials[orientation]);
+        billboardMaterials[orientation] = 0;
+    }
+    vid_shader_free(movingBillboardShader);
+    movingBillboardShader = 0;
+    vid_shader_free(billboardShader);
+    billboardShader = 0;
     for (sint32 orientation = 0; orientation < 2; ++orientation)
     {
         vid_mat_free(carCubeMaterials[orientation]);
@@ -1924,6 +2064,8 @@ static void hd_free(void)
         carShadowMaterials[orientation] = 0;
     }
     vid_shader_free(carShader);
+    vid_tex_free(carTransforms);
+    carTransforms = 0;
     carShader = 0;
     vid_shader_free(sceneShader);
     sceneShader = 0;
@@ -1942,6 +2084,12 @@ static void hd_free(void)
         vid_mat_free(weatherMaterials[i]);
         weatherMaterials[i] = 0;
     }
+    vid_mat_free(weatherCompositeMaterial);
+    weatherCompositeMaterial = 0;
+    vid_mat_free(souffleCompositeMaterial);
+    souffleCompositeMaterial = 0;
+    vid_mat_free(skidCompositeMaterial);
+    skidCompositeMaterial = 0;
     for (sint32 pass = 0; pass < 5; ++pass)
     {
         vid_mat_free(skidMaterials[pass]);
@@ -1979,11 +2127,15 @@ static void hd_free(void)
         {
             vid_mat_free(roadMaterials[orientation][pass]);
             roadMaterials[orientation][pass] = 0;
+            vid_mat_free(roadBatchMaterials[orientation][pass]);
+            roadBatchMaterials[orientation][pass] = 0;
         }
     for (sint32 orientation = 0; orientation < 2; ++orientation)
     {
         vid_mat_free(roadCompositeMaterials[orientation]);
         roadCompositeMaterials[orientation] = 0;
+        vid_mat_free(roadBatchCompositeMaterials[orientation]);
+        roadBatchCompositeMaterials[orientation] = 0;
     }
     vid_tex_free(roadMetadata);
     roadMetadata = 0;
@@ -2538,6 +2690,11 @@ static bool hd_world_resources(void)
             material->params[2] = 2;
             material->params[3] = (float)blend;
             material->blend = blends[blend];
+            if (blend != 2)
+            {
+                material->blend = VID_BLEND_PREMULTIPLIED;
+                material->params[6] = 1;
+            }
             material->depth_write = 0;
             vid_mat_commit(worldSemiMaterials[blend]);
         }
@@ -2681,6 +2838,18 @@ VID_TEXTURE *hd_vram_texture(void)
     return worldVram;
 }
 
+static void hd_mesh_bounds(HdWorldChunk *mesh, const sint16 *position)
+{
+    for (sint32 axis = 0; axis < 3; ++axis)
+    {
+        if (!mesh->boundsValid || position[axis] < mesh->boundsMin.v[axis])
+            mesh->boundsMin.v[axis] = position[axis];
+        if (!mesh->boundsValid || position[axis] > mesh->boundsMax.v[axis])
+            mesh->boundsMax.v[axis] = position[axis];
+    }
+    mesh->boundsValid = true;
+}
+
 static void hd_face_record(HdWorldChunk *mesh, VID_VERTEX16 *vertices, uint32 index, sint16 offset, bool sourceCulling = false)
 {
     HdWorldFace *face = mesh->faces + index;
@@ -2690,6 +2859,7 @@ static void hd_face_record(HdWorldChunk *mesh, VID_VERTEX16 *vertices, uint32 in
     for (sint32 corner = 0; corner < 4; ++corner)
     {
         memcpy(face->points[corner], vertices[index * 4 + corner].pos, sizeof(face->points[corner]));
+        hd_mesh_bounds(mesh, face->points[corner]);
         float squared = 0;
         for (sint32 axis = 0; axis < 3; ++axis)
             squared += (float)face->points[corner][axis] * face->points[corner][axis];
@@ -3062,20 +3232,22 @@ static bool hd_world_batch_build(void)
     }
     if (vertices == 0)
         return false;
-    worldBatchStarts = (uint32 *)malloc(worldChunkCount * sizeof(*worldBatchStarts));
+    worldBatchStarts = (uint32 *)malloc((worldChunkCount + 1) * sizeof(*worldBatchStarts));
     worldBatch.mesh = vid_mesh_create_3d(vertices);
-    worldBatchTopology = (uint32 *)malloc(vertices / 4 * 6 * sizeof(uint32));
-    if (worldBatch.mesh == 0 || worldBatchStarts == 0 || worldBatchTopology == 0)
+    worldBatchIndices = vid_index_create(vertices / 4 * 6);
+    if (worldBatch.mesh == 0 || worldBatchStarts == 0 || worldBatchIndices == 0)
         return false;
     worldBatch.terrain = true;
     worldBatchOrigin = worldChunks[0].center;
     VID_VERTEX3D *target = vid_mesh_data_3d(worldBatch.mesh);
+    uint32 *topology = vid_index_data(worldBatchIndices);
     uint32 used = 0;
     for (sint32 chunk = 0; chunk < worldChunkCount; ++chunk)
     {
         const HdWorldChunk *mesh = worldChunks + chunk;
         const VID_VERTEX16 *source = mesh->mesh != 0 ? vid_mesh_data_16(mesh->mesh) : 0;
-        worldBatchStarts[chunk] = used;
+        worldBatchStarts[chunk] = worldBatch.count;
+        uint32 first = used;
         for (uint32 vertex = 0; vertex < mesh->count / 6 * 4; ++vertex)
         {
             VID_VERTEX3D *out = target + used++;
@@ -3089,7 +3261,7 @@ static bool hd_world_batch_build(void)
         {
             const uint32 *indices = vid_index_data(mesh->indices);
             for (uint32 index = 0; index < mesh->count; ++index)
-                worldBatchTopology[worldBatch.count + index] = indices[index] + worldBatchStarts[chunk];
+                topology[worldBatch.count + index] = indices[index] + first;
             vid_mesh_static(mesh->mesh);
             vid_index_static(mesh->indices);
         }
@@ -3097,12 +3269,9 @@ static bool hd_world_batch_build(void)
     }
     vid_mesh_commit(worldBatch.mesh);
     vid_mesh_static(worldBatch.mesh);
-    for (sint32 bank = 0; bank < 8; ++bank)
-    {
-        worldBatchIndices[bank] = vid_index_create(worldBatch.count);
-        if (worldBatchIndices[bank] == 0)
-            return false;
-    }
+    worldBatchStarts[worldChunkCount] = worldBatch.count;
+    vid_index_commit(worldBatchIndices, worldBatch.count);
+    vid_index_static(worldBatchIndices);
     worldBatchReady = true;
     return true;
 }
@@ -3317,6 +3486,47 @@ static void hd_order_flush(void)
     orderedCount = 0;
 }
 
+static void hd_param_uniforms(VID_MATERIAL *material, const MATRIXF *camera, const HdViewPose *view, VID_RECT viewport, float height, float phase, float uniforms[18][4])
+{
+    hd_effect_uniforms(material, uniforms);
+    for (sint32 row = 0; row < 3; ++row)
+    {
+        uniforms[row][3] = 0;
+        for (sint32 axis = 0; axis < 3; ++axis)
+        {
+            uniforms[row][axis] = camera->m[axis][row];
+            uniforms[row][3] -= camera->m[axis][row] * camera->t[axis];
+        }
+    }
+    float width = height * viewport.w / viewport.h;
+    uniforms[3][0] = 2 * view->projection / width * (view->mirror ? -1 : 1);
+    uniforms[3][1] = 2 * view->projection / height;
+    uniforms[3][2] = phase >= 0 ? phase <= 1 ? phase : 1 : 0;
+    uniforms[4][0] = width;
+    uniforms[4][1] = height;
+    uniforms[5][1] = cubeRendering ? 1.0f : 0.0f;
+    if (cubeRendering)
+    {
+        uniforms[3][0] = 1;
+        uniforms[3][1] = -1;
+        uniforms[17][0] = 1;
+        uniforms[17][1] = -1;
+    }
+}
+
+static void hd_param_order(HdParamQuads *owner, VID_MATERIAL *source, const HdOrderKey *key, uint32 first, const MATRIXF *camera, const HdViewPose *view, VID_RECT viewport, float height, float phase)
+{
+    VID_MATERIAL *material = hd_param_material(owner, source);
+    if (material == 0)
+    {
+        worldSubmissionValid = false;
+        return;
+    }
+    float uniforms[18][4];
+    hd_param_uniforms(material, camera, view, viewport, height, phase, uniforms);
+    hd_order_draw(key, material, owner->mesh, 0, first, 6, &uniforms[0][0], 18, true);
+}
+
 static void hd_submit(VID_GEOMETRY *mesh, VID_INDEX *indices, uint32 first, uint32 count)
 {
     worldSubmissionValid = vid_submit(mesh, indices, first, count) != 0 && worldSubmissionValid;
@@ -3337,7 +3547,7 @@ static void hd_world_submit(const HdWorldChunk *mesh, const MATRIXF *model, cons
     float uniforms[32][4] = {0};
     hd_fog_uniforms(uniforms, view, viewport, logicalHeight, material);
     const VID_MATERIAL_DATA *lightingMaterial = material != 0 ? vid_mat_read(material) : 0;
-    bool receiver = effect <= 0 && (lightingMaterial == 0 || lightingMaterial->blend == VID_BLEND_NONE || lightingMaterial->blend == VID_BLEND_ALPHA);
+    bool receiver = effect <= 0 && (lightingMaterial == 0 || lightingMaterial->blend == VID_BLEND_NONE || lightingMaterial->blend == VID_BLEND_ALPHA || lightingMaterial->blend == VID_BLEND_PREMULTIPLIED);
     hd_lighting_uniforms(uniforms, model, lightingView, receiver);
     uniforms[21][2] = shadowReceiver ? 0.0f : 1.0f;
     bool carSurface = lightingMaterial != 0 && (lightingMaterial->shader == carShader || lightingMaterial->shader == carCubeShader || lightingMaterial->shader == carDepthShader);
@@ -3347,6 +3557,7 @@ static void hd_world_submit(const HdWorldChunk *mesh, const MATRIXF *model, cons
     uniforms[29][3] = 2.0f / 256;
     uniforms[30][0] = 1;
     uniforms[30][1] = 65535;
+    uniforms[30][3] = (float)mesh->carVariant;
     uniforms[31][0] = 1;
     uniforms[31][1] = 0.25f;
     uniforms[31][2] = 0.03f;
@@ -3391,7 +3602,7 @@ static void hd_world_submit(const HdWorldChunk *mesh, const MATRIXF *model, cons
     uniforms[4][0] = view->fogStart;
     uniforms[4][1] = view->fogScale;
     uniforms[4][2] = view->fogEnabled ? 1.0f : 0.0f;
-    uniforms[4][3] = (float)materialRow;
+    uniforms[4][3] = lightingMaterial != 0 && lightingMaterial->shader == movingBillboardShader ? movingBillboardPhase : (float)materialRow;
     uniforms[14][3] = mipScale;
     if (light >= 0 && light < Chunk::numLight)
     {
@@ -3474,6 +3685,38 @@ static float hd_face_depth(const sint16 point[3], const MATRIXF *model, const MA
 
 static bool hd_cube_mesh_visible(const HdWorldChunk *mesh, const MATRIXF *model, const MATRIXF *camera)
 {
+    if (mesh->boundsValid)
+    {
+        float center[3] = {0};
+        float basis[3][3] = {{0}};
+        float half[3];
+        for (sint32 axis = 0; axis < 3; ++axis)
+        {
+            half[axis] = (mesh->boundsMax.v[axis] - mesh->boundsMin.v[axis]) * 0.5f;
+            float local = (mesh->boundsMax.v[axis] + mesh->boundsMin.v[axis]) * 0.5f;
+            for (sint32 row = 0; row < 3; ++row)
+                for (sint32 world = 0; world < 3; ++world)
+                    basis[row][axis] += camera->m[world][row] * model->m[world][axis];
+            for (sint32 row = 0; row < 3; ++row)
+                center[row] += basis[row][axis] * local + camera->m[axis][row] * (model->t[axis] - camera->t[axis]);
+        }
+        float depthRadius = 0;
+        for (sint32 axis = 0; axis < 3; ++axis)
+            depthRadius += fabsf(basis[2][axis]) * half[axis];
+        if (center[2] + depthRadius < 1 || center[2] - depthRadius > 65535)
+            return false;
+        for (sint32 plane = 0; plane < 4; ++plane)
+        {
+            sint32 row = plane / 2;
+            float sign = (plane & 1) != 0 ? -1.0f : 1.0f;
+            float radius = 0;
+            for (sint32 axis = 0; axis < 3; ++axis)
+                radius += fabsf(basis[2][axis] + sign * basis[row][axis]) * half[axis];
+            if (center[2] + sign * center[row] + radius < 0)
+                return false;
+        }
+        return true;
+    }
     float scale = 0;
     for (sint32 row = 0; row < 3; ++row)
         for (sint32 axis = 0; axis < 3; ++axis)
@@ -3486,9 +3729,26 @@ static bool hd_cube_mesh_visible(const HdWorldChunk *mesh, const MATRIXF *model,
     return center[2] + radius >= 1 && center[2] - radius <= 65535 && fabsf(center[0]) <= center[2] + radius * 1.414214f && fabsf(center[1]) <= center[2] + radius * 1.414214f;
 }
 
+static bool hd_view_mesh_visible(const HdWorldChunk *mesh, const MATRIXF *model, const MATRIXF *camera, const HdViewPose *view, VID_RECT viewport, float logicalHeight)
+{
+    if (cubeRendering)
+        return hd_cube_mesh_visible(mesh, model, camera);
+    if (!mesh->boundsValid || viewport.w <= 0 || viewport.h <= 0 || !(logicalHeight > 0))
+        return true;
+    MATRIXF frustum = *camera;
+    float x = 2 * view->projection / (logicalHeight * viewport.w / viewport.h);
+    float y = 2 * view->projection * (56320.0f / 65536) / logicalHeight;
+    for (sint32 axis = 0; axis < 3; ++axis)
+    {
+        frustum.m[axis][0] *= x;
+        frustum.m[axis][1] *= y;
+    }
+    return hd_cube_mesh_visible(mesh, model, &frustum);
+}
+
 static bool hd_world_geometry(const HdWorldChunk *mesh, const MATRIXF *model, const MATRIXF *camera, const HdViewPose *view, VID_RECT viewport, float logicalHeight, sint16 light, sint32 offset, uint32 group, uint32 object, uint32 piece, bool shadowReceiver = true, bool opaque = true)
 {
-    if (cubeRendering && !hd_cube_mesh_visible(mesh, model, camera))
+    if (!hd_view_mesh_visible(mesh, model, camera, view, viewport, logicalHeight))
         return true;
     float mipScale = offset == -1 ? 0.25f : 1.0f;
     if (opaque)
@@ -3622,8 +3882,9 @@ static void hd_world_semi_view(const MATRIXF *camera, const HdViewPose *view, VI
         const HdWorldSemiCommand *command = worldSemiCommands + index;
         HdWorldChunk mesh = *command->mesh;
         mesh.count = 6;
+        sint32 blend = command->blend == 2 ? 2 : 0;
         HdOrderKey order = {command->bucket, mesh.terrain ? HD_ORDER_TERRAIN : HD_ORDER_OBJECTS, command->group, command->object, command->piece, command->face, 0};
-        hd_world_submit(&mesh, &command->model, camera, view, viewport, logicalHeight, command->light, -1, 0, -1, 1, 0, command->face * 6, 0, command->midground ? 0.25f : 1, &order, mesh.terrain ? worldSemiMaterials[command->blend] : mesh.faces[command->face].twoSided ? worldTwoSidedMaterials[command->blend + 1] : worldObjectSemiMaterials[view->mirror != 0 ? 1 : 0][command->blend], command->shadowReceiver);
+        hd_world_submit(&mesh, &command->model, camera, view, viewport, logicalHeight, command->light, -1, 0, -1, 1, 0, command->face * 6, 0, command->midground ? 0.25f : 1, &order, mesh.terrain ? worldSemiMaterials[blend] : mesh.faces[command->face].twoSided ? worldTwoSidedMaterials[blend + 1] : worldObjectSemiMaterials[view->mirror != 0 ? 1 : 0][blend], command->shadowReceiver);
         ++hd_world_semi_draws;
     }
 }
@@ -3639,9 +3900,12 @@ static uint32 hd_world_group(const HdViewPose *view, sint32 chunk)
 }
 
 static const char carVertex[] = "layout(location=0) in vec4 aPos; layout(location=1) in vec2 aUV; layout(location=2) in vec4 aColor;\n"
-                                "layout(location=3) in vec4 aN; layout(location=4) in vec4 aExtra; layout(location=5) in uvec4 aTex; uniform vec4 uDraw[32]; uniform highp usampler2D uAux0;\n" HD_LIGHTING_VERTEX_GLSL HD_CAR_VERTEX_OUTPUT_GLSL "out vec2 vUV; out vec4 vColor; out float vDepth; out vec2 vFog;out vec3 vAtmospherePosition; flat out uvec4 vCarTex; flat out uvec2 vCarWindow;flat out ivec4 vRegion;\n"
+                                "layout(location=3) in vec4 aN; layout(location=4) in vec4 aExtra; layout(location=5) in uvec4 aTex; uniform vec4 uDraw[32]; uniform vec4 uParams[2];uniform highp sampler2D uAux3;uniform highp usampler2D uAux0;\n" HD_LIGHTING_VERTEX_GLSL HD_CAR_VERTEX_OUTPUT_GLSL "out vec2 vUV; out vec4 vColor; out float vDepth; out vec2 vFog;out vec3 vAtmospherePosition; flat out uvec4 vCarTex; flat out uvec2 vCarWindow;flat out ivec4 vRegion;\n"
                                 "uvec4 meta(uint id){return texelFetch(uAux0,ivec2(int(id),int(uDraw[4].w)),0); }\n"
-                                "void main(){vec4 p=vec4(aPos.xyz,1.0);vec3 c=vec3(dot(uDraw[0],p),dot(uDraw[1],p),dot(uDraw[2],p));\n"
+                                "void main(){vec4 p=vec4(aPos.xyz,1.0);vec3 localNormal=aExtra.xyz;p.xyz+=localNormal*(aN.w*(1.0/256.0)*inversesqrt(max(dot(localNormal,localNormal),0.00000001)));bool batch=uParams[1].x>0.5&&uDraw[6].x<2.5;"
+                                "if(batch){int row=(int(uDraw[4].w)*4+int(uDraw[30].w))*57+int(aTex.w);int column=(row&3)*3;row>>=2;vec4 x=texelFetch(uAux3,ivec2(column,row),0),y=texelFetch(uAux3,ivec2(column+1,row),0),z=texelFetch(uAux3,ivec2(column+2,row),0);"
+                                "p=vec4(dot(x,p),dot(y,p),dot(z,p),1.0);localNormal=vec3(dot(x.xyz,localNormal),dot(y.xyz,localNormal),dot(z.xyz,localNormal));}"
+                                "vec3 c=vec3(dot(uDraw[0],p),dot(uDraw[1],p),dot(uDraw[2],p));\n"
                                 "uint index=aTex.x;uint mode=aTex.z&9u;uint flags=0u;vec2 offset=vec2(0.0);uvec4 settings=meta(193u);\n"
                                 "if((mode&8u)!=0u){uint word=meta(141u+index).x;flags=(aTex.y&32768u)!=0u?word>>8:word&255u;\n"
                                 "if((aTex.y&1008u)!=0u){flags&=(aTex.y&4095u)>>4;if(flags!=0u){while((flags&3u)==0u)flags>>=2;}}}\n"
@@ -3652,17 +3916,17 @@ static const char carVertex[] = "layout(location=0) in vec4 aPos; layout(locatio
                                 "else if((info.z&127u)!=0u)offset=(info.z&2u)!=0u?vec2(settings.xy):vec2(uv.zw); }\n"
                                 "vUV=vec2(uvec2(aUV+offset)&uvec2(255u))+vec2(0.5);vColor=vec4(mode==8u&&(flags&128u)!=0u?vec3(128.0/255.0):uDraw[5].rgb,1.0);\n"
                                 "uint semi=mode==0u?(aTex.z&2u)!=0u?aTex.y&1u:0u:(mode&8u)!=0u?aTex.y&1u:0u;\n"
-                                "if(uDraw[6].w>0.5&&mode==0u)semi=0u;vReflective=(aTex.z&1u)!=0u&&(info.z&3u)==0u?1.0:0.0;vLocalNormal=aExtra.xyz;vEnvironmentNormal=aN.xyz;vCarFlags=uvec3(mode,flags,aTex.y);\n"
+                                "if(uDraw[6].w>0.5&&mode==0u)semi=0u;vReflective=(aTex.z&1u)!=0u&&(info.z&3u)==0u?1.0:0.0;vLocalNormal=localNormal;vEnvironmentNormal=aN.xyz;vCarFlags=uvec3(mode,flags,aTex.y);\n"
                                 "vDepth=c.z;vFog=vec2(0.0);vAtmospherePosition=c;vCarTex=uvec4(info.xy,semi,index<settings.z?1u:0u);vRegion=index<settings.z?ivec4(meta(198u+index)):ivec4(0);\n"
                                 "if(uDraw[6].x>2.5){uvec4 map=meta(197u);vUV=aUV+vec2(0.5);vColor=aColor/255.0;vCarTex=uvec4(map.xy,2u,1u); }\n"
                                 "float decal=uDraw[6].w>0.5?0.0:max(aExtra.w,(info.z&3u)!=0u?0.25:0.0);float biased=max(c.z-decal,0.0001);"
                                 "float clipZ=decal>0.0?(biased*uDraw[3].z+uDraw[3].w)*c.z/biased:c.z*uDraw[3].z+uDraw[3].w;"
-                                "gl_Position=vec4(c.x*uDraw[3].x,c.y*uDraw[3].y,clipZ,c.z);hdLightingVertex(aPos.xyz); }\n";
+                                "gl_Position=vec4(c.x*uDraw[3].x,c.y*uDraw[3].y,clipZ,c.z);hdLightingVertex(p.xyz); }\n";
 
 #define HD_CAR_FRAGMENT_GLSL(environment) \
     "flat in uvec4 vCarTex;flat in ivec4 vRegion;flat in uvec3 vCarFlags;smooth in vec3 vEnvironmentNormal;uvec2 carWindow,carOrigin;\n" \
-    "#define vWindow carWindow\n#define vWindowOrigin carOrigin\n" HD_BOUNDED_WINDOW_GLSL VID_PSX_SAMPLING_GLSL HD_VRAM_WORD_GLSL HD_PSX_COLOR_GLSL "uniform vec4 uDraw[32];uniform highp usampler2D uAux0;in vec3 vAtmospherePosition;\n" HD_FOG_BODY_GLSL HD_LIGHTING_FRAGMENT_GLSL HD_CAR_SUN_GLSL environment "uvec4 hdCarMeta(uint id){return texelFetch(uAux0,ivec2(int(id),int(uDraw[4].w)),0);}\n" \
-    "void main(){carWindow=uvec2(0u);carOrigin=uvec2(0u);hdLightingPrepareNormal(hdCarNormal());uvec4 tex=vCarTex;vec2 uv=vUV;vec3 tint=vColor.rgb;ivec4 region=vRegion;\n" \
+    "#define vWindow carWindow\n#define vWindowOrigin carOrigin\n" HD_BOUNDED_WINDOW_GLSL VID_PSX_SAMPLING_GLSL HD_VRAM_WORD_GLSL HD_PSX_COLOR_GLSL HD_PSX_PREMULTIPLIED_GLSL "uniform vec4 uDraw[32];uniform highp usampler2D uAux0;in vec3 vAtmospherePosition;\n" HD_FOG_BODY_GLSL HD_LIGHTING_FRAGMENT_GLSL HD_CAR_SUN_GLSL environment "uvec4 hdCarMeta(uint id){return texelFetch(uAux0,ivec2(int(id),int(uDraw[4].w)),0);}\n" \
+    "void main(){carWindow=uvec2(0u);carOrigin=uvec2(0u);uvec4 tex=vCarTex;bool premul=uParams[1].y>0.5;uint blend=(tex.y>>5)&3u;bool additive=premul&&blend!=0u;if(!additive)hdLightingPrepareNormal(hdCarNormal());vec2 uv=vUV;vec3 tint=vColor.rgb;ivec4 region=vRegion;\n" \
     "if(uDraw[6].x>0.5){uint pass=uint(uDraw[6].x);region=ivec4(hdCarMeta(249u+pass-1u));if(pass<=2u){uvec4 map=hdCarMeta(pass==1u?194u:195u),colors=hdCarMeta(196u);" \
     "uint mode=vCarFlags.x,flags=vCarFlags.y,facet=vCarFlags.z;bool enabled=(mode&1u)!=0u&&(map.x!=0u||map.z!=0u||map.w!=0u);uint light=colors.x;" \
     "if(pass==1u){vec2 n=vec2(vEnvironmentNormal.x*uDraw[6].y+vEnvironmentNormal.z*uDraw[6].z,-vEnvironmentNormal.x*uDraw[6].z+vEnvironmentNormal.z*uDraw[6].y);" \
@@ -3670,11 +3934,11 @@ static const char carVertex[] = "layout(location=0) in vec4 aPos; layout(locatio
     "else{enabled=enabled&&(facet&1011u)!=0u;uv=vEnvironmentNormal.yz+vec2(map.z+64u,map.w+colors.w)+vec2(0.5);carWindow=uvec2(128u,192u);}" \
     "carOrigin=map.zw;tint=vec3(float(light)/255.0);tex=uvec4(map.xy,2u,enabled?1u:0u);}}" \
     "if((tex.w&1u)==0u)discard;bool semi=tex.z!=0u;uint stp=uint(uParams[0].x);\n" \
-    "if(uParams[0].z>1.5){if(!semi||((tex.y>>5)&3u)!=uint(uParams[0].w))discard;stp=2u;}\n" \
+    "if(uParams[0].z>1.5){if(!semi||(!premul&&((tex.y>>5)&3u)!=uint(uParams[0].w)))discard;stp=2u;}\n" \
     "else if(uParams[0].z>0.5)stp=semi?1u:0u;else if(!semi)stp=0u;\n" \
-    "uvec2 pixel=uvec2(ivec2(floor(uv)));pixel=(pixel&(~carWindow))|(carOrigin&carWindow);\n" \
-    "vec4 c=hdPsxColor(uv,tex.y,tex.x,region,stp,vidPsxDecode(tex.y,tex.x,ivec2(pixel)));\n" \
-    "vec3 lit=hdCarSun(hdCarEnvironment(hdLighting(clamp(c.rgb*tint*(255.0/128.0),0.0,1.0),c.rgb)));if(c.a==0.0)discard;outColor=vec4(hdFog(lit),uParams[0].y); }\n"
+    "uvec2 pixel=uvec2(ivec2(floor(uv)));pixel=(pixel&(~carWindow))|(carOrigin&carWindow);uint word=vidPsxDecode(tex.y,tex.x,ivec2(pixel));bool integrated=uParams[1].z>0.5&&semi&&blend==0u;if(integrated)stp=(word&32768u)!=0u?2u:1u;\n" \
+    "vec4 c=hdPsxColor(uv,tex.y,tex.x,region,stp,word);\n" \
+    "vec3 lit=hdCarSun(hdCarEnvironment(hdLighting(clamp(c.rgb*tint*(255.0/128.0),0.0,1.0),c.rgb)));if(c.a==0.0)discard;outColor=integrated?hdPsxPremultiplied(hdFog(lit),0u,(word&32768u)!=0u):premul?hdPsxPremultiplied(additive?lit*(1.0-hdFogAmount()):hdFog(lit),blend,true):vec4(hdFog(lit),uParams[0].y); }\n"
 
 static const char carFragment[] = HD_CAR_FRAGMENT_GLSL("vec3 hdCarEnvironment(vec3 base){return base;}\n");
 static const char carCompositeFragment[] = HD_CAR_FRAGMENT_GLSL(HD_CAR_ENVIRONMENT_GLSL);
@@ -3688,6 +3952,7 @@ static VID_MATERIAL *hd_car_material(uint32 blend, bool depthWrite, float stpCla
     data->shader = carShader;
     data->texture = worldVram;
     data->aux[0] = carMaterials;
+    data->aux[3] = carTransforms;
     data->aux[5] = hd_lighting_depth();
     data->aux[6] = hd_lighting_data();
     data->depth_test = 1;
@@ -3697,6 +3962,17 @@ static VID_MATERIAL *hd_car_material(uint32 blend, bool depthWrite, float stpCla
     data->params[1] = alpha;
     data->params[2] = mode;
     data->params[3] = abr;
+    data->params[4] = 1;
+    if (depthWrite && mode == 1)
+    {
+        data->blend = VID_BLEND_PREMULTIPLIED;
+        data->params[6] = 1;
+    }
+    if (mode == 2 && blend != VID_BLEND_SUBTRACT)
+    {
+        data->blend = VID_BLEND_PREMULTIPLIED;
+        data->params[5] = 1;
+    }
     data->filter = VID_FILTER_NEAREST;
     data->cull = cull;
     vid_mat_commit(material);
@@ -3705,6 +3981,10 @@ static VID_MATERIAL *hd_car_material(uint32 blend, bool depthWrite, float stpCla
 
 static bool hd_car_resources(void)
 {
+    if (carTransforms == 0)
+        carTransforms = vid_tex_create_fmt(12, (9 * 4 * 57 + 3) / 4, VID_RGBA32F);
+    if (carTransforms == 0)
+        return false;
     if (carShader == 0)
         carShader = vid_shader_create(carVertex, carFragment);
     if (carShader == 0)
@@ -3859,20 +4139,99 @@ static bool hd_car_layered_part(const HdCarModel *car, sint32 part)
     return car->type < 28 && (part == 12 || part == 13 || part == 31 || part == 45 || part == 46 || ((uint8)R3DCar::ObjectInfo[part][1] & 9) == 8);
 }
 
+static float hd_car_decal_bias(const HdCarModel *car, sint32 part)
+{
+    return hd_car_layered_part(car, part) ? 0.25f : 0.0f;
+}
+
+static float hd_car_decal_separation(const HdCarModel *car, sint32 part, const COORD16 *position, const VEC3F *normal)
+{
+    if (!hd_car_layered_part(car, part) || part == 0)
+        return 0;
+    const Transformer::zObj *bodies[2] = {car->parts[41].object, car->parts[42].object};
+    if ((bodies[0] == 0 || bodies[0]->numFacet == 0) && (bodies[1] == 0 || bodies[1]->numFacet == 0))
+        bodies[0] = car->parts[0].object;
+    float length2 = normal->x * normal->x + normal->y * normal->y + normal->z * normal->z;
+    if (length2 < 0.5f)
+        return 0;
+    float inverse = 1 / sqrtf(length2);
+    VEC3F direction = {normal->x * inverse, normal->y * inverse, normal->z * inverse};
+    float closest = 32.0f;
+    bool found = false;
+    for (sint32 half = 0; half < 2; ++half)
+    {
+        const Transformer::zObj *body = bodies[half];
+        if (body == 0 || body->vertex == 0 || body->facet == 0)
+            continue;
+        for (sint32 index = 0; index < body->numFacet; ++index)
+        {
+            const Transformer::zFacet *facet = body->facet + index;
+            if (facet->vertexId0 >= body->numVertex || facet->vertexId1 >= body->numVertex || facet->vertexId2 >= body->numVertex)
+                continue;
+            const COORD16 *a = body->vertex + facet->vertexId0, *b = body->vertex + facet->vertexId1, *c = body->vertex + facet->vertexId2;
+            VEC3F e1 = {(float)b->x - a->x, (float)b->y - a->y, (float)b->z - a->z};
+            VEC3F e2 = {(float)c->x - a->x, (float)c->y - a->y, (float)c->z - a->z};
+            VEC3F cross = {direction.y * e2.z - direction.z * e2.y, direction.z * e2.x - direction.x * e2.z, direction.x * e2.y - direction.y * e2.x};
+            float determinant = e1.x * cross.x + e1.y * cross.y + e1.z * cross.z;
+            if (fabsf(determinant) < 0.000001f)
+                continue;
+            VEC3F offset = {(float)position->x - a->x, (float)position->y - a->y, (float)position->z - a->z};
+            float u = (offset.x * cross.x + offset.y * cross.y + offset.z * cross.z) / determinant;
+            if (u < -0.0001f || u > 1.0001f)
+                continue;
+            VEC3F q = {offset.y * e1.z - offset.z * e1.y, offset.z * e1.x - offset.x * e1.z, offset.x * e1.y - offset.y * e1.x};
+            float v = (direction.x * q.x + direction.y * q.y + direction.z * q.z) / determinant;
+            if (v < -0.0001f || u + v > 1.0001f)
+                continue;
+            float distance = (e2.x * q.x + e2.y * q.y + e2.z * q.z) / determinant;
+            if (distance >= 0 && distance <= closest)
+            {
+                closest = distance;
+                found = true;
+            }
+        }
+    }
+    return found ? closest + 0.25f : 0.0f;
+}
+
 static bool hd_car_build(HdCarModel *car)
 {
     if (!car->dirty)
         return true;
+    uint32 capacity = 0;
+    for (sint32 index = 0; index < 57; ++index)
+    {
+        const Transformer::zObj *object = car->parts[index].object;
+        uint32 count = object != 0 ? object->numFacet : 0;
+        if (count > 0xffffffff / (3 * sizeof(VID_VERTEX16)) - capacity)
+            return false;
+        capacity += count;
+    }
+    vid_mesh_free(car->batchMesh);
+    for (sint32 bank = 0; bank < 8; ++bank)
+        for (sint32 side = 0; side < 2; ++side)
+        {
+            vid_index_free(car->opaqueIndices[bank][side]);
+            car->opaqueIndices[bank][side] = 0;
+            car->opaqueCounts[bank][side] = 0;
+        }
+    vid_index_free(car->casterIndices);
+    car->casterIndices = 0;
+    car->casterReady = false;
+    car->casterGeneration = 0;
+    memset(car->opaqueReady, 0, sizeof(car->opaqueReady));
+    car->batchCapacity = capacity != 0 ? capacity * 3 : 3;
+    car->batchMesh = vid_mesh_create_16(capacity != 0 ? capacity * 3 : 3);
+    if (car->batchMesh == 0)
+        return false;
+    VID_VERTEX16 *batchVertices = vid_mesh_data_16(car->batchMesh);
+    uint32 batchUsed = 0;
     for (sint32 index = 0; index < 57; ++index)
     {
         HdCarPart *part = car->parts + index;
         vid_mesh_free(part->geometry.mesh);
         vid_index_free(part->geometry.indices);
         free(part->facets);
-        vid_index_free(part->shadowIndices);
-        part->shadowIndices = 0;
-        part->shadowCount = 0;
-        part->shadowGeneration = 0;
         for (sint32 detail = 0; detail < 4; ++detail)
         {
             free(part->renderSurfaces[detail]);
@@ -3891,10 +4250,14 @@ static bool hd_car_build(HdCarModel *car)
         part->facets = (uint32 *)calloc(object->numFacet, sizeof(*part->facets));
         if (part->facets == 0)
             return false;
-        VEC3F *normals = (VEC3F *)calloc(object->numVertex, sizeof(*normals));
+        VEC3F *normals = (VEC3F *)calloc(object->numVertex, sizeof(*normals) + sizeof(sint16));
         if (normals == 0)
             return false;
         hd_car_vertex_normals(object, normals);
+        sint16 *separations = (sint16 *)(normals + object->numVertex);
+        if (hd_car_layered_part(car, index))
+            for (sint32 vertex = 0; vertex < object->numVertex; ++vertex)
+                separations[vertex] = (sint16)ceilf(hd_car_decal_separation(car, index, object->vertex + vertex, normals + vertex) * 256);
         VID_VERTEX16 *vertices = vid_mesh_data_16(mesh);
         uint32 used = 0;
         for (sint32 face = object->numFacet - 1; face >= 0; --face)
@@ -3918,6 +4281,7 @@ static bool hd_car_build(HdCarModel *car)
                 vertex->pos[0] = object->vertex[ids[corner]].x;
                 vertex->pos[1] = object->vertex[ids[corner]].y;
                 vertex->pos[2] = object->vertex[ids[corner]].z;
+                hd_mesh_bounds(&part->geometry, vertex->pos);
                 float radius2 = 0;
                 for (sint32 axis = 0; axis < 3; ++axis)
                     radius2 += (float)vertex->pos[axis] * vertex->pos[axis];
@@ -3930,8 +4294,15 @@ static bool hd_car_build(HdCarModel *car)
                     vertex->n[2] = object->Nvertex[ids[corner]].z;
                 }
                 memcpy(vertex->extra, normals[ids[corner]].v, 3 * sizeof(float));
-                sint32 authoredBias = -(sint8)R3DCar::ObjectInfo[index][0];
-                vertex->extra[3] = hd_car_layered_part(car, index) && authoredBias > 0 ? (float)authoredBias : 0;
+                vertex->extra[3] = hd_car_decal_bias(car, index);
+                vertex->n[3] = separations[ids[corner]];
+                if (vertex->n[3] > 0)
+                    for (sint32 axis = 0; axis < 3; ++axis)
+                    {
+                        float coordinate = vertex->pos[axis] + normals[ids[corner]].v[axis] * (vertex->n[3] / 256.0f);
+                        if (coordinate < part->geometry.boundsMin.v[axis]) part->geometry.boundsMin.v[axis] = coordinate;
+                        if (coordinate > part->geometry.boundsMax.v[axis]) part->geometry.boundsMax.v[axis] = coordinate;
+                    }
                 vertex->uv[0] = uv[corner].u;
                 vertex->uv[1] = uv[corner].v;
                 vertex->tex[0] = facet->textureIndex;
@@ -3940,11 +4311,18 @@ static bool hd_car_build(HdCarModel *car)
             }
         }
         free(normals);
+        part->batchFirst = batchUsed;
+        memcpy(batchVertices + batchUsed, vertices, used * sizeof(*vertices));
+        for (uint32 vertex = 0; vertex < used; ++vertex)
+            batchVertices[batchUsed + vertex].tex[3] = (uint16)index;
+        batchUsed += used;
         vid_mesh_commit(mesh);
         vid_mesh_static(mesh);
         part->geometry.mesh = mesh;
         part->geometry.count = used;
     }
+    vid_mesh_commit(car->batchMesh);
+    vid_mesh_static(car->batchMesh);
     car->dirty = false;
     return true;
 }
@@ -3969,6 +4347,25 @@ static bool hd_cars_prepare(void)
     for (sint32 slot = 0; slot < 9; ++slot)
         if (carModels[slot].active && !hd_car_build(carModels + slot))
             return false;
+    float *transforms = (float *)vid_tex_data(carTransforms);
+    for (sint32 slot = 0; slot < 9; ++slot)
+        if (carModels[slot].active)
+            for (sint32 detail = 0; detail < 4; ++detail)
+                for (sint32 part = 0; part < 57; ++part)
+                {
+                    const HdCarPart *source = carModels[slot].parts + part;
+                    if (source->geometry.count == 0 || source->poses[detail].visible == 0 || source->poses[detail].visible >= 17)
+                        continue;
+                    MATRIXF model;
+                    hd_car_part_model(carModels[slot].parts + part, detail, poseRenderPhase, &model);
+                    float *record = transforms + ((slot * 4 + detail) * 57 + part) * 12;
+                    for (sint32 row = 0; row < 3; ++row)
+                    {
+                        memcpy(record + row * 4, model.m[row], 3 * sizeof(float));
+                        record[row * 4 + 3] = model.t[row] - worldBatchOrigin.v[row];
+                    }
+                }
+    vid_tex_commit(carTransforms);
     return true;
 }
 
@@ -4179,6 +4576,56 @@ static void hd_car_order(float phase, const MATRIXF *camera, const HdViewPose *v
     }
 }
 
+static uint8 hd_car_facet_coverage(const Draw::tPixMap *pixmap, const Transformer::zFacet *facet, sint32 u, sint32 v, HdCarSurface *surface)
+{
+    const Transformer::zUV uv[3] = {facet->uv0, facet->uv1, facet->uv2};
+    sint32 left = 255, top = 255, right = 0, bottom = 0;
+    for (sint32 corner = 0; corner < 3; ++corner)
+    {
+        sint32 x = (uv[corner].u + u) & 255, y = (uv[corner].v + v) & 255;
+        if (x < left)
+            left = x;
+        if (x > right)
+            right = x;
+        if (y < top)
+            top = y;
+        if (y > bottom)
+            bottom = y;
+    }
+    uint32 depth = (pixmap->tpage >> 7) & 3;
+    uint32 pageX = (pixmap->tpage & 15) * 64, pageY = ((pixmap->tpage >> 4) & 1) * 256;
+    uint64 signature = 2166136261;
+    const uint32 key[6] = {pixmap->tpage, pixmap->clut, (uint32)left, (uint32)right, (uint32)top, (uint32)bottom};
+    for (sint32 i = 0; i < 6; ++i)
+        signature = (signature ^ key[i]) * 16777619;
+    for (sint32 y = top; y <= bottom; ++y)
+        signature = (signature ^ gpu_vram_row_version(pageY + y)) * 16777619;
+    if (depth < 2)
+        signature = (signature ^ gpu_vram_row_version((pixmap->clut >> 6) & 511)) * 16777619;
+    if (surface->coverageValid && signature == surface->coverageSignature)
+        return surface->coverage;
+    uint8 coverage = 0;
+    for (sint32 y = top; y <= bottom && coverage != 3; ++y)
+        for (sint32 x = left; x <= right; ++x)
+        {
+            uint32 shift = depth == 0 ? 2 : depth == 1 ? 1 : 0;
+            uint16 word = VRAM[((pageY + y) & 511) * 1024 + ((pageX + ((uint32)x >> shift)) & 1023)];
+            if (depth < 2)
+            {
+                uint32 index = depth == 0 ? (word >> ((x & 3) * 4)) & 15 : (word >> ((x & 1) * 8)) & 255;
+                word = VRAM[((pixmap->clut >> 6) & 511) * 1024 + (((pixmap->clut & 63) * 16 + index) & 1023)];
+            }
+            if (word != 0)
+                coverage |= (word & 32768) != 0 ? 2 : 1;
+            if (coverage == 3)
+                break;
+        }
+    surface->coverageValid = true;
+    surface->coverageSignature = signature;
+    surface->coverage = coverage;
+    return coverage;
+}
+
 static bool hd_car_surface(const HdCarModel *car, sint32 part, const Transformer::zFacet *facet, sint32 detail, HdCarSurface *surface)
 {
     sint32 envmap = car->type >= 28 ? 0x22 : (uint8)R3DCar::ObjectInfo[part][1];
@@ -4201,18 +4648,42 @@ static bool hd_car_surface(const HdCarModel *car, sint32 part, const Transformer
                 overlay >>= 2;
     }
     sint32 which = overlay & 3;
+    sint32 u = 0, v = 0;
     if (which != 0)
     {
         sint32 map = texture * 3 + which - 1;
         if (map >= 90)
             return false;
         texture += car->overlayMaps[map].offset;
+        u = car->overlayMaps[map].u;
+        v = car->overlayMaps[map].v;
     }
     if (texture < 0 || texture >= car->pixmapCount)
         return false;
+    if (which == 0 && mode == 0)
+    {
+        sint32 offset = -1;
+        if ((envmap & 2) != 0)
+        {
+            if ((flags & 1) == 0 || detail == 3)
+                offset = 0;
+        }
+        else if ((car->pixmaps[texture].flag & 127) != 0)
+            offset = (car->pixmaps[texture].flag & 2) != 0 ? 4 : 2;
+        if (offset >= 0)
+        {
+            u = car->offsets[offset];
+            v = car->offsets[offset + 1];
+        }
+    }
+    uint8 coverage = hd_car_facet_coverage(car->pixmaps + texture, facet, u, v, surface);
     surface->castsShadow = (car->pixmaps[texture].flag & 3) == 0;
     surface->blend = (car->pixmaps[texture].tpage >> 5) & 3;
     surface->semi = (flags & 1) != 0 && ((mode == 0 && (envmap & 2) != 0 && detail != 3) || (mode & 8) != 0);
+    surface->opaque = (coverage & (surface->semi ? 1 : 3)) != 0;
+    surface->castsShadow = surface->castsShadow && surface->opaque;
+    surface->semi = surface->semi && (coverage & 2) != 0;
+    surface->opaque = surface->opaque || (surface->semi && surface->blend == 0);
     return true;
 }
 
@@ -4228,7 +4699,11 @@ static const HdCarSurface *hd_car_surfaces(HdCarModel *car, sint32 partIndex, si
         for (uint32 face = 0; face < part->geometry.count / 3; ++face)
         {
             HdCarSurface *surface = part->renderSurfaces[detail] + face;
+            bool valid = surface->valid, opaque = surface->opaque, shadow = surface->castsShadow, semi = surface->semi;
+            sint32 blend = surface->blend;
             surface->valid = hd_car_surface(car, partIndex, part->object->facet + part->facets[face], detail, surface);
+            if (valid != surface->valid || opaque != surface->opaque || shadow != surface->castsShadow || semi != surface->semi || blend != surface->blend)
+                ++part->surfaceRevision[detail];
         }
         part->surfaceGeneration[detail] = renderGeneration;
     }
@@ -4278,6 +4753,11 @@ static void hd_shadows_view(float phase, const MATRIXF *camera, const HdViewPose
 {
     if (!carShadowMapValid || hd_car_shadows_enabled == 0)
         return;
+    if (!hd_shadow_build(phase))
+    {
+        worldSubmissionValid = false;
+        return;
+    }
     MATRIXF identity;
     IdentityMatrixf(&identity);
     for (sint32 slot = 0; slot < 9; ++slot)
@@ -4300,6 +4780,46 @@ static void hd_shadows_view(float phase, const MATRIXF *camera, const HdViewPose
     }
 }
 
+static bool hd_car_caster_prepare(HdCarModel *car, float phase);
+
+static bool hd_car_opaque_prepare(HdCarModel *car, sint32 bank, sint32 detail, const uint64 masks[2])
+{
+    bool changed = !car->opaqueReady[bank] || car->opaqueDetails[bank] != detail || car->opaqueMasks[bank][0] != masks[0] || car->opaqueMasks[bank][1] != masks[1];
+    for (sint32 part = 0; part < 57; ++part)
+        if (((masks[0] | masks[1]) & ((uint64)1 << part)) != 0 && car->opaqueRevisions[bank][part] != car->parts[part].surfaceRevision[detail])
+            changed = true;
+    if (!changed)
+        return true;
+    for (sint32 side = 0; side < 2; ++side)
+    {
+        if (car->opaqueIndices[bank][side] == 0)
+            car->opaqueIndices[bank][side] = vid_index_create(car->batchCapacity);
+        uint32 *indices = vid_index_data(car->opaqueIndices[bank][side]);
+        if (indices == 0)
+            return false;
+        uint32 used = 0;
+        for (sint32 layer = 0; layer < 2; ++layer)
+        for (sint32 index = 0; index < 57; ++index)
+            if ((masks[side] & ((uint64)1 << index)) != 0)
+            {
+                const HdCarPart *part = car->parts + index;
+                const HdCarSurface *surfaces = part->renderSurfaces[detail];
+                for (uint32 face = 0; face < part->geometry.count / 3; ++face)
+                    if (surfaces[face].valid && surfaces[face].opaque && (surfaces[face].semi && surfaces[face].blend == 0 ? 1 : 0) == layer)
+                        for (uint32 corner = 0; corner < 3; ++corner)
+                            indices[used++] = part->batchFirst + face * 3 + corner;
+            }
+        vid_index_commit(car->opaqueIndices[bank][side], used);
+        car->opaqueCounts[bank][side] = used;
+        car->opaqueMasks[bank][side] = masks[side];
+    }
+    for (sint32 part = 0; part < 57; ++part)
+        car->opaqueRevisions[bank][part] = car->parts[part].surfaceRevision[detail];
+    car->opaqueDetails[bank] = (sint16)detail;
+    car->opaqueReady[bank] = true;
+    return true;
+}
+
 static void hd_cars_view(float phase, const MATRIXF *camera, const HdViewPose *view, VID_RECT viewport, float logicalHeight, const HdCarOrder orders[9])
 {
     hd_car_upload();
@@ -4315,6 +4835,18 @@ static void hd_cars_view(float phase, const MATRIXF *camera, const HdViewPose *v
         MATRIXF carPose;
         if (!hd_render_car_pose(slot, phase, &carPose))
             continue;
+        if (cubeRendering)
+        {
+            MATRIXF boundsModel;
+            IdentityMatrixf(&boundsModel);
+            if (!hd_car_caster_prepare(car, phase))
+            {
+                worldSubmissionValid = false;
+                return;
+            }
+            if (!hd_cube_mesh_visible(&car->casterBounds, &boundsModel, camera))
+                continue;
+        }
         ++hd_car_variant_draws[detail];
         float relative[3] = {carPose.t[0] - camera->t[0], carPose.t[1] - camera->t[1], carPose.t[2] - camera->t[2]};
         float localX = 0, localZ = 0;
@@ -4330,6 +4862,11 @@ static void hd_cars_view(float phase, const MATRIXF *camera, const HdViewPose *v
         sint32 average = ((rgb & 255) + ((rgb >> 8) & 255) + ((rgb >> 16) & 255)) / 3;
         if (average < 24)
             average = 24;
+        MATRIXF submitModel;
+        IdentityMatrixf(&submitModel);
+        memcpy(submitModel.t, &worldBatchOrigin, sizeof(submitModel.t));
+        sint32 bank = detail * 2 + (view->mirror != 0 ? 1 : 0);
+        uint64 masks[2] = {0, 0};
         for (sint32 index = 0; index < 57; ++index)
         {
             const HdCarPart *part = car->parts + index;
@@ -4338,49 +4875,30 @@ static void hd_cars_view(float phase, const MATRIXF *camera, const HdViewPose *v
                 continue;
             MATRIXF model;
             hd_car_part_model(car->parts + index, detail, phase, &model);
-            if (cubeRendering && !hd_cube_mesh_visible(&part->geometry, &model, camera))
-                continue;
             sint32 orientation = (view->mirror != 0) != pose->mirrored ? 1 : 0;
             bool combined = !cubeRendering && cubeReady && hd_dynamic_reflections_enabled != 0 && hd_car_reflections_enabled != 0;
-            VID_MATERIAL *baseMaterial = combined ? carCubeMaterials[orientation] : carMaterial[orientation];
             const HdCarSurface *surfaces = hd_car_surfaces(car, index, detail);
             if (surfaces == 0)
             {
                 worldSubmissionValid = false;
                 return;
             }
-            bool layered = !cubeRendering && hd_car_layered_part(car, index);
-            if (!layered)
             {
-                uint32 first = 0;
-                while (first < part->geometry.count / 3)
-                {
-                    if (!surfaces[first].valid)
-                    {
-                        ++first;
-                        continue;
-                    }
-                    uint32 end = first + 1;
-                    while (end < part->geometry.count / 3 && surfaces[end].valid)
-                        ++end;
-                    HdWorldChunk mesh = part->geometry;
-                    mesh.count = (end - first) * 3;
-                    vid_pass(baseMaterial);
-                    hd_world_submit(&mesh, &model, camera, view, viewport, logicalHeight, -1, average * 0x10101, slot, 0, 1, 0, first * 3, detail == 3 ? 1 : 0, 1, 0, baseMaterial);
-                    first = end;
-                }
+                masks[orientation] |= (uint64)1 << index;
                 if (cubeRendering && hd_car_semi_enabled != 0)
                     for (uint32 face = 0; face < part->geometry.count / 3; ++face)
                     {
                         const HdCarSurface *surface = surfaces + face;
-                        if (!surface->valid || !surface->semi)
+                        if (!surface->valid || !surface->semi || surface->blend == 0)
                             continue;
                         const Transformer::zFacet *source = part->object->facet + part->facets[face];
                         sint32 bucket = hd_car_facet_bucket(part->object, source, &model, camera, 0);
                         HdOrderKey key = {bucket, HD_ORDER_CARS, (uint32)slot, 0, (uint32)(slot * 57 + index), part->object->numFacet - 1 - part->facets[face], 1};
                         HdWorldChunk mesh = part->geometry;
+                        mesh.mesh = car->batchMesh;
+                        mesh.carVariant = (sint16)detail;
                         mesh.count = 3;
-                        hd_world_submit(&mesh, &model, camera, view, viewport, logicalHeight, -1, average * 0x10101, slot, 0, 1, 0, face * 3, 0, 1, &key, carSemiMaterials[surface->blend][orientation]);
+                        hd_world_submit(&mesh, &submitModel, camera, view, viewport, logicalHeight, -1, average * 0x10101, slot, 0, 1, 0, part->batchFirst + face * 3, 0, 1, &key, carSemiMaterials[surface->blend == 2 ? 2 : 0][orientation]);
                     }
                 if (cubeRendering)
                     continue;
@@ -4395,14 +4913,14 @@ static void hd_cars_view(float phase, const MATRIXF *camera, const HdViewPose *v
                 if (bucket < 0 || bucket >= order->size)
                     continue;
                 HdWorldChunk mesh = part->geometry;
+                mesh.mesh = car->batchMesh;
+                mesh.carVariant = (sint16)detail;
                 mesh.count = 3;
                 HdOrderKey key = {order->bucket, HD_ORDER_CARS, (uint32)order->group, (uint32)bucket, (uint32)(slot * 57 + index), part->object->numFacet - 1 - part->facets[face], 0};
-                if (layered)
-                    hd_world_submit(&mesh, &model, camera, view, viewport, logicalHeight, -1, average * 0x10101, slot, 0, 1, 0, face * 3, detail == 3 ? 1 : 0, 1, &key, baseMaterial);
                 key.pass = 1;
-                if (surface.semi && hd_car_semi_enabled != 0)
+                if (surface.semi && surface.blend != 0 && hd_car_semi_enabled != 0)
                 {
-                    hd_world_submit(&mesh, &model, camera, view, viewport, logicalHeight, -1, average * 0x10101, slot, 0, 1, 0, face * 3, detail == 3 ? 1 : 0, 1, &key, combined ? carCubeSemiMaterials[surface.blend][orientation] : carSemiMaterials[surface.blend][orientation]);
+                    hd_world_submit(&mesh, &submitModel, camera, view, viewport, logicalHeight, -1, average * 0x10101, slot, 0, 1, 0, part->batchFirst + face * 3, detail == 3 ? 1 : 0, 1, &key, combined ? carCubeSemiMaterials[surface.blend == 2 ? 2 : 0][orientation] : carSemiMaterials[surface.blend == 2 ? 2 : 0][orientation]);
                     ++hd_car_semi_draws;
                 }
                 sint32 envmap = car->type >= 28 ? 0x22 : (uint8)R3DCar::ObjectInfo[index][1];
@@ -4422,7 +4940,7 @@ static void hd_cars_view(float phase, const MATRIXF *camera, const HdViewPose *v
                     for (sint32 pass = 0; pass < 2; ++pass)
                     {
                         key.pass = effect * 2 + pass;
-                        hd_world_submit(&mesh, &model, camera, view, viewport, logicalHeight, -1, average * 0x10101, slot, effect, yawCos, yawSin, face * 3, detail == 3 ? 1 : 0, 1, &key, carEffectMaterials[pass == 0 ? 0 : blend + 1][orientation]);
+                        hd_world_submit(&mesh, &submitModel, camera, view, viewport, logicalHeight, -1, average * 0x10101, slot, effect, yawCos, yawSin, part->batchFirst + face * 3, detail == 3 ? 1 : 0, 1, &key, carEffectMaterials[pass == 0 ? 0 : blend + 1][orientation]);
                         ++hd_car_reflection_draws;
                     }
                 }
@@ -4432,21 +4950,29 @@ static void hd_cars_view(float phase, const MATRIXF *camera, const HdViewPose *v
             ++hd_car_part_draws;
             hd_car_triangle_count += part->geometry.count / 3;
         }
+        if (!hd_car_opaque_prepare(car, bank, detail, masks))
+        {
+            worldSubmissionValid = false;
+            return;
+        }
+        for (sint32 side = 0; side < 2; ++side)
+            if (car->opaqueCounts[bank][side] != 0)
+            {
+                HdWorldChunk mesh = {};
+                mesh.mesh = car->batchMesh;
+                mesh.indices = car->opaqueIndices[bank][side];
+                mesh.count = car->opaqueCounts[bank][side];
+                mesh.carVariant = (sint16)detail;
+                bool combined = !cubeRendering && cubeReady && hd_dynamic_reflections_enabled != 0 && hd_car_reflections_enabled != 0;
+                VID_MATERIAL *material = combined ? carCubeMaterials[side] : carMaterial[side];
+                vid_pass(material);
+                hd_world_submit(&mesh, &submitModel, camera, view, viewport, logicalHeight, -1, average * 0x10101, slot, 0, 1, 0, 0, detail == 3 ? 1 : 0, 1, 0, material);
+            }
     }
 }
 
 static bool hd_chunk_visible(const HdViewPose *view, sint32 chunk, bool objects, uint16 rejectMask = 0)
 {
-    if (cubeRendering)
-    {
-        if (chunk < 0)
-            return true;
-        if (chunk >= worldChunkCount)
-            return false;
-        float dx = worldChunks[chunk].center.x - cubeOrigin.x;
-        float dz = worldChunks[chunk].center.z - cubeOrigin.z;
-        return dx * dx + dz * dz <= view->world.chunkFarSquared * 4;
-    }
     sint32 source = view->world.chunk;
     if (source < 0 || source >= worldChunkCount || chunk < 0 || chunk >= worldChunkCount || Track::gInViewCount == 0 || Track::gInViewList == 0)
         return false;
@@ -4455,90 +4981,121 @@ static bool hd_chunk_visible(const HdViewPose *view, sint32 chunk, bool objects,
     float dz = center->z - view->pose.position.z;
     if (dx * dx + dz * dz > view->world.chunkFarSquared * 4)
         return false;
-    for (sint32 distance = 0; distance <= 4; ++distance)
-        for (sint32 direction = -1; direction <= 1; direction += 2)
-        {
-            if (distance == 0 && direction == 1)
-                continue;
-            sint32 neighbor = (source + direction * (distance % worldChunkCount) + worldChunkCount) % worldChunkCount;
-            sint32 count = Track::gInViewCount[neighbor];
-            if (count > 36)
-                continue;
-            for (sint32 i = 0; i < count; ++i)
-            {
-                uint16 entry = ((const sint16 *)Track::gInViewList)[neighbor * 32 + i];
-                if ((entry & 1023) == chunk && (entry & (rejectMask != 0 ? rejectMask : objects ? 0x4800 : 0x2800)) == 0)
-                    return true;
-            }
-        }
+    sint32 count = Track::gInViewCount[source];
+    if (count > 36)
+        return false;
+    for (sint32 i = 0; i < count; ++i)
+    {
+        uint16 entry = ((const sint16 *)Track::gInViewList)[source * 32 + i];
+        if ((entry & 1023) == chunk && (entry & (rejectMask != 0 ? rejectMask : objects ? 0x4800 : 0x2800)) == 0)
+            return true;
+    }
     return false;
+}
+
+static bool hd_chunk_range(const HdViewPose *view, uint16 rejectMask, sint32 *first, sint32 *count)
+{
+    sint32 source = view->world.chunk;
+    if (source < 0 || source >= worldChunkCount || Track::gInViewCount == 0 || Track::gInViewList == 0 || Track::gInViewCount[source] > 36)
+        return false;
+    sint32 low = worldChunkCount, high = -worldChunkCount;
+    for (sint32 i = 0; i < Track::gInViewCount[source]; ++i)
+    {
+        uint16 entry = ((const sint16 *)Track::gInViewList)[source * 32 + i];
+        sint32 chunk = entry & 1023;
+        if (chunk >= worldChunkCount || (entry & rejectMask) != 0)
+            continue;
+        const VEC3F *origin = cubeRendering ? &cubeOrigin : &view->pose.position;
+        float dx = worldChunks[chunk].center.x - origin->x;
+        float dz = worldChunks[chunk].center.z - origin->z;
+        if (dx * dx + dz * dz > view->world.chunkFarSquared * 4)
+            continue;
+        sint32 offset = (chunk - source + worldChunkCount) % worldChunkCount;
+        if (offset > worldChunkCount / 2)
+            offset -= worldChunkCount;
+        if (offset < low)
+            low = offset;
+        if (offset > high)
+            high = offset;
+    }
+    if (low > high)
+        return false;
+    *first = (source + low + worldChunkCount) % worldChunkCount;
+    *count = high - low + 1;
+    return true;
 }
 
 static bool hd_world_batch_view(sint32 player, const MATRIXF *camera, const HdViewPose *view, VID_RECT viewport, float logicalHeight)
 {
     sint32 bank = cubeRendering ? (sint32)cubeFace + 2 : player;
-    uint32 *indices = vid_index_data(worldBatchIndices[bank]);
-    uint32 used = 0;
-    bool changed = false;
     hd_world_batch_draws[bank] = hd_world_batch_chunks[bank] = 0;
-    for (sint32 chunk = 0; chunk < worldChunkCount; ++chunk)
-    {
-        const HdWorldChunk *mesh = worldChunks + chunk;
-        if (!hd_chunk_visible(view, chunk, false) || mesh->count == 0)
-            continue;
-        MATRIXF model;
-        IdentityMatrixf(&model);
-        memcpy(model.t, &mesh->center, sizeof(model.t));
-        if (cubeRendering && !hd_cube_mesh_visible(mesh, &model, camera))
-            continue;
-        const uint32 *source = worldBatchTopology + worldBatchStarts[chunk] / 4 * 6;
-        ++hd_world_batch_chunks[bank];
-        for (uint32 index = 0; index < mesh->count; ++index)
-        {
-            uint32 value = source[index];
-            if (indices[used] != value)
-                changed = true;
-            indices[used++] = value;
-        }
-    }
-    if (used == 0)
+    sint32 first, count;
+    if (!hd_chunk_range(view, 0x2800, &first, &count))
         return true;
-    if (changed || used != worldBatchCounts[bank])
+    if (cubeRendering)
     {
-        vid_index_commit(worldBatchIndices[bank], used);
-        worldBatchCounts[bank] = used;
+        sint32 low = count, high = -1;
+        for (sint32 offset = 0; offset < count; ++offset)
+        {
+            const HdWorldChunk *chunk = worldChunks + (first + offset) % worldChunkCount;
+            MATRIXF bounds;
+            IdentityMatrixf(&bounds);
+            memcpy(bounds.t, &chunk->center, sizeof(bounds.t));
+            if (hd_cube_mesh_visible(chunk, &bounds, camera))
+            {
+                if (offset < low)
+                    low = offset;
+                high = offset;
+            }
+        }
+        if (high < low)
+            return true;
+        first = (first + low) % worldChunkCount;
+        count = high - low + 1;
     }
-    HdWorldChunk mesh = worldBatch;
-    mesh.indices = worldBatchIndices[bank];
-    mesh.count = used;
     MATRIXF model;
     IdentityMatrixf(&model);
     memcpy(model.t, &worldBatchOrigin, sizeof(model.t));
-    vid_pass(worldBatchMaterial);
-    hd_world_submit(&mesh, &model, camera, view, viewport, logicalHeight, -1, -1, 0, -1, 1, 0, 0, 0, 1, 0, worldBatchMaterial);
-    hd_world_batch_draws[bank] = 1;
+    for (sint32 part = 0; count > 0 && part < 2; ++part)
+    {
+        sint32 end = first + count;
+        if (end > worldChunkCount)
+            end = worldChunkCount;
+        HdWorldChunk mesh = worldBatch;
+        mesh.indices = worldBatchIndices;
+        mesh.count = worldBatchStarts[end] - worldBatchStarts[first];
+        if (mesh.count != 0)
+        {
+            vid_pass(worldBatchMaterial);
+            hd_world_submit(&mesh, &model, camera, view, viewport, logicalHeight, -1, -1, 0, -1, 1, 0, worldBatchStarts[first], 0, 1, 0, worldBatchMaterial);
+            ++hd_world_batch_draws[bank];
+        }
+        hd_world_batch_chunks[bank] += end - first;
+        count -= end - first;
+        first = 0;
+    }
     return worldSubmissionValid;
 }
 
-static bool hd_object_visible(const HdObjectEntry *entry, const HdViewPose *view)
+static bool hd_object_visible(const HdObjectEntry *entry, const HdViewPose *view, sint32 first = -1, sint32 count = 0)
 {
-    if (cubeRendering)
-    {
-        if (!entry->current.active || entry->current.definition < 0 || entry->current.definition >= worldDefinitionCount)
-            return false;
-        float dx = entry->current.pose.position.x - cubeOrigin.x;
-        float dz = entry->current.pose.position.z - cubeOrigin.z;
-        return dx * dx + dz * dz <= view->world.chunkFarSquared * 4;
-    }
     if (!entry->current.active || entry->current.definition < 0 || entry->current.definition >= worldDefinitionCount)
         return false;
     if (entry->kind < 2)
+    {
+        if (entry->current.billboard || (entry->pieceCount == 0 && (entry->current.type == 1 || entry->current.type == 2 || entry->current.type == 5)))
+        {
+            if (first < 0 && !hd_chunk_range(view, 0x4800, &first, &count))
+                return false;
+            return (entry->chunk - first + worldChunkCount) % worldChunkCount < count;
+        }
         return hd_chunk_visible(view, entry->chunk, true);
+    }
     if (entry->kind == 4)
     {
         float dx = entry->current.pose.position.x - view->pose.position.x;
         float dz = entry->current.pose.position.z - view->pose.position.z;
-        return dx * dx + dz * dz < view->world.chunkFarSquared * 4;
+        return dx * dx + dz * dz < view->world.polygonFarSquared * 4;
     }
     uint32 chunk = view->world.chunk;
     if (chunk >= (uint32)worldChunkCount)
@@ -4550,7 +5107,7 @@ static bool hd_object_visible(const HdObjectEntry *entry, const HdViewPose *view
         return false;
     float dx = entry->current.pose.position.x - view->pose.position.x;
     float dz = entry->current.pose.position.z - view->pose.position.z;
-    return dx * dx + dz * dz < view->world.chunkFarSquared * 4;
+    return dx * dx + dz * dz < view->world.polygonFarSquared * 4;
 }
 
 static void hd_object_matrix_uncached(const HdObjectEntry *entry, float phase, const MATRIXF *camera, MATRIXF *model)
@@ -4585,6 +5142,11 @@ static void hd_object_matrix_uncached(const HdObjectEntry *entry, float phase, c
 
 static void hd_object_matrix(const HdObjectEntry *entry, float phase, const MATRIXF *camera, MATRIXF *model)
 {
+    if (cubeRendering && entry->current.billboard)
+    {
+        hd_object_matrix_uncached(entry, phase, camera, model);
+        return;
+    }
     sint32 player = lightingView == 1 ? 1 : 0;
     HdObjectEntry *cache = const_cast<HdObjectEntry *>(entry);
     if (cache->renderModelGeneration[player] != renderGeneration)
@@ -4669,13 +5231,35 @@ static bool hd_static_world_build(float phase)
         }
         vid_mesh_commit(staticWorld.mesh);
         vid_mesh_static(staticWorld.mesh);
-        for (sint32 bank = 0; bank < 8; ++bank)
+        if (staticWorld.count > 0x7fffffff)
+            return false;
+        staticWorldIndices = vid_index_create(staticWorld.count * 2);
+        if (staticWorldIndices == 0)
+            return false;
+        uint32 *indices = vid_index_data(staticWorldIndices);
+        uint32 indexCount = 0;
+        const uint32 topology[2][6] = {{0, 1, 2, 2, 1, 3}, {0, 2, 1, 2, 3, 1}};
+        for (uint32 index = 0; index < worldObjectCount; ++index)
+        {
+            HdStaticWorldEntry *saved = staticWorldEntries + index;
+            if (saved->count == 0)
+                continue;
+            const HdWorldChunk *mesh = worldDefinitions + saved->definition;
+            saved->firstIndex = indexCount;
             for (sint32 side = 0; side < 2; ++side)
-            {
-                staticWorldIndices[bank][side] = vid_index_create(staticWorld.count);
-                if (staticWorldIndices[bank][side] == 0)
-                    return false;
-            }
+                for (uint32 face = 0; face < mesh->count / 6; ++face)
+                {
+                    uint32 source = side == 0 ? face : mesh->count / 6 - 1 - face;
+                    if (side != 0 && !mesh->faces[source].twoSided)
+                        continue;
+                    for (sint32 corner = 0; corner < 6; ++corner)
+                        indices[indexCount++] = saved->first + source * 4 + topology[side][corner];
+                }
+            saved->indexCount = indexCount - saved->firstIndex;
+        }
+        staticWorld.count = indexCount;
+        vid_index_commit(staticWorldIndices, indexCount);
+        vid_index_static(staticWorldIndices);
     }
     for (sint32 definition = 0; definition < worldDefinitionCount; ++definition)
         if (worldDefinitions[definition].mesh != 0)
@@ -4690,57 +5274,48 @@ static bool hd_static_world_view(sint32 player, float phase, const MATRIXF *came
     hd_static_batch_draws[bank] = hd_static_batch_objects[bank] = 0;
     if (staticWorld.mesh == 0)
         return true;
-    uint32 *indices[2] = {vid_index_data(staticWorldIndices[bank][0]), vid_index_data(staticWorldIndices[bank][1])};
-    uint32 used[2] = {0, 0};
-    bool changed[2] = {false, false};
-    const uint32 topology[6] = {0, 1, 2, 2, 1, 3};
-    for (uint32 index = 0; index < worldObjectCount; ++index)
-    {
-        const HdObjectEntry *entry = worldObjects + index;
-        if (!hd_static_world_candidate(entry) || !hd_object_visible(entry, view))
-            continue;
-        MATRIXF model;
-        hd_object_matrix(entry, phase, camera, &model);
-        if (!hd_static_world_match(index, &model))
-            continue;
-        const HdWorldChunk *mesh = worldDefinitions + entry->current.definition;
-        if (cubeRendering && !hd_cube_mesh_visible(mesh, &model, camera))
-            continue;
-        ++hd_static_batch_objects[bank];
-        for (sint32 side = 0; side < 2; ++side)
-            for (uint32 face = 0; face < mesh->count / 6; ++face)
-            {
-                uint32 sourceFace = side == 0 ? face : mesh->count / 6 - 1 - face;
-                if (side != 0 && !mesh->faces[sourceFace].twoSided)
-                    continue;
-                for (sint32 corner = 0; corner < 6; ++corner)
-                {
-                    uint32 value = staticWorldEntries[index].first + sourceFace * 4 + topology[corner];
-                    if (indices[side][used[side]] != value)
-                        changed[side] = true;
-                    indices[side][used[side]++] = value;
-                }
-            }
-    }
+    sint32 segmentFirst = 0, segmentCount = 0;
+    hd_chunk_range(view, 0x4800, &segmentFirst, &segmentCount);
     MATRIXF model;
     IdentityMatrixf(&model);
     memcpy(model.t, &worldBatchOrigin, sizeof(model.t));
-    for (sint32 side = 0; side < 2; ++side)
+    VID_MATERIAL *material = staticWorldMaterials[view->mirror != 0 ? 1 : 0];
+    uint32 first = 0, count = 0;
+    uint32 entries = staticWorldEntryCount < worldObjectCount ? staticWorldEntryCount : worldObjectCount;
+    for (uint32 index = 0; index <= entries; ++index)
     {
-        if (used[side] == 0)
+        const HdStaticWorldEntry *saved = index < entries ? staticWorldEntries + index : 0;
+        if (saved != 0 && saved->indexCount == 0)
             continue;
-        if (changed[side] || used[side] != staticWorldCounts[bank][side])
+        bool visible = false;
+        if (saved != 0)
         {
-            vid_index_commit(staticWorldIndices[bank][side], used[side]);
-            staticWorldCounts[bank][side] = used[side];
+            const HdObjectEntry *entry = worldObjects + index;
+            visible = entry->chunk >= 0 ? (entry->chunk - segmentFirst + worldChunkCount) % worldChunkCount < segmentCount : hd_object_visible(entry, view, segmentFirst, segmentCount);
+            if (visible)
+            {
+                MATRIXF object;
+                hd_object_matrix(entry, phase, camera, &object);
+                visible = hd_static_world_match(index, &object) && (!cubeRendering && entry->chunk >= 0 || hd_view_mesh_visible(worldDefinitions + saved->definition, &object, camera, view, viewport, logicalHeight));
+            }
         }
-        HdWorldChunk mesh = staticWorld;
-        mesh.indices = staticWorldIndices[bank][side];
-        mesh.count = used[side];
-        VID_MATERIAL *material = staticWorldMaterials[(view->mirror != 0) != (side != 0) ? 1 : 0];
-        vid_pass(material);
-        hd_world_submit(&mesh, &model, camera, view, viewport, logicalHeight, -1, -1, 0, -1, 1, 0, 0, 0, 1, 0, material);
-        ++hd_static_batch_draws[bank];
+        if (count != 0 && (!visible || saved->firstIndex != first + count))
+        {
+            HdWorldChunk mesh = staticWorld;
+            mesh.indices = staticWorldIndices;
+            mesh.count = count;
+            vid_pass(material);
+            hd_world_submit(&mesh, &model, camera, view, viewport, logicalHeight, -1, -1, 0, -1, 1, 0, first, 0, 1, 0, material);
+            ++hd_static_batch_draws[bank];
+            count = 0;
+        }
+        if (visible)
+        {
+            if (count == 0)
+                first = saved->firstIndex;
+            count += saved->indexCount;
+            ++hd_static_batch_objects[bank];
+        }
     }
     return worldSubmissionValid;
 }
@@ -4750,161 +5325,416 @@ static bool hd_billboard_candidate(const HdObjectEntry *entry)
     return entry->current.active && entry->current.billboard && entry->pieceCount == 0 && entry->current.orderOffset != -1 && entry->current.definition >= 0 && entry->current.definition < worldDefinitionCount;
 }
 
-static bool hd_billboard_prepare(sint32 player, float phase)
+static bool hd_fixed_billboard_candidate(const HdObjectEntry *entry)
 {
-    HdBillboardBank *bank = billboardBanks + player;
-    MATRIXF camera;
-    HdViewPose view;
-    if (!hd_render_view_pose(player, phase, &camera, &view))
+    return hd_billboard_candidate(entry) && entry->kind < 2 && entry->current.type != 3 && entry->current.type != 7 && fabsf(entry->current.scale.x) > 0.000001f && fabsf(entry->current.scale.z) > 0.000001f;
+}
+
+static bool hd_fixed_billboard_match(uint32 index)
+{
+    if (index >= fixedBillboards.entryCapacity)
         return false;
-    if (bank->entryCapacity < worldObjectCount)
-    {
-        HdStaticWorldEntry *entries = (HdStaticWorldEntry *)realloc(bank->entries, worldObjectCount * sizeof(*entries));
-        if (entries == 0)
+    const HdStaticWorldEntry *saved = fixedBillboards.entries + index;
+    const HdObjectEntry *entry = worldObjects + index;
+    if (saved->count == 0 || !hd_fixed_billboard_candidate(entry) || saved->source != entry->source || saved->definition != entry->current.definition || saved->light != entry->current.light)
+        return false;
+    if (saved->light >= 0 && saved->light < Chunk::numLight && memcmp(&saved->color, Chunk::lightTable + saved->light, sizeof(saved->color)) != 0)
+        return false;
+    for (sint32 axis = 0; axis < 3; ++axis)
+        if (saved->model.t[axis] != entry->current.pose.position.v[axis] || saved->model.m[axis][axis] != entry->current.scale.v[axis] || entry->previous.pose.position.v[axis] != entry->current.pose.position.v[axis] || entry->previous.scale.v[axis] != entry->current.scale.v[axis])
             return false;
-        bank->entries = entries;
-        bank->entryCapacity = worldObjectCount;
-    }
-    if (worldObjectCount != 0)
-        memset(bank->entries, 0, worldObjectCount * sizeof(*bank->entries));
+    return true;
+}
+
+static void hd_fixed_billboard_vertex(VID_VERTEX3D *out, const VID_VERTEX16 *in, const VEC3F *axis, const VEC3F *scale, sint16 light, const CVECTOR *color, uint32 corner)
+{
+    memset(out, 0, sizeof(*out));
+    out->pos[0] = axis->x;
+    out->pos[1] = axis->y + in->pos[1] * scale->y;
+    out->pos[2] = axis->z;
+    out->pos[3] = in->n[0] * scale->x;
+    out->n[0] = in->pos[0] * scale->x;
+    out->n[1] = in->n[1] * scale->y;
+    out->n[2] = in->pos[2] * scale->z;
+    out->n[3] = color != 0 ? light : in->tex[2];
+    out->extra[0] = in->extra[0] * scale->y * scale->z;
+    out->extra[1] = in->extra[1] * scale->x * scale->z;
+    out->extra[2] = in->extra[2] * scale->x * scale->y;
+    out->uv[0] = in->tex[0];
+    out->uv[1] = in->n[2] * scale->z;
+    uint32 rgb = color != 0 ? color->r | (color->g << 8) | (color->b << 16) : in->color[0] | (in->color[1] << 8) | (in->color[2] << 16);
+    out->color[0] = (float)rgb;
+    out->color[1] = scale->x / scale->z;
+    out->color[2] = scale->z / scale->x;
+    out->color[3] = axis->y;
+    out->extra[3] = (float)(in->tex[3] | (color != 0 ? 65536 : 0) | ((corner) << 17) | ((uint32)floorf(in->extra[3] * 4 + 0.5f) << 19));
+}
+
+static bool hd_fixed_billboard_build(void)
+{
+    if (fixedBillboards.generation != 0)
+        return true;
+    if (fixedBillboards.entries != 0)
+        return false;
+    if (billboardShader == 0)
+        billboardShader = vid_shader_create(billboardVertex, worldFragment);
+    if (billboardShader == 0)
+        return false;
+    for (sint32 side = 0; side < 2; ++side)
+        if (billboardMaterials[side] == 0)
+        {
+            billboardMaterials[side] = vid_mat_create();
+            if (billboardMaterials[side] == 0)
+                return false;
+            *vid_mat_data(billboardMaterials[side]) = *vid_mat_read(staticWorldMaterials[side]);
+            vid_mat_data(billboardMaterials[side])->shader = billboardShader;
+            vid_mat_commit(billboardMaterials[side]);
+        }
+    fixedBillboards.entries = (HdStaticWorldEntry *)calloc(worldObjectCount != 0 ? worldObjectCount : 1, sizeof(HdStaticWorldEntry));
+    if (fixedBillboards.entries == 0)
+        return false;
+    fixedBillboards.entryCapacity = worldObjectCount;
+    fixedBillboardOrder = (uint32 *)malloc((worldObjectCount != 0 ? worldObjectCount : 1) * sizeof(uint32));
+    fixedBillboardStarts = (uint32 *)calloc(worldChunkCount + 1, sizeof(uint32));
+    if (fixedBillboardOrder == 0 || fixedBillboardStarts == 0)
+        return false;
     uint32 vertices = 0;
     for (uint32 index = 0; index < worldObjectCount; ++index)
-        if (hd_billboard_candidate(worldObjects + index))
+        if (hd_fixed_billboard_candidate(worldObjects + index))
         {
             uint32 count = worldDefinitions[worldObjects[index].current.definition].count / 6 * 4;
-            if (count > 0xffffffff - vertices)
+            if (count > 0xffffffff / 3 - vertices)
                 return false;
             vertices += count;
         }
     if (vertices == 0)
     {
-        bank->generation = renderGeneration;
+        fixedBillboards.generation = 1;
         return true;
     }
-    bool changed = false;
-    if (vertices > bank->vertexCapacity)
-    {
-        vid_mesh_free(bank->mesh);
-        bank->mesh = vid_mesh_create_3d(vertices);
-        bank->vertexCapacity = bank->mesh != 0 ? vertices : 0;
-        changed = true;
-    }
-    if (bank->mesh == 0)
+    fixedBillboards.mesh = vid_mesh_create_3d(vertices);
+    fixedBillboardIndices = vid_index_create(vertices / 4 * 12);
+    if (fixedBillboards.mesh == 0 || fixedBillboardIndices == 0)
         return false;
-    if (vertices / 4 * 6 > bank->indexCapacity)
-    {
-        uint32 capacity = vertices / 4 * 6;
-        for (sint32 target = 0; target < 8; ++target)
-            if (target == player || (player == 0 && target >= 2))
-                for (sint32 side = 0; side < 2; ++side)
-                {
-                    vid_index_free(billboardIndices[target][side]);
-                    billboardIndices[target][side] = vid_index_create(capacity);
-                    billboardCounts[target][side] = 0;
-                    if (billboardIndices[target][side] == 0)
-                        return false;
-                }
-        bank->indexCapacity = capacity;
-    }
-    VID_VERTEX3D *target = vid_mesh_data_3d(bank->mesh);
-    uint32 used = 0;
+    VID_VERTEX3D *target = vid_mesh_data_3d(fixedBillboards.mesh);
+    uint32 *indices = vid_index_data(fixedBillboardIndices);
+    uint32 used = 0, indexCount = 0;
+    const uint32 topology[2][6] = {{0, 1, 2, 2, 1, 3}, {0, 2, 1, 2, 3, 1}};
     for (uint32 index = 0; index < worldObjectCount; ++index)
     {
         const HdObjectEntry *entry = worldObjects + index;
-        if (!hd_billboard_candidate(entry))
+        if (!hd_fixed_billboard_candidate(entry))
             continue;
         const HdWorldChunk *mesh = worldDefinitions + entry->current.definition;
-        HdStaticWorldEntry *saved = bank->entries + index;
+        HdStaticWorldEntry *saved = fixedBillboards.entries + index;
         saved->source = entry->source;
-        saved->first = used;
-        saved->count = mesh->count;
         saved->definition = entry->current.definition;
         saved->light = entry->current.light;
-        hd_object_matrix_uncached(entry, phase, &camera, &saved->model);
-        HdObjectEntry *cache = worldObjects + index;
-        cache->renderModel[player] = saved->model;
-        cache->renderModelGeneration[player] = renderGeneration;
+        saved->count = mesh->count;
+        saved->first = used;
+
+        memset(&saved->model, 0, sizeof(saved->model));
+        const VEC3F *scale = &entry->current.scale;
+        for (sint32 axis = 0; axis < 3; ++axis)
+        {
+            saved->model.m[axis][axis] = scale->v[axis];
+            saved->model.t[axis] = entry->current.pose.position.v[axis];
+        }
         const CVECTOR *color = saved->light >= 0 && saved->light < Chunk::numLight ? Chunk::lightTable + saved->light : 0;
+        if (color != 0)
+            saved->color = *color;
         for (uint32 vertex = 0; vertex < mesh->count / 6 * 4; ++vertex)
         {
-            VID_VERTEX3D value;
-            hd_world_instance_vertex(&value, mesh->sourceVertices + vertex, &saved->model, &worldBatchOrigin, saved->light, color);
-            if (memcmp(target + used, &value, sizeof(value)) != 0)
-                changed = true;
-            target[used++] = value;
+            const VID_VERTEX16 *in = mesh->sourceVertices + vertex;
+            VID_VERTEX3D *out = target + used++;
+            VEC3F axis;
+            for (sint32 row = 0; row < 3; ++row)
+                axis.v[row] = entry->current.pose.position.v[row] - worldBatchOrigin.v[row];
+            hd_fixed_billboard_vertex(out, in, &axis, scale, saved->light, color, vertex & 3);
         }
     }
-    if (changed)
-        vid_mesh_commit(bank->mesh);
-    bank->generation = renderGeneration;
+    uint32 objects = 0;
+    for (sint32 chunk = 0; chunk < worldChunkCount; ++chunk)
+    {
+        fixedBillboardStarts[chunk] = objects;
+        for (uint32 index = 0; index < worldObjectCount; ++index)
+        {
+            HdStaticWorldEntry *saved = fixedBillboards.entries + index;
+            if (saved->count == 0 || worldObjects[index].chunk != chunk)
+                continue;
+            fixedBillboardOrder[objects++] = index;
+            saved->firstIndex = indexCount;
+            const HdWorldChunk *mesh = worldDefinitions + saved->definition;
+            for (sint32 side = 0; side < 2; ++side)
+                for (uint32 face = 0; face < mesh->count / 6; ++face)
+                {
+                    uint32 source = side == 0 ? face : mesh->count / 6 - 1 - face;
+                    if (side != 0 && !mesh->faces[source].twoSided)
+                        continue;
+                    for (sint32 corner = 0; corner < 6; ++corner)
+                        indices[indexCount++] = saved->first + source * 4 + topology[side][corner];
+                }
+            saved->indexCount = indexCount - saved->firstIndex;
+        }
+    }
+    fixedBillboardStarts[worldChunkCount] = objects;
+    vid_mesh_commit(fixedBillboards.mesh);
+    vid_mesh_static(fixedBillboards.mesh);
+    vid_index_commit(fixedBillboardIndices, indexCount);
+    vid_index_static(fixedBillboardIndices);
+    fixedBillboards.indexCapacity = indexCount;
+    fixedBillboards.generation = 1;
     return true;
+}
+
+static bool hd_moving_billboards_prepare(void)
+{
+    bool rebuild = movingBillboards.entries == 0 || movingBillboards.entryCapacity != worldObjectCount;
+    if (!rebuild)
+        for (uint32 i = 0; i < worldObjectCount; ++i)
+        {
+            const HdObjectEntry *entry = worldObjects + i;
+            const HdStaticWorldEntry *saved = movingBillboards.entries + i;
+            if (hd_billboard_candidate(entry) && !hd_fixed_billboard_match(i) && (saved->count == 0 || saved->source != entry->source || saved->definition != entry->current.definition))
+                rebuild = true;
+        }
+    if (rebuild)
+    {
+        vid_mesh_free(movingBillboards.mesh);
+        vid_index_free(movingBillboardIndices);
+        vid_tex_free(movingBillboardParameters);
+        free(movingBillboards.entries);
+        memset(&movingBillboards, 0, sizeof(movingBillboards));
+        movingBillboardIndices = 0;
+        movingBillboardParameters = 0;
+        for (sint32 side = 0; side < 2; ++side)
+        {
+            vid_mat_free(movingBillboardMaterials[side]);
+            movingBillboardMaterials[side] = 0;
+        }
+        movingBillboards.entries = (HdStaticWorldEntry *)calloc(worldObjectCount != 0 ? worldObjectCount : 1, sizeof(HdStaticWorldEntry));
+        movingBillboards.entryCapacity = worldObjectCount;
+        if (movingBillboards.entries == 0)
+            return false;
+        uint32 vertices = 0;
+        for (uint32 i = 0; i < worldObjectCount; ++i)
+            if (hd_billboard_candidate(worldObjects + i) && !hd_fixed_billboard_match(i))
+                vertices += worldDefinitions[worldObjects[i].current.definition].count / 6 * 4;
+        if (vertices != 0)
+        {
+            movingBillboards.mesh = vid_mesh_create_3d(vertices);
+            movingBillboardIndices = vid_index_create(vertices / 4 * 12);
+            movingBillboardParameters = vid_tex_create_fmt(128, (worldObjectCount + 31) / 32, VID_RGBA32F);
+            if (movingBillboards.mesh == 0 || movingBillboardIndices == 0 || movingBillboardParameters == 0)
+                return false;
+            VID_VERTEX3D *out = vid_mesh_data_3d(movingBillboards.mesh);
+            uint32 *indices = vid_index_data(movingBillboardIndices);
+            uint32 used = 0, usedIndices = 0;
+            const uint32 topology[2][6] = {{0, 1, 2, 2, 1, 3}, {0, 2, 1, 2, 3, 1}};
+            for (uint32 i = 0; i < worldObjectCount; ++i)
+            {
+                const HdObjectEntry *entry = worldObjects + i;
+                if (!hd_billboard_candidate(entry) || hd_fixed_billboard_match(i))
+                    continue;
+                const HdWorldChunk *mesh = worldDefinitions + entry->current.definition;
+                HdStaticWorldEntry *saved = movingBillboards.entries + i;
+                saved->source = entry->source;
+                saved->definition = entry->current.definition;
+                saved->first = used;
+                saved->count = mesh->count;
+                saved->firstIndex = usedIndices;
+                VEC3F axis = {0, 0, 0}, scale = {1, 1, 1};
+                for (uint32 vertex = 0; vertex < mesh->count / 6 * 4; ++vertex)
+                {
+                    hd_fixed_billboard_vertex(out + used, mesh->sourceVertices + vertex, &axis, &scale, -1, 0, vertex & 3);
+                    out[used++].color[3] = (float)i;
+                }
+                for (sint32 side = 0; side < 2; ++side)
+                    for (uint32 face = 0; face < mesh->count / 6; ++face)
+                    {
+                        uint32 source = side == 0 ? face : mesh->count / 6 - 1 - face;
+                        if (side != 0 && !mesh->faces[source].twoSided)
+                            continue;
+                        for (sint32 corner = 0; corner < 6; ++corner)
+                            indices[usedIndices++] = saved->first + source * 4 + topology[side][corner];
+                    }
+                saved->indexCount = usedIndices - saved->firstIndex;
+            }
+            vid_mesh_commit(movingBillboards.mesh);
+            vid_mesh_static(movingBillboards.mesh);
+            vid_index_commit(movingBillboardIndices, usedIndices);
+            vid_index_static(movingBillboardIndices);
+            memset(vid_tex_data(movingBillboardParameters), 0, worldObjectCount * 16 * sizeof(float));
+            vid_tex_commit(movingBillboardParameters);
+        }
+    }
+    if (movingBillboards.mesh == 0)
+        return true;
+    if (movingBillboardShader == 0)
+        movingBillboardShader = vid_shader_create(movingBillboardVertex, worldFragment);
+    if (movingBillboardShader == 0)
+        return false;
+    for (sint32 side = 0; side < 2; ++side)
+        if (movingBillboardMaterials[side] == 0)
+        {
+            movingBillboardMaterials[side] = vid_mat_create();
+            if (movingBillboardMaterials[side] == 0)
+                return false;
+            *vid_mat_data(movingBillboardMaterials[side]) = *vid_mat_read(staticWorldMaterials[side]);
+            vid_mat_data(movingBillboardMaterials[side])->shader = movingBillboardShader;
+            vid_mat_data(movingBillboardMaterials[side])->aux[7] = movingBillboardParameters;
+            vid_mat_commit(movingBillboardMaterials[side]);
+        }
+    float *data = (float *)vid_tex_data(movingBillboardParameters);
+    for (uint32 i = 0; i < worldObjectCount; ++i)
+    {
+        if (movingBillboards.entries[i].count == 0)
+            continue;
+        const HdObjectEntry *entry = worldObjects + i;
+        float values[4][4] = {};
+        for (sint32 axis = 0; axis < 3; ++axis)
+        {
+            values[0][axis] = entry->previous.pose.position.v[axis] - worldBatchOrigin.v[axis];
+            values[1][axis] = entry->current.pose.position.v[axis] - worldBatchOrigin.v[axis];
+            values[2][axis] = entry->previous.scale.v[axis];
+            values[3][axis] = entry->current.scale.v[axis];
+        }
+        values[2][3] = entry->current.light >= 0 && entry->current.light < Chunk::numLight ? (float)entry->current.light : -1.0f;
+        if (entry->current.light >= 0 && entry->current.light < Chunk::numLight)
+            values[3][3] = hd_param_color(Chunk::lightTable[entry->current.light]);
+        if (memcmp(data + i * 16, values, sizeof(values)) != 0)
+        {
+            memcpy(data + i * 16, values, sizeof(values));
+            vid_tex_commit_rows(movingBillboardParameters, i / 32, 1);
+        }
+    }
+    return true;
+}
+
+static bool hd_billboard_prepare(sint32 player, float phase)
+{
+    return hd_fixed_billboard_build() && (player != 0 || hd_moving_billboards_prepare());
 }
 
 static bool hd_billboard_match(uint32 index, sint32 player, const MATRIXF *model)
 {
-    const HdBillboardBank *bank = billboardBanks + player;
-    if (bank->generation != renderGeneration || index >= bank->entryCapacity || !hd_billboard_candidate(worldObjects + index))
+    if (hd_fixed_billboard_match(index))
+        return true;
+    if (index >= movingBillboards.entryCapacity || !hd_billboard_candidate(worldObjects + index))
         return false;
-    const HdStaticWorldEntry *saved = bank->entries + index;
-    return saved->count != 0 && saved->source == worldObjects[index].source && saved->definition == worldObjects[index].current.definition && memcmp(&saved->model, model, sizeof(*model)) == 0;
+    const HdStaticWorldEntry *saved = movingBillboards.entries + index;
+    return saved->count != 0 && saved->source == worldObjects[index].source && saved->definition == worldObjects[index].current.definition;
+}
+
+static bool hd_fixed_billboard_view(sint32 player, const MATRIXF *camera, const HdViewPose *view, VID_RECT viewport, float logicalHeight)
+{
+    if (fixedBillboards.mesh == 0)
+        return true;
+    sint32 bank = cubeRendering ? (sint32)cubeFace + 2 : player;
+    sint32 segmentFirst = 0, segmentCount = 0;
+    hd_chunk_range(view, 0x4800, &segmentFirst, &segmentCount);
+    MATRIXF model;
+    IdentityMatrixf(&model);
+    memcpy(model.t, &worldBatchOrigin, sizeof(model.t));
+    VID_MATERIAL *material = billboardMaterials[view->mirror != 0 ? 1 : 0];
+    for (sint32 part = 0; segmentCount > 0 && part < 2; ++part)
+    {
+        sint32 end = segmentFirst + segmentCount;
+        if (end > worldChunkCount)
+            end = worldChunkCount;
+        uint32 first = 0, count = 0;
+        uint32 last = fixedBillboardStarts[end];
+        for (uint32 index = fixedBillboardStarts[segmentFirst]; index <= last; ++index)
+        {
+            uint32 object = index < last ? fixedBillboardOrder[index] : worldObjectCount;
+            const HdStaticWorldEntry *saved = object < worldObjectCount ? fixedBillboards.entries + object : 0;
+            if (saved != 0 && saved->indexCount == 0)
+                continue;
+            bool visible = saved != 0 && segmentCount != 0 && (worldObjects[object].chunk - segmentFirst + worldChunkCount) % worldChunkCount < segmentCount && hd_fixed_billboard_match(object);
+            if (visible && cubeRendering)
+            {
+                HdWorldChunk bounds = worldDefinitions[saved->definition];
+                if (bounds.boundsValid)
+                {
+                    float x = fmaxf(fabsf(bounds.boundsMin.x), fabsf(bounds.boundsMax.x));
+                    float z = fmaxf(fabsf(bounds.boundsMin.z), fabsf(bounds.boundsMax.z));
+                    float radius = sqrtf(x * x + z * z);
+                    bounds.boundsMin.x = bounds.boundsMin.z = -radius;
+                    bounds.boundsMax.x = bounds.boundsMax.z = radius;
+                    visible = hd_cube_mesh_visible(&bounds, &saved->model, camera);
+                }
+            }
+            if (count != 0 && (!visible || saved->firstIndex != first + count))
+            {
+                HdWorldChunk mesh = {};
+                mesh.mesh = fixedBillboards.mesh;
+                mesh.indices = fixedBillboardIndices;
+                mesh.count = count;
+                vid_pass(material);
+                hd_world_submit(&mesh, &model, camera, view, viewport, logicalHeight, -1, -1, 0, -1, 1, 0, first, 0, 1, 0, material, false);
+                ++hd_billboard_batch_draws[bank];
+                count = 0;
+            }
+            if (visible)
+            {
+                if (count == 0)
+                    first = saved->firstIndex;
+                count += saved->indexCount;
+                ++hd_billboard_batch_objects[bank];
+            }
+        }
+        segmentCount -= end - segmentFirst;
+        segmentFirst = 0;
+    }
+    return worldSubmissionValid;
 }
 
 static bool hd_billboard_view(sint32 player, float phase, const MATRIXF *camera, const HdViewPose *view, VID_RECT viewport, float logicalHeight)
 {
-    sint32 bankIndex = cubeRendering ? (sint32)cubeFace + 2 : player;
-    const HdBillboardBank *bank = billboardBanks + (cubeRendering ? 0 : player);
-    hd_billboard_batch_draws[bankIndex] = hd_billboard_batch_objects[bankIndex] = 0;
-    if (bank->mesh == 0 || bank->generation != renderGeneration)
+    sint32 bank = cubeRendering ? (sint32)cubeFace + 2 : player;
+    hd_billboard_batch_draws[bank] = hd_billboard_batch_objects[bank] = 0;
+    if (!hd_fixed_billboard_view(player, camera, view, viewport, logicalHeight))
+        return false;
+    if (movingBillboards.mesh == 0)
         return true;
-    uint32 *indices[2] = {vid_index_data(billboardIndices[bankIndex][0]), vid_index_data(billboardIndices[bankIndex][1])};
-    uint32 used[2] = {0, 0};
-    bool changed[2] = {false, false};
-    const uint32 topology[6] = {0, 1, 2, 2, 1, 3};
-    for (uint32 index = 0; index < worldObjectCount; ++index)
-    {
-        const HdObjectEntry *entry = worldObjects + index;
-        const HdStaticWorldEntry *saved = bank->entries + index;
-        if (saved->count == 0 || !hd_object_visible(entry, view))
-            continue;
-        const HdWorldChunk *mesh = worldDefinitions + saved->definition;
-        if (cubeRendering && !hd_cube_mesh_visible(mesh, &saved->model, camera))
-            continue;
-        ++hd_billboard_batch_objects[bankIndex];
-        for (sint32 side = 0; side < 2; ++side)
-            for (uint32 face = 0; face < mesh->count / 6; ++face)
-            {
-                uint32 source = side == 0 ? face : mesh->count / 6 - 1 - face;
-                if (side != 0 && !mesh->faces[source].twoSided)
-                    continue;
-                for (sint32 corner = 0; corner < 6; ++corner)
-                {
-                    uint32 value = saved->first + source * 4 + topology[corner];
-                    if (indices[side][used[side]] != value)
-                        changed[side] = true;
-                    indices[side][used[side]++] = value;
-                }
-            }
-    }
+    movingBillboardPhase = objectReset ? 1.0f : phase >= 0 ? phase <= 1 ? phase : 1 : 0;
     MATRIXF model;
     IdentityMatrixf(&model);
     memcpy(model.t, &worldBatchOrigin, sizeof(model.t));
-    for (sint32 side = 0; side < 2; ++side)
+    VID_MATERIAL *material = movingBillboardMaterials[view->mirror != 0 ? 1 : 0];
+    sint32 firstChunk = 0, chunkCount = 0;
+    hd_chunk_range(view, 0x4800, &firstChunk, &chunkCount);
+    uint32 first = 0, count = 0;
+    for (uint32 i = 0; i <= movingBillboards.entryCapacity; ++i)
     {
-        if (used[side] == 0)
+        const HdStaticWorldEntry *saved = i < movingBillboards.entryCapacity ? movingBillboards.entries + i : 0;
+        if (saved != 0 && saved->indexCount == 0)
             continue;
-        if (changed[side] || used[side] != billboardCounts[bankIndex][side])
+        bool visible = saved != 0 && hd_billboard_match(i, player, 0) && !hd_fixed_billboard_match(i) && hd_object_visible(worldObjects + i, view, firstChunk, chunkCount);
+        if (visible)
         {
-            vid_index_commit(billboardIndices[bankIndex][side], used[side]);
-            billboardCounts[bankIndex][side] = used[side];
+            MATRIXF object;
+            hd_object_matrix(worldObjects + i, phase, camera, &object);
+            visible = hd_view_mesh_visible(worldDefinitions + saved->definition, &object, camera, view, viewport, logicalHeight);
         }
-        HdWorldChunk mesh = {};
-        mesh.mesh = bank->mesh;
-        mesh.indices = billboardIndices[bankIndex][side];
-        mesh.count = used[side];
-        VID_MATERIAL *material = staticWorldMaterials[(view->mirror != 0) != (side != 0) ? 1 : 0];
-        vid_pass(material);
-        hd_world_submit(&mesh, &model, camera, view, viewport, logicalHeight, -1, -1, 0, -1, 1, 0, 0, 0, 1, 0, material, false);
-        ++hd_billboard_batch_draws[bankIndex];
+        if (count != 0 && (!visible || saved->firstIndex != first + count))
+        {
+            HdWorldChunk mesh = {};
+            mesh.mesh = movingBillboards.mesh;
+            mesh.indices = movingBillboardIndices;
+            mesh.count = count;
+            vid_pass(material);
+            hd_world_submit(&mesh, &model, camera, view, viewport, logicalHeight, -1, -1, 0, -1, 1, 0, first, 0, 1, 0, material, false);
+            ++hd_billboard_batch_draws[bank];
+            count = 0;
+        }
+        if (visible)
+        {
+            if (count == 0)
+                first = saved->firstIndex;
+            count += saved->indexCount;
+            ++hd_billboard_batch_objects[bank];
+        }
     }
     return worldSubmissionValid;
 }
@@ -5008,30 +5838,58 @@ static bool hd_sky_resources(void)
         vid_mat_commit(skyMaterial);
     }
     uint32 stars = skyCurrent.starCount > 0 ? skyCurrent.starCount : 0;
-    if (stars > (0xFFFFFFFF / 6) - 80)
+    if (!hd_param_prepare(&skyGpu, 80 + stars, skyFragment))
         return false;
-    uint32 capacity = (80 + stars) * 6;
-    for (sint32 player = 0; player < 2; ++player)
-        if (skyCapacities[player] < capacity)
-        {
-            vid_mesh_free(skyMeshes[player]);
-            skyMeshes[player] = vid_mesh_create_2d(capacity);
-            if (skyMeshes[player] == 0)
-            {
-                skyCapacities[player] = 0;
-                return false;
-            }
-            skyCapacities[player] = capacity;
-        }
     return true;
 }
 
-static void hd_celestial_build(sint32 player, float phase, const MATRIXF *camera, const HdViewPose *view, float aspect, float logicalHeight);
+static void hd_celestial_build(sint32 player, float phase, const MATRIXF *camera, const HdViewPose *view, float aspect, float logicalHeight, VID_RECT viewport);
 static void hd_celestial_submit(sint32 player, bool sun);
+
+static void hd_sky_parameter(uint32 slot, const SVECTOR points[4], const CVECTOR previousColors[4], const CVECTOR colors[4], const Draw::tPixMap *pixmap, sint32 mode)
+{
+    HdParamQuad value = {};
+    HdTextureRegion region = {};
+    if ((hd_texture_filtering_enabled & HD_FILTER_SKY) != 0)
+        hd_texture_region(pixmap, &region);
+    hd_param_texture(&value, pixmap, &region);
+    for (sint32 corner = 0; corner < 4; ++corner)
+    {
+        const float p[3] = {(float)points[corner].vx, (float)points[corner].vy, (float)points[corner].vz};
+        memcpy(value.values[corner], p, sizeof(p));
+        memcpy(value.values[4 + corner], p, sizeof(p));
+        value.values[8][corner] = hd_param_color(previousColors[corner]);
+        value.values[9][corner] = hd_param_color(colors[corner]);
+    }
+    value.values[12][2] = (float)mode;
+    value.values[14][1] = 56320.0f / 65536;
+    hd_param_write(&skyGpu, slot, &value);
+}
+
+static void hd_sky_param_submit(uint32 first, uint32 count, float phase, const MATRIXF *camera, const HdViewPose *view, VID_RECT viewport, float height)
+{
+    if (count == 0)
+        return;
+    VID_MATERIAL *material = hd_param_material(&skyGpu, skyMaterial);
+    if (material == 0)
+    {
+        worldSubmissionValid = false;
+        return;
+    }
+    HdViewPose skyView = *view;
+    if (skyView.projection > 700)
+        skyView.projection = 700;
+    float uniforms[18][4];
+    hd_param_uniforms(material, camera, &skyView, viewport, height, phase, uniforms);
+    uniforms[5][1] = cubeRendering ? 1.0f : 0.0f;
+    vid_uniforms(&uniforms[0][0], 18);
+    vid_pass(material);
+    hd_submit(skyGpu.mesh, skyGpu.indices, first * 6, count * 6);
+}
 
 static void hd_sky_view(sint32 player, float phase, const MATRIXF *camera, const HdViewPose *view, VID_RECT viewport, float logicalHeight)
 {
-    if (skyCurrent.mesh == 0 || skyCurrent.ring == 0)
+    if (skyCurrent.mesh == 0 || skyCurrent.ring == 0 || skyGpu.mesh == 0)
         return;
     if (skyReset)
         phase = 1;
@@ -5041,118 +5899,74 @@ static void hd_sky_view(sint32 player, float phase, const MATRIXF *camera, const
         phase = 1;
     float aspect = (float)viewport.w / viewport.h;
     if (!cubeRendering)
-        hd_celestial_build(player, phase, camera, view, aspect, logicalHeight);
-    VID_VERTEX2D *vertices = vid_mesh_data_2d(skyMeshes[player]);
+        hd_celestial_build(player, phase, camera, view, aspect, logicalHeight, viewport);
     uint32 used = 0;
     if (skyCurrent.skyEnabled)
-    {
-        HdSkyPoint projected[85];
-        for (sint32 i = 0; i < 85; ++i)
-            projected[i] = hd_sky_project(skyCurrent.mesh + i, camera, view, aspect, logicalHeight, true);
         for (sint32 face = 63; face >= 0; --face)
         {
             sint32 first = (face * 17) / 16;
             const sint32 corners[4] = {first + 17, first + 18, first, first + 1};
-            HdSkyPoint points[4];
-            CVECTOR colors[4];
+            SVECTOR points[4];
+            CVECTOR previousColors[4], colors[4];
             const Draw::tPixMap *pixmap = 0;
             if (skyCurrent.type == 1)
             {
                 uint8 index = skyCurrent.cloudIndices[face];
                 if (index >= 16)
-                {
-                    ++hd_world_invalid_count;
                     continue;
-                }
                 pixmap = skyCurrent.pixmaps + index;
             }
             for (sint32 corner = 0; corner < 4; ++corner)
             {
                 sint32 index = corners[corner];
-                points[corner] = projected[index];
-                colors[corner] = skyCurrent.type != 1 || (skyCurrent.flags & 0x20) != 0 ? hd_sky_color(skyPrevious.colors + index, skyCurrent.colors + index, phase) : hd_sky_color(&skyPrevious.frontColor, &skyCurrent.frontColor, phase);
+                points[corner] = skyCurrent.mesh[index];
+                bool vertexColor = skyCurrent.type != 1 || (skyCurrent.flags & 0x20) != 0;
+                previousColors[corner] = vertexColor ? skyPrevious.colors[index] : skyPrevious.frontColor;
+                colors[corner] = vertexColor ? skyCurrent.colors[index] : skyCurrent.frontColor;
             }
-            HdTextureRegion region = {0};
-            if ((hd_texture_filtering_enabled & HD_FILTER_SKY) != 0)
-                hd_texture_region(pixmap, &region);
-            hd_sky_quad(vertices, &used, points, colors, pixmap, &region);
+            hd_sky_parameter(used++, points, previousColors, colors, pixmap, 5);
             ++hd_sky_quads;
         }
-    }
     uint32 skyEnd = used;
     if ((skyCurrent.flags & 0x10) != 0 && skyCurrent.stars != 0 && skyCurrent.starColors != 0)
         for (sint32 i = skyCurrent.starCount - 1; i >= 0; --i)
         {
-            HdSkyPoint point = hd_sky_project(skyCurrent.stars + i, camera, view, aspect, logicalHeight, false);
-            if (point.w <= 0)
-                continue;
-            HdSkyPoint points[4] = {point, point, point, point};
-            points[1].x += 2 * point.w / (logicalHeight * aspect);
-            points[2].y -= 2 * point.w / logicalHeight;
-            points[3].x = points[1].x;
-            points[3].y = points[2].y;
+            SVECTOR points[4] = {skyCurrent.stars[i], skyCurrent.stars[i], skyCurrent.stars[i], skyCurrent.stars[i]};
             uint32 color = skyCurrent.starColors[i];
-            CVECTOR colorValue = {(uint8)color, (uint8)(color >> 8), (uint8)(color >> 16), 0};
-            CVECTOR colors[4] = {colorValue, colorValue, colorValue, colorValue};
-            hd_sky_quad(vertices, &used, points, colors, 0);
+            CVECTOR value = {(uint8)color, (uint8)(color >> 8), (uint8)(color >> 16), 0};
+            CVECTOR colors[4] = {value, value, value, value};
+            hd_sky_parameter(used++, points, colors, colors, 0, 6);
             ++hd_star_quads;
         }
     uint32 starEnd = used;
     if (skyCurrent.ringEnabled)
-    {
         for (sint32 face = 15; face >= 0; --face)
         {
             uint8 image = skyCurrent.ringIndices[face];
             if (image >= 16)
                 continue;
             float height = skyCurrent.ringPercent[face] / 65536.0f;
-            sint16 top = (sint16)(skyCurrent.ringOffset + skyCurrent.ringHeight * height);
-            sint16 bottom = skyCurrent.ringOffset;
-            SVECTOR corners[4] = {skyCurrent.ring[face], skyCurrent.ring[face + 1], skyCurrent.ring[face], skyCurrent.ring[face + 1]};
-            corners[0].vy = corners[1].vy = top;
-            corners[2].vy = corners[3].vy = bottom;
-            HdSkyPoint points[4];
-            for (sint32 corner = 0; corner < 4; ++corner)
-                points[corner] = hd_sky_project(corners + corner, camera, view, aspect, logicalHeight, true);
+            sint16 top = (sint16)(skyCurrent.ringOffset + skyCurrent.ringHeight * height), bottom = skyCurrent.ringOffset;
+            SVECTOR points[4] = {skyCurrent.ring[face], skyCurrent.ring[face + 1], skyCurrent.ring[face], skyCurrent.ring[face + 1]};
+            points[0].vy = points[1].vy = top;
+            points[2].vy = points[3].vy = bottom;
             CVECTOR colors[4] = {skyCurrent.ringColors[1][face], skyCurrent.ringColors[1][face + 1], skyCurrent.ringColors[0][face], skyCurrent.ringColors[0][face + 1]};
             if (image >= 8)
                 for (sint32 row = 0; row < 2; ++row)
                 {
-                    HdSkyPoint point = points[row * 2];
-                    points[row * 2] = points[row * 2 + 1];
-                    points[row * 2 + 1] = point;
-                    CVECTOR color = colors[row * 2];
-                    colors[row * 2] = colors[row * 2 + 1];
-                    colors[row * 2 + 1] = color;
+                    SVECTOR point = points[row * 2];points[row * 2] = points[row * 2 + 1];points[row * 2 + 1] = point;
+                    CVECTOR color = colors[row * 2];colors[row * 2] = colors[row * 2 + 1];colors[row * 2 + 1] = color;
                 }
-            HdTextureRegion region = {0};
-            if ((hd_texture_filtering_enabled & HD_FILTER_SKY) != 0)
-                hd_texture_region(skyCurrent.ringPixmaps + face, &region);
-            hd_sky_quad(vertices, &used, points, colors, skyCurrent.ringPixmaps + face, &region);
+            hd_sky_parameter(used++, points, colors, colors, skyCurrent.ringPixmaps + face, 5);
             ++hd_ring_quads;
         }
-    }
-    if (used != 0)
-        vid_mesh_commit(skyMeshes[player]);
-    if (skyEnd != 0)
-    {
-        vid_pass(skyMaterial);
-        hd_submit(skyMeshes[player], 0, 0, skyEnd);
-    }
+    hd_sky_param_submit(0, skyEnd, phase, camera, view, viewport, logicalHeight);
     if (!cubeRendering)
         hd_celestial_submit(player, true);
-    if (starEnd > skyEnd)
-    {
-        vid_pass(skyMaterial);
-        hd_submit(skyMeshes[player], 0, skyEnd, starEnd - skyEnd);
-    }
+    hd_sky_param_submit(skyEnd, starEnd - skyEnd, phase, camera, view, viewport, logicalHeight);
     if (!cubeRendering)
         hd_celestial_submit(player, false);
-    if (used > starEnd)
-    {
-        vid_pass(skyMaterial);
-        hd_submit(skyMeshes[player], 0, starEnd, used - starEnd);
-    }
+    hd_sky_param_submit(starEnd, used - starEnd, phase, camera, view, viewport, logicalHeight);
 }
 
 static const char effectVertex[] = "layout(location=0) in vec4 aPos;layout(location=1) in vec2 aUV;layout(location=2) in vec4 aColor;layout(location=5) in uvec4 aTex;layout(location=6) in uvec2 aRect;\n"
@@ -5160,10 +5974,26 @@ static const char effectVertex[] = "layout(location=0) in vec4 aPos;layout(locat
                                    "void main(){gl_Position=aPos;vUV=aUV;vColor=aColor/255.0;vDepth=aPos.w;vFog=vec2(0.0);vSkyTex=aTex;vEffectRegion=ivec4(ivec2(aTex.w&255u,aTex.w>>8),ivec2(aRect));\n"
                                    "vAtmospherePosition=vec3(abs(uDraw[17].x)>0.000001?aPos.x/uDraw[17].x:0.0,abs(uDraw[17].y)>0.000001?aPos.y/uDraw[17].y:0.0,aPos.w); }\n";
 
-static const char weatherFragment[] = "flat in uvec4 vSkyTex;flat in ivec4 vEffectRegion;\n" VID_PSX_SAMPLING_GLSL HD_VRAM_WORD_GLSL HD_PSX_COLOR_GLSL HD_FOG_GLSL "void main(){if(vSkyTex.z==0u){outColor=vec4(hdFog(vColor.rgb),1.0);return;}\n"
-                                      "vec4 color=hdPsxColor(vUV,vSkyTex.y,vSkyTex.x,vEffectRegion,uint(uParams[0].x),vidPsxDecode(vSkyTex.y,vSkyTex.x,ivec2(floor(vUV))));\n"
+static const char weatherFragment[] = "flat in uvec4 vSkyTex;flat in ivec4 vEffectRegion;\n" VID_PSX_SAMPLING_GLSL HD_VRAM_WORD_GLSL HD_PSX_COLOR_GLSL HD_PSX_PREMULTIPLIED_GLSL HD_FOG_GLSL "void main(){if(vSkyTex.z==0u){outColor=vec4(hdFog(vColor.rgb),1.0);return;}\n"
+                                      "bool composite=uParams[1].w>0.5;uint word=vidPsxDecode(vSkyTex.y,vSkyTex.x,ivec2(floor(vUV)));bool semi=(word&32768u)!=0u;uint mode=(vSkyTex.y>>5)&3u;\n"
+                                      "vec4 color=hdPsxColor(vUV,vSkyTex.y,vSkyTex.x,vEffectRegion,composite?(semi?2u:1u):uint(uParams[0].x),word);\n"
                                       "if(color.a==0.0)discard;vec3 rgb=(vSkyTex.z&2u)!=0u?color.rgb:color.rgb*vColor.rgb*(255.0/128.0);\n"
-                                      "outColor=vec4(hdFog(clamp(rgb,0.0,1.0)),uParams[0].y); }\n";
+                                      "rgb=clamp(rgb,0.0,1.0);outColor=composite?hdPsxPremultiplied(semi&&mode!=0u?rgb*(1.0-hdFogAmount()):hdFog(rgb),mode,semi):vec4(hdFog(rgb),uParams[0].y); }\n";
+
+static bool hd_effect_composite_resource(VID_MATERIAL **owner, VID_MATERIAL *base)
+{
+    if (*owner != 0)
+        return true;
+    *owner = vid_mat_create();
+    if (*owner == 0)
+        return false;
+    VID_MATERIAL_DATA *material = vid_mat_data(*owner);
+    *material = *vid_mat_read(base);
+    material->params[7] = 1;
+    material->blend = VID_BLEND_PREMULTIPLIED;
+    vid_mat_commit(*owner);
+    return true;
+}
 
 static bool hd_souffle_resources(void)
 {
@@ -5193,13 +6023,36 @@ static bool hd_souffle_resources(void)
             material->filter = VID_FILTER_NEAREST;
             vid_mat_commit(souffleMaterials[pass]);
         }
-    for (sint32 player = 0; player < 2; ++player)
-        if (souffleMeshes[player] == 0)
+    if (!hd_effect_composite_resource(&souffleCompositeMaterial, souffleMaterials[0]))
+        return false;
+    if (!hd_param_prepare(&souffleGpu, HD_SOUFFLE_PARTICLES, weatherFragment))
+        return false;
+    for (sint32 slot = 0; slot < HD_SOUFFLE_PARTICLES; ++slot)
+    {
+        const HdSouffleState *state = souffleStates + slot;
+        HdParamQuad value = {};
+        HdTextureRegion region = {};
+        if ((state->current.type == 1 || state->current.type == 2 || state->current.type == 3 || state->current.type == 6 || state->current.type == 11) && (hd_texture_filtering_enabled & HD_FILTER_SMOKE) != 0)
+            hd_texture_region(&state->current.pixmap, &region);
+        hd_param_texture(&value, &state->current.pixmap, &region, (state->current.color.cd & 1) != 0 ? 3 : 1);
+        for (sint32 corner = 0; corner < 4; ++corner)
         {
-            souffleMeshes[player] = vid_mesh_create_2d(HD_SOUFFLE_PARTICLES * 6);
-            if (souffleMeshes[player] == 0)
-                return false;
+            memcpy(value.values[corner], &state->previous.points[corner], sizeof(VEC3F));
+            memcpy(value.values[4 + corner], &state->current.points[corner], sizeof(VEC3F));
+            value.values[8][corner] = value.values[9][corner] = hd_param_color(state->current.color);
         }
+        value.values[12][2] = 1;
+        value.values[12][3] = state->current.active ? 1.0f : 0.0f;
+        value.values[13][0] = state->previous.angle;
+        value.values[13][1] = state->previous.radius;
+        value.values[13][2] = state->current.angle;
+        value.values[13][3] = state->current.radius;
+        value.values[14][0] = (float)state->current.kind;
+        value.values[14][1] = 56320.0f / 65536;
+        value.values[14][2] = 1;
+        value.values[14][3] = state->reset ? 1.0f : -1.0f;
+        hd_param_write(&souffleGpu, slot, &value);
+    }
     return true;
 }
 
@@ -5284,9 +6137,53 @@ static bool hd_souffle_quad(const HdSouffleState *state, float phase, const MATR
     return *bucket >= 0 && *bucket <= view->orderTableSize - 3;
 }
 
+static bool hd_souffle_bucket(const HdSouffleState *state, float phase, const MATRIXF *camera, const HdViewPose *view, sint32 *bucket)
+{
+    if (!state->current.active)
+        return false;
+    if (!(phase >= 0))
+        phase = 0;
+    if (phase > 1 || state->reset)
+        phase = 1;
+    float depths[4];
+    VEC3F first;
+    for (sint32 corner = 0; corner < 4; ++corner)
+    {
+        VEC3F point;
+        depths[corner] = 0;
+        for (sint32 axis = 0; axis < 3; ++axis)
+        {
+            point.v[axis] = state->previous.points[corner].v[axis] + (state->current.points[corner].v[axis] - state->previous.points[corner].v[axis]) * phase;
+            depths[corner] += camera->m[axis][2] * (point.v[axis] - camera->t[axis]);
+        }
+        if (corner == 0)
+            first = point;
+    }
+    float dx = fabsf(first.x - camera->t[0]), dz = fabsf(first.z - camera->t[2]);
+    if ((dx > dz ? dx + dz * 0.25f : dz + dx * 0.25f) >= 3200)
+        return false;
+    float sum;
+    if (state->current.kind == 1)
+        sum = depths[0] * 4;
+    else if (state->current.kind == 2)
+    {
+        if (depths[1] < 64)
+            return false;
+        sum = depths[0] + depths[1] + depths[0] + depths[1];
+    }
+    else
+    {
+        if (depths[1] < 32)
+            return false;
+        sum = depths[0] + depths[1] + depths[2] + depths[3];
+    }
+    *bucket = (sint32)floorf(sum / 32) + state->current.offset;
+    return *bucket >= 0 && *bucket <= view->orderTableSize - 3;
+}
+
 static void hd_souffle_view(sint32 player, float phase, const MATRIXF *camera, const HdViewPose *view, VID_RECT viewport, float logicalHeight)
 {
-    if (souffleMeshes[player] == 0 || hd_souffle_enabled == 0)
+    if (souffleGpu.mesh == 0 || hd_souffle_enabled == 0)
         return;
 
     struct Command
@@ -5297,26 +6194,18 @@ static void hd_souffle_view(sint32 player, float phase, const MATRIXF *camera, c
     } commands[HD_SOUFFLE_PARTICLES];
 
     uint32 count = 0, used = 0;
-    VID_VERTEX2D *vertices = vid_mesh_data_2d(souffleMeshes[player]);
     for (sint32 slot = 0; slot < HD_SOUFFLE_PARTICLES; ++slot)
     {
         const HdSouffleState *state = souffleStates + slot;
-        HdSkyPoint points[4];
         sint32 bucket;
-        if (!hd_souffle_quad(state, phase, camera, view, logicalHeight * viewport.w / viewport.h, logicalHeight, points, &bucket))
+        if (!hd_souffle_bucket(state, phase, camera, view, &bucket))
             continue;
         CVECTOR color = state->current.color;
-        CVECTOR colors[4] = {color, color, color, color};
-        uint32 first = used;
-        HdTextureRegion region = {0};
-        if ((state->current.type == 1 || state->current.type == 2 || state->current.type == 3 || state->current.type == 6 || state->current.type == 11) && (hd_texture_filtering_enabled & HD_FILTER_SMOKE) != 0)
-            hd_texture_region(&state->current.pixmap, &region);
-        if (region.width != 0 && region.height != 0)
+        uint32 first = slot * 6;
+        ++used;
+        const HdParamQuad *record = (const HdParamQuad *)vid_tex_data(souffleGpu.parameters) + slot;
+        if (record->values[12][0] != 0 && record->values[12][1] != 0)
             ++hd_souffle_filtered_quads;
-        hd_sky_quad(vertices, &used, points, colors, &state->current.pixmap, &region);
-        if ((color.cd & 1) != 0)
-            for (uint32 vertex = first; vertex < used; ++vertex)
-                vertices[vertex].tex[2] |= 2;
         Command draw = {first, bucket, (color.cd & 2) != 0 ? (state->current.pixmap.tpage >> 5) & 3 : -1};
         uint32 index = count++;
         while (index > 0 && commands[index - 1].bucket <= bucket)
@@ -5329,20 +6218,19 @@ static void hd_souffle_view(sint32 player, float phase, const MATRIXF *camera, c
     }
     if (used == 0)
         return;
-    vid_mesh_commit(souffleMeshes[player]);
     for (uint32 index = 0; index < count; ++index)
     {
         const Command *draw = commands + index;
         if (draw->blend < 0)
         {
             HdOrderKey order = {draw->bucket, HD_ORDER_SOUFFLE, 0, 0, 0, draw->first / 6, 0};
-            hd_order_draw(&order, souffleMaterials[5], souffleMeshes[player], 0, draw->first, 6);
+            hd_param_order(&souffleGpu, souffleMaterials[5], &order, draw->first, camera, view, viewport, logicalHeight, phase);
         }
         else
-            for (sint32 pass = 0; pass < 2; ++pass)
+            for (sint32 pass = 0; pass < (draw->blend == 2 ? 2 : 1); ++pass)
             {
                 HdOrderKey order = {draw->bucket, HD_ORDER_SOUFFLE, 0, 0, 0, draw->first / 6, (uint32)pass};
-                hd_order_draw(&order, souffleMaterials[pass == 0 ? 0 : draw->blend + 1], souffleMeshes[player], 0, draw->first, 6);
+                hd_param_order(&souffleGpu, draw->blend == 2 ? souffleMaterials[pass == 0 ? 0 : 3] : souffleCompositeMaterial, &order, draw->first, camera, view, viewport, logicalHeight, phase);
             }
     }
 }
@@ -5370,6 +6258,8 @@ static bool hd_sprite_materials(void)
             material->filter = VID_FILTER_NEAREST;
             vid_mat_commit(weatherMaterials[pass]);
         }
+    if (!hd_effect_composite_resource(&weatherCompositeMaterial, weatherMaterials[0]))
+        return false;
     return true;
 }
 
@@ -5380,12 +6270,8 @@ static bool hd_weather_resources(void)
     if (!hd_sprite_materials())
         return false;
     for (sint32 player = 0; player < 2; ++player)
-        if (weatherMeshes[player] == 0)
-        {
-            weatherMeshes[player] = vid_mesh_create_2d((HD_WEATHER_PARTICLES + HD_WEATHER_SPLATS) * 6);
-            if (weatherMeshes[player] == 0)
-                return false;
-        }
+        if (!hd_param_prepare(weatherGpu + player, HD_WEATHER_PARTICLES + HD_WEATHER_SPLATS, weatherFragment))
+            return false;
     return true;
 }
 
@@ -5403,9 +6289,7 @@ static bool hd_lens_resources(void)
     }
     if (!hd_sprite_materials())
         return false;
-    if (lensMesh == 0)
-        lensMesh = vid_mesh_create_2d(88 * 6);
-    if (lensMesh == 0)
+    if (!hd_param_prepare(&lensGpuGeometry, 88, weatherFragment))
         return false;
     return hd_lens_enabled == 0 || hd_celestial_enabled == 0 || hd_lens_gpu_prepare(worldVram);
 }
@@ -5417,12 +6301,8 @@ static bool hd_celestial_resources(void)
     if (!hd_sprite_materials())
         return false;
     for (sint32 player = 0; player < 2; ++player)
-        if (celestialMeshes[player] == 0)
-        {
-            celestialMeshes[player] = vid_mesh_create_2d(8 * 3 + 18 * 6);
-            if (celestialMeshes[player] == 0)
-                return false;
-        }
+        if (!hd_param_prepare(celestialGpu + player, 26, weatherFragment))
+            return false;
     return true;
 }
 
@@ -5443,106 +6323,134 @@ static bool hd_celestial_center(const SVECTOR *source, const MATRIXF *camera, co
     return true;
 }
 
-static void hd_celestial_build(sint32 player, float phase, const MATRIXF *camera, const HdViewPose *view, float aspect, float logicalHeight)
+static void hd_celestial_parameter(sint32 player, uint32 row, const SVECTOR *source, bool perspective, const float offsets[4][2], const float scales[4], const CVECTOR colors[4], const CVECTOR previousColors[4], const Draw::tPixMap *pixmap, const float *brightness = 0)
+{
+    HdParamQuad value = {};
+    hd_param_texture(&value, pixmap);
+    for (sint32 corner = 0; corner < 4; ++corner)
+    {
+        value.values[corner][0] = offsets[corner][0];
+        value.values[corner][1] = offsets[corner][1];
+        value.values[corner][3] = scales != 0 ? scales[corner] : 1.0f;
+        memcpy(value.values[4 + corner], value.values[corner], 4 * sizeof(float));
+        value.values[8][corner] = hd_param_color(previousColors != 0 ? previousColors[corner] : colors[corner]);
+        value.values[9][corner] = hd_param_color(colors[corner]);
+    }
+    if (brightness != 0)
+    {
+        value.values[15][0] = brightness[0];
+        value.values[15][1] = brightness[1];
+        value.values[15][2] = 1;
+    }
+    value.values[12][2] = 7;
+    value.values[13][0] = (float)source->vx;value.values[13][1] = (float)source->vy;value.values[13][2] = (float)source->vz;value.values[13][3] = perspective ? 1.0f : 0.0f;
+    hd_param_write(celestialGpu + player, row, &value);
+}
+
+static void hd_celestial_parameter_rect(sint32 player, uint32 row, const SVECTOR *source, bool perspective, float left, float top, float right, float bottom, CVECTOR color, const Draw::tPixMap *pixmap, const CVECTOR *previousColor = 0, const float *brightness = 0)
+{
+    const float offsets[4][2] = {{left, top}, {right, top}, {left, bottom}, {right, bottom}};
+    CVECTOR colors[4] = {color, color, color, color};
+    CVECTOR previous[4] = {color, color, color, color};
+    if (previousColor != 0)
+        for (sint32 corner = 0; corner < 4; ++corner)
+            previous[corner] = *previousColor;
+    hd_celestial_parameter(player, row, source, perspective, offsets, 0, colors, previous, pixmap, brightness);
+}
+
+static void hd_celestial_build(sint32 player, float phase, const MATRIXF *camera, const HdViewPose *view, float aspect, float logicalHeight, VID_RECT viewport)
 {
     celestialCommandCount[player] = 0;
     if (player == 0)
         lensMarkerValid = false;
-    if (celestialMeshes[player] == 0 || hd_celestial_enabled == 0)
+    if (celestialGpu[player].mesh == 0 || hd_celestial_enabled == 0)
         return;
     if (!(phase >= 0))
         phase = 0;
     if (phase > 1 || skyReset)
         phase = 1;
-    VID_VERTEX2D *vertices = vid_mesh_data_2d(celestialMeshes[player]);
+    celestialCameras[player] = *camera;celestialViews[player] = *view;celestialViewports[player] = viewport;celestialHeights[player] = logicalHeight;celestialPhases[player] = phase;
     HdCelestialCommand *commands = celestialCommands[player];
-    uint32 count = 0, used = 0;
+    uint32 count = 0, rows = 0;
     float x, y, width = logicalHeight * aspect;
-    CVECTOR neutral = {128, 128, 128, 0};
+    CVECTOR neutral = {128, 128, 128, 0}, black = {0, 0, 0, 0};
     if ((skyCurrent.celestialFlags & 4) != 0 && skyCurrent.skyEnabled && hd_celestial_center(&skyCurrent.sun, camera, view, aspect, logicalHeight, true, &x, &y))
     {
-        uint32 first = used;
+        uint32 first = rows * 6;
         sint32 blend = 1;
         if ((skyCurrent.celestialFlags & 256) != 0)
         {
             if (skyCurrent.celestialPixmapValid)
             {
-                hd_celestial_rect(vertices, &used, x - 16, y - 16, x + 16, y + 16, width, logicalHeight, skyCurrent.sunColor, &skyCurrent.celestialPixmap);
+                hd_celestial_parameter_rect(player, rows++, &skyCurrent.sun, true, -16, -16, 16, 16, skyCurrent.sunColor, &skyCurrent.celestialPixmap);
                 blend = (skyCurrent.celestialPixmap.tpage >> 5) & 3;
                 hd_sun_triangles += 2;
             }
         }
         else
         {
-            float originalProjection = view->projection < 724 ? view->projection : 724;
-            float activeProjection = view->projection < 700 ? view->projection : 700;
-            float radius = originalProjection > 0 ? 16 * activeProjection / originalProjection : 0;
+            float originalProjection = view->projection < 724 ? view->projection : 724, activeProjection = view->projection < 700 ? view->projection : 700;
+            float ratio = originalProjection > 0 ? activeProjection / originalProjection : 0, radius = 16 * ratio;
             for (sint32 edge = 0; edge < 8; ++edge)
             {
-                const SVECTOR *from = skyCurrent.sunOctagon + edge;
-                const SVECTOR *to = skyCurrent.sunOctagon + ((edge + 1) & 7);
-                float centerScale = originalProjection > 0 ? activeProjection / originalProjection : 0;
-                HdSkyPoint points[4] = {{2 * (x * centerScale + to->vx * radius / 256) / width, 2 * (y * centerScale - to->vy * radius / 256) / logicalHeight, 0, 1}, {2 * x / width, 2 * y / logicalHeight, 0, 1}, {2 * (x * centerScale + from->vx * radius / 256) / width, 2 * (y * centerScale - from->vy * radius / 256) / logicalHeight, 0, 1}, {0, 0, 0, 1}};
-                CVECTOR black = {0, 0, 0, 0};
-                CVECTOR colors[4] = {black, neutral, black, black};
-                VID_VERTEX2D triangle[6];
-                uint32 triangleCount = 0;
-                hd_sky_quad(triangle, &triangleCount, points, colors, 0);
-                memcpy(vertices + used, triangle, 3 * sizeof(*vertices));
-                used += 3;
+                const SVECTOR *from = skyCurrent.sunOctagon + edge, *to = skyCurrent.sunOctagon + ((edge + 1) & 7);
+                const float offsets[4][2] = {{to->vx * radius / 256, -to->vy * radius / 256}, {0, 0}, {from->vx * radius / 256, -from->vy * radius / 256}, {0, 0}};
+                const float scales[4] = {ratio, 1, ratio, 1};
+                CVECTOR colors[4] = {black, neutral, black, neutral};
+                hd_celestial_parameter(player, rows++, &skyCurrent.sun, true, offsets, scales, colors, 0, 0);
                 ++hd_sun_triangles;
             }
             blend = -1;
         }
-        if (used != first)
+        if (rows * 6 != first)
         {
-            HdCelestialCommand command = {first, used - first, blend, true};
-            commands[count++] = command;
+            HdCelestialCommand command = {first, rows * 6 - first, blend, true};commands[count++] = command;
         }
         if (player == 0 && current.viewCount == 1 && (skyCurrent.celestialFlags & 256) == 0 && skyCurrent.lensSize > 0 && x < width * 0.5f - 3)
         {
-            lensMarkerValid = true;
-            lensCenterX = x;
-            lensCenterY = y;
-            uint32 first = used;
+            lensMarkerValid = true;lensCenterX = x;lensCenterY = y;
             CVECTOR white = {255, 255, 255, 0};
-            hd_celestial_rect(vertices, &used, x - 2, y + 2, x + 3, y - 3, width, logicalHeight, white, 0);
-            HdCelestialCommand command = {first, 6, -2, true};
-            commands[count++] = command;
+            hd_celestial_parameter_rect(player, rows++, &skyCurrent.sun, true, -2, 2, 3, -3, white, 0);
+            HdCelestialCommand command = {(rows - 1) * 6, 6, -2, true};commands[count++] = command;
         }
     }
     if ((skyCurrent.celestialFlags & 8) != 0 && skyCurrent.celestialPixmapValid && hd_celestial_center(&skyCurrent.moon, camera, view, aspect, logicalHeight, false, &x, &y))
     {
-        uint32 first = used;
-        hd_celestial_rect(vertices, &used, x - 16, y - 16, x + 16, y + 16, width, logicalHeight, neutral, &skyCurrent.celestialPixmap);
-        HdCelestialCommand command = {first, 6, (skyCurrent.celestialPixmap.tpage >> 5) & 3, false};
-        commands[count++] = command;
-        ++hd_moon_quads;
+        hd_celestial_parameter_rect(player, rows++, &skyCurrent.moon, false, -16, -16, 16, 16, neutral, &skyCurrent.celestialPixmap);
+        HdCelestialCommand command = {(rows - 1) * 6, 6, (skyCurrent.celestialPixmap.tpage >> 5) & 3, false};commands[count++] = command;++hd_moon_quads;
     }
     if (skyCurrent.lightningActive && hd_celestial_center(&skyCurrent.lightning, camera, view, aspect, logicalHeight, true, &x, &y))
     {
-        float brightness = (float)skyCurrent.lightningBrightness;
+        sint32 brightness = skyCurrent.lightningBrightness, previousBrightness = brightness;
         if (skyPrevious.lightningActive && skyPrevious.lightningCount == skyCurrent.lightningCount && memcmp(&skyPrevious.lightning, &skyCurrent.lightning, sizeof(skyCurrent.lightning)) == 0 && memcmp(skyPrevious.lightningOffsets, skyCurrent.lightningOffsets, sizeof(skyCurrent.lightningOffsets)) == 0)
-            brightness = skyPrevious.lightningBrightness + (skyCurrent.lightningBrightness - skyPrevious.lightningBrightness) * phase;
-        if (brightness < 0)
-            brightness = 0;
-        if (brightness > 255)
-            brightness = 255;
-        CVECTOR color = {(uint8)brightness, (uint8)brightness, (uint8)brightness, 0};
+            previousBrightness = skyPrevious.lightningBrightness;
+        const float rawBrightness[2] = {(float)previousBrightness, (float)brightness};
+        if (brightness < 0)brightness = 0;if (brightness > 255)brightness = 255;
+        if (previousBrightness < 0)previousBrightness = 0;if (previousBrightness > 255)previousBrightness = 255;
+        CVECTOR color = {(uint8)brightness, (uint8)brightness, (uint8)brightness, 0}, previousColor = {(uint8)previousBrightness, (uint8)previousBrightness, (uint8)previousBrightness, 0};
         for (sint32 fork = skyCurrent.lightningCount - 1; fork >= 0; --fork)
         {
-            uint32 first = used;
-            float left = x + skyCurrent.lightningOffsets[fork].vx;
-            float top = y - skyCurrent.lightningOffsets[fork].vy;
-            hd_celestial_rect(vertices, &used, left, top, left + 16, top - 16, width, logicalHeight, color, skyCurrent.lightningPixmaps + fork);
-            HdCelestialCommand command = {first, 6, (skyCurrent.lightningPixmaps[fork].tpage >> 5) & 3, false};
-            commands[count++] = command;
-            ++hd_lightning_quads;
+            float left = (float)skyCurrent.lightningOffsets[fork].vx, top = (float)-skyCurrent.lightningOffsets[fork].vy;
+            hd_celestial_parameter_rect(player, rows++, &skyCurrent.lightning, true, left, top, left + 16, top - 16, color, skyCurrent.lightningPixmaps + fork, &previousColor, rawBrightness);
+            HdCelestialCommand command = {(rows - 1) * 6, 6, (skyCurrent.lightningPixmaps[fork].tpage >> 5) & 3, false};commands[count++] = command;++hd_lightning_quads;
         }
     }
     celestialCommandCount[player] = count;
-    if (used != 0)
-        vid_mesh_commit(celestialMeshes[player]);
+}
+
+static void hd_celestial_param_pass(sint32 player, VID_MATERIAL *base, uint32 first, uint32 count)
+{
+    HdParamQuads *owner = celestialGpu + player;
+    VID_MATERIAL *material = hd_param_material(owner, base);
+    if (material == 0)
+    {
+        worldSubmissionValid = false;
+        return;
+    }
+    float uniforms[18][4];
+    hd_param_uniforms(material, celestialCameras + player, celestialViews + player, celestialViewports[player], celestialHeights[player], celestialPhases[player], uniforms);
+    uniforms[5][2] = celestialViews[player].projection < 700 ? celestialViews[player].projection : 700;
+    vid_uniforms(&uniforms[0][0], 18);vid_pass(material);hd_submit(owner->mesh, owner->indices, first, count);
 }
 
 static void hd_celestial_submit(sint32 player, bool sun)
@@ -5553,16 +6461,10 @@ static void hd_celestial_submit(sint32 player, bool sun)
         if (command->sun != sun)
             continue;
         if (command->blend < 0)
-        {
-            hd_effect_pass(command->blend == -2 ? skyMaterial : weatherMaterials[2]);
-            hd_submit(celestialMeshes[player], 0, command->first, command->count);
-        }
+            hd_celestial_param_pass(player, command->blend == -2 ? skyMaterial : weatherMaterials[2], command->first, command->count);
         else
-            for (sint32 pass = 0; pass < 2; ++pass)
-            {
-                hd_effect_pass(weatherMaterials[pass == 0 ? 0 : command->blend + 1]);
-                hd_submit(celestialMeshes[player], 0, command->first, command->count);
-            }
+            for (sint32 pass = 0; pass < (command->blend == 2 ? 2 : 1); ++pass)
+                hd_celestial_param_pass(player, command->blend == 2 ? weatherMaterials[pass == 0 ? 0 : 3] : weatherCompositeMaterial, command->first, command->count);
     }
 }
 
@@ -5580,6 +6482,23 @@ struct HdLensCommand
 
 static void hd_lens_quad(VID_VERTEX2D *vertices, uint32 *used, HdLensCommand *commands, uint32 *count, const HdLensPoint *positions, const CVECTOR *colors, const Draw::tPixMap *pixmap, float width, float height)
 {
+    sint32 blend = pixmap != 0 ? (pixmap->tpage >> 5) & 3 : -1;
+    bool black = true;
+    float left = positions[0].x, right = left, top = positions[0].y, bottom = top;
+    for (sint32 corner = 0; corner < 4; ++corner)
+    {
+        black = black && colors[corner].r == 0 && colors[corner].g == 0 && colors[corner].b == 0;
+        if (positions[corner].x < left)
+            left = positions[corner].x;
+        if (positions[corner].x > right)
+            right = positions[corner].x;
+        if (positions[corner].y < top)
+            top = positions[corner].y;
+        if (positions[corner].y > bottom)
+            bottom = positions[corner].y;
+    }
+    if (left > width * 0.5f || right < -width * 0.5f || top > height * 0.5f || bottom < -height * 0.5f || (black && blend < 0))
+        return;
     HdSkyPoint points[4];
     for (sint32 i = 0; i < 4; ++i)
     {
@@ -5678,36 +6597,184 @@ static uint32 hd_lens_geometry(VID_VERTEX2D *vertices, HdLensCommand *commands, 
     return count;
 }
 
+static void hd_lens_param_record(uint32 *row, HdLensCommand *commands, uint32 *count, const HdLensPoint points[4], const CVECTOR colors[4], const Draw::tPixMap *pixmap, float coefficient, float scaleX = 1, float scaleY = 1, float angle = 0, bool spike = false)
+{
+    if (*row >= 88)
+    {
+        worldSubmissionValid = false;
+        return;
+    }
+    bool black = true;
+    for (sint32 corner = 0; corner < 4; ++corner)
+        black = black && colors[corner].r == 0 && colors[corner].g == 0 && colors[corner].b == 0;
+    if (pixmap == 0 && black)
+        return;
+    HdParamQuad value = {};
+    hd_param_texture(&value, pixmap);
+    for (sint32 corner = 0; corner < 4; ++corner)
+    {
+        value.values[corner][0] = points[corner].x;
+        value.values[corner][1] = points[corner].y;
+        value.values[corner][3] = coefficient;
+        value.values[9][corner] = hd_param_color(colors[corner]);
+        value.values[14][corner] = spike ? corner == 1 ? 8192.0f : 24576.0f : 0.0f;
+    }
+    value.values[13][0] = scaleX;
+    value.values[13][1] = scaleY;
+    value.values[13][2] = angle;
+    hd_param_write(&lensGpuGeometry, *row, &value);
+    commands[*count].first = (*row)++ * 6;
+    commands[(*count)++].blend = pixmap != 0 ? (pixmap->tpage >> 5) & 3 : -1;
+}
+
+static uint32 hd_lens_parameters(HdLensCommand commands[88])
+{
+    uint32 row = 0, count = 0;
+    CVECTOR black = {0, 0, 0, 0};
+    for (sint32 part = 8; part >= 0; --part)
+    {
+        const HdLensPiece *piece = skyCurrent.lensPieces + part;
+        float radius = floorf(skyCurrent.lensSize * (piece->size / 65536.0f));
+        if (radius < 4)
+            continue;
+        float coefficient = 1 - 2 * (piece->distance / 65536.0f);
+        CVECTOR color = piece->color;
+        CVECTOR colors[4] = {color, color, color, color};
+        if (piece->type <= 1)
+        {
+            if (!skyCurrent.lensPixmapValid[piece->type])
+                continue;
+            HdLensPoint points[4] = {{-radius, -radius}, {radius, -radius}, {-radius, radius}, {radius, radius}};
+            hd_lens_param_record(&row, commands, &count, points, colors, skyCurrent.lensPixmaps + piece->type, coefficient);
+        }
+        else if (piece->type == 2)
+        {
+            HdLensPoint points[6] = {{-radius * 0.25f, -radius * 0.5f}, {radius * 0.25f, -radius * 0.5f}, {-radius * 0.5f, 0}, {radius * 0.5f, 0}, {-radius * 0.25f, radius * 0.5f}, {radius * 0.25f, radius * 0.5f}};
+            for (sint32 quad = 1; quad >= 0; --quad)
+                hd_lens_param_record(&row, commands, &count, points + quad * 2, colors, 0, coefficient);
+        }
+        else if (piece->type == 3)
+        {
+            HdLensPoint points[8];
+            for (sint32 i = 0; i < 8; ++i)
+            {
+                points[i].x = skyCurrent.lensOctagon[i].vx * radius / 256;
+                points[i].y = -skyCurrent.lensOctagon[i].vy * radius / 256;
+            }
+            for (sint32 quad = 2; quad >= 0; --quad)
+                hd_lens_param_record(&row, commands, &count, points + quad * 2, colors, 0, coefficient);
+        }
+        else if (piece->type == 4)
+        {
+            CVECTOR ringColors[4] = {color, black, color, black};
+            for (sint32 edge = 7; edge >= 0; --edge)
+            {
+                const SVECTOR *from = skyCurrent.sunOctagon + edge, *to = skyCurrent.sunOctagon + ((edge + 1) & 7);
+                HdLensPoint points[4] = {{from->vx * radius / 256, -from->vy * radius / 256}, {from->vx * (radius - 5) / 256, -from->vy * (radius - 5) / 256}, {to->vx * radius / 256, -to->vy * radius / 256}, {to->vx * (radius - 5) / 256, -to->vy * (radius - 5) / 256}};
+                hd_lens_param_record(&row, commands, &count, points, ringColors, 0, coefficient);
+            }
+        }
+    }
+    for (sint32 pass = 1; pass >= 0; --pass)
+        for (sint32 edge = 0; edge < 8; ++edge)
+        {
+            uint8 from = skyCurrent.lensSpikeFrom[edge], to = skyCurrent.lensSpikeTo[edge];
+            if (from >= 4 || to >= 4)
+                continue;
+            const SVECTOR *a = skyCurrent.lensSpikes + from, *b = skyCurrent.sunOctagon + edge, *c = skyCurrent.lensSpikes + to;
+            HdLensPoint points[4] = {{(float)a->vx, (float)a->vy}, {0, 0}, {(float)b->vx, (float)b->vy}, {(float)c->vx, (float)c->vy}};
+            CVECTOR colors[4] = {black, skyCurrent.sunBeamColor, black, black};
+            hd_lens_param_record(&row, commands, &count, points, colors, 0, 1, 25.0f / (pass == 0 ? 128 : 256), -25.0f / 256, pass == 0 ? 8.0f : 6.0f, true);
+        }
+    return count;
+}
+
 static void hd_lens_view(const HdViewPose *view, VID_RECT viewport, float logicalHeight, float phase)
 {
-    if (!hd_lens_eligible() || !lensMarkerValid || hd_celestial_enabled == 0 || hd_lens_enabled == 0 || lensMesh == 0)
+    if (!hd_lens_eligible() || !lensMarkerValid || hd_celestial_enabled == 0 || hd_lens_enabled == 0 || lensGpuGeometry.mesh == 0 || !hd_lens_gpu_may_be_visible(phase))
         return;
     HdLensCommand commands[88];
-    uint32 count = hd_lens_geometry(vid_mesh_data_2d(lensMesh), commands, view, logicalHeight * viewport.w / viewport.h, logicalHeight);
+    uint32 count = hd_lens_parameters(commands);
     if (count == 0)
         return;
-    vid_mesh_commit(lensMesh);
     float activeProjection = view->projection < 700 ? view->projection : 700;
     float originalProjection = view->projection < 724 ? view->projection : 724;
     float ratio = originalProjection > 0 ? activeProjection / originalProjection : 0;
-    float centerX = lensCenterX * 2 * ratio / (logicalHeight * viewport.w / viewport.h);
-    float centerY = lensCenterY * 2 * ratio / logicalHeight;
+    float width = logicalHeight * viewport.w / viewport.h;
     for (uint32 index = 0; index < count; ++index)
     {
         const HdLensCommand *command = commands + index;
-        if (command->blend < 0)
+        if (command->blend == 2)
         {
-            hd_lens_gpu_pass(2, phase, centerX, centerY);
-            hd_submit(lensMesh, 0, command->first, 6);
-        }
-        else
             for (sint32 pass = 0; pass < 2; ++pass)
             {
-                hd_lens_gpu_pass(pass == 0 ? 0 : command->blend + 1, phase, centerX, centerY);
-                hd_submit(lensMesh, 0, command->first, 6);
+                worldSubmissionValid = hd_lens_gpu_param_pass(pass == 0 ? 0 : 3, phase, lensCenterX, lensCenterY, width, logicalHeight, ratio, lensGpuGeometry.parameters) && worldSubmissionValid;
+                hd_submit(lensGpuGeometry.mesh, lensGpuGeometry.indices, command->first, 6);
             }
+        }
+        else
+        {
+            uint32 first = command->first, vertices = 6;
+            while (index + 1 < count && commands[index + 1].blend != 2 && commands[index + 1].first == first + vertices)
+            {
+                vertices += 6;
+                ++index;
+            }
+            worldSubmissionValid = hd_lens_gpu_param_pass(5, phase, lensCenterX, lensCenterY, width, logicalHeight, ratio, lensGpuGeometry.parameters) && worldSubmissionValid;
+            hd_submit(lensGpuGeometry.mesh, lensGpuGeometry.indices, first, vertices);
+        }
     }
     hd_lens_quads += count;
+}
+
+static void hd_halo_template_vertex(float rows[144][4], uint32 *used, const SVECTOR *point, sint32 color, sint32 side = 0, const SVECTOR *target = 0)
+{
+    float *out = rows[(*used)++ * 2];
+    out[0] = point != 0 ? (float)point->vx : 0;
+    out[1] = point != 0 ? (float)point->vy : 0;
+    out[2] = (float)color;
+    out[3] = (float)side;
+    out[4] = target != 0 ? (float)target->vx : 0;
+    out[5] = target != 0 ? (float)target->vy : 0;
+}
+
+static bool hd_halo_prepare(HdHaloBuffer *owner, uint32 count, VID_MATERIAL *material, const char *fragment = weatherFragment)
+{
+    if (owner->capacity >= count)
+        return true;
+    float templates[4][144][4] = {};
+    const uint32 order[6] = {0, 1, 2, 2, 1, 3};
+    for (sint32 shape = 0; shape < 4; ++shape)
+    {
+        uint32 used = 0;
+        if (shape == 1)
+            for (sint32 edge = 7; edge >= 0; --edge)
+                for (sint32 vertex = 0; vertex < 6; ++vertex)
+                {
+                    sint32 corner = order[vertex];
+                    hd_halo_template_vertex(templates[shape], &used, corner < 2 ? 0 : haloTables.octagon + edge, corner < 2 ? 2 : 0, (corner & 1) == 0 ? 1 : -1, haloTables.octagon + edge);
+                }
+        sint32 sides = shape == 0 ? 8 : shape == 2 ? 4 : 6;
+        const SVECTOR *points = shape == 0 ? haloTables.octagon : shape == 1 ? haloTables.hexagon : shape == 2 ? haloTables.quad : haloTables.reflection;
+        for (sint32 index = 0; index < sides; ++index)
+        {
+            sint32 edge = shape == 2 ? 3 - index : index;
+            hd_halo_template_vertex(templates[shape], &used, points + (edge + 1) % sides, 0);
+            hd_halo_template_vertex(templates[shape], &used, 0, 1);
+            hd_halo_template_vertex(templates[shape], &used, points + edge, 0);
+            if (shape == 0)
+            {
+                sint32 ids[4] = {haloTables.spikeFrom[edge], -1, edge + 4, haloTables.spikeTo[edge]};
+                for (sint32 vertex = 0; vertex < 6; ++vertex)
+                {
+                    sint32 corner = order[vertex], id = ids[corner];
+                    const SVECTOR *point = id < 0 ? 0 : id < 4 ? haloTables.spikes + id : haloTables.octagon + id - 4;
+                    hd_halo_template_vertex(templates[shape], &used, point, corner == 1 ? 2 : 0);
+                }
+            }
+        }
+    }
+    return hd_halo_buffer_prepare(owner, count, templates, material, fragment);
 }
 
 static bool hd_car_halo_resources(void)
@@ -5747,14 +6814,8 @@ static bool hd_car_halo_resources(void)
         vid_mat_commit(carHaloMaterial);
     }
     for (sint32 player = 0; player < 2; ++player)
-        if (carHaloCapacities[player] < faces * 90)
-        {
-            vid_mesh_free(carHaloMeshes[player]);
-            carHaloMeshes[player] = vid_mesh_create_2d(faces * 90);
-            carHaloCapacities[player] = carHaloMeshes[player] != 0 ? faces * 90 : 0;
-            if (carHaloMeshes[player] == 0)
-                return false;
-        }
+        if (!hd_halo_prepare(carHaloGpu + player, faces * 2, carHaloMaterial))
+            return false;
     return true;
 }
 
@@ -5823,6 +6884,19 @@ static void hd_car_halo_emit(VID_VERTEX2D *vertices, uint32 *used, const HdLensP
 
 static void hd_halo_shape(VID_VERTEX2D *vertices, uint32 *used, HdLensPoint screen, CVECTOR halo, CVECTOR beam, float sx, float sy, float spin, float angleOuter, float projection, sint32 shape, float depth, float width, float height)
 {
+    if (haloBufferCapture != 0)
+    {
+        float values[8][4] = {};
+        values[0][0] = screen.x;values[0][1] = screen.y;values[0][2] = depth;values[0][3] = projection;
+        values[1][0] = sx;values[1][1] = sy;values[1][2] = spin;values[1][3] = angleOuter;
+        values[2][0] = hd_param_color(halo);values[2][1] = hd_param_color(beam);values[2][2] = width;values[2][3] = height;
+        const uint32 counts[4] = {72, 66, 12, 18};
+        values[3][0] = (float)shape;
+        values[3][2] = (float)counts[shape];
+        hd_halo_buffer_write(haloBufferCapture, *used / 72, values);
+        *used += counts[shape];
+        return;
+    }
     CVECTOR black = {0, 0, 0, 0};
     float sine = sinf(spin), cosine = cosf(spin);
     float outerSine = sinf(angleOuter), outerCosine = cosf(angleOuter);
@@ -6004,8 +7078,11 @@ uint32 hd_frontend_halo_geometry(VID_VERTEX2D *vertices, const COORD16 *points, 
         return 0;
     HdViewPose view = {};
     view.projection = 512;
-    uint32 used = 0;
+    uint32 first = haloBufferCapture != 0 ? haloBufferOffset : 0;
+    uint32 used = first;
     hd_car_halo_geometry(vertices, &used, points, flag, type, false, 0, 0, 0, &view, 512, 240, matrix, x, y);
+    if (haloBufferCapture != 0)
+        return used - first;
     for (uint32 i = 0; depthBias != 0 && i < used; ++i)
     {
         float depth = vertices[i].pos[3];
@@ -6015,6 +7092,50 @@ uint32 hd_frontend_halo_geometry(VID_VERTEX2D *vertices, const COORD16 *points, 
         vertices[i].pos[2] = (65536.0f / 65534 - (131070.0f / 65534) / biasedDepth) * depth;
     }
     return used;
+}
+
+bool hd_frontend_halo_buffer_begin(uint32 slot, uint32 faces)
+{
+    if (slot >= 4 || faces == 0)
+        return false;
+    if (frontendHaloBase == 0)
+    {
+        frontendHaloBase = vid_mat_create();
+        if (frontendHaloBase == 0)
+            return false;
+        vid_mat_data(frontendHaloBase)->blend = VID_BLEND_ADD;
+        vid_mat_data(frontendHaloBase)->depth_test = 1;
+        vid_mat_commit(frontendHaloBase);
+    }
+    return hd_halo_prepare(frontendHaloGpu + slot, faces, frontendHaloBase, "void main(){outColor=vec4(vColor.rgb,1.0);}");
+}
+
+uint32 hd_frontend_halo_buffer_geometry(uint32 slot, uint32 first, const COORD16 *points, sint16 flag, sint32 type, const float matrix[3][4], bool mirror, float x, float y, float depthBias)
+{
+    haloBufferCapture = frontendHaloGpu + slot;
+    haloBufferOffset = first;
+    uint32 used = hd_frontend_halo_geometry(0, points, flag, type, matrix, mirror, x, y, depthBias);
+    if (used != 0 && depthBias != 0)
+    {
+        float values[8][4];
+        memcpy(values, (float *)vid_tex_data(haloBufferCapture->parameters) + first / 72 * 32, sizeof(values));
+        values[6][0] = depthBias;
+        hd_halo_buffer_write(haloBufferCapture, first / 72, values);
+    }
+    haloBufferCapture = 0;
+    return used;
+}
+
+bool hd_frontend_halo_buffer_render(uint32 slot, uint32 count, const float mapping[4])
+{
+    if (count == 0)
+        return true;
+    float uniforms[18][4] = {};
+    memcpy(uniforms[6], mapping, 4 * sizeof(float));
+    uniforms[7][3] = 1;
+    vid_uniforms(&uniforms[0][0], 18);
+    vid_pass(frontendHaloGpu[slot].material);
+    return vid_submit(frontendHaloGpu[slot].mesh, 0, 0, count) != 0;
 }
 
 static bool hd_track_halo_resources(void)
@@ -6044,14 +7165,8 @@ static bool hd_track_halo_resources(void)
         uint32 count = trackHaloStates[player].count;
         if (count > 0xffffffff / 72)
             return false;
-        if (trackHaloCapacities[player] < count * 72)
-        {
-            vid_mesh_free(trackHaloMeshes[player]);
-            trackHaloMeshes[player] = vid_mesh_create_2d(count * 72);
-            trackHaloCapacities[player] = trackHaloMeshes[player] != 0 ? count * 72 : 0;
-            if (trackHaloMeshes[player] == 0)
-                return false;
-        }
+        if (!hd_halo_prepare(trackHaloGpu + player, count, trackHaloMaterial))
+            return false;
         if (trackHaloCommandCapacities[player] < count)
         {
             HdTrackHaloCommand *commands = (HdTrackHaloCommand *)realloc(trackHaloCommands[player], count * sizeof(*commands));
@@ -6095,6 +7210,17 @@ static void hd_track_halo_plane(VID_VERTEX2D *vertices, uint32 first, uint32 cou
     center.x *= view->mirror ? -1 : 1;
     center.y /= -(56320.0f / 65536);
     float distance = normal[0] * center.x + normal[1] * center.y + normal[2] * center.z;
+    if (haloBufferCapture != 0)
+    {
+        float values[8][4];
+        memcpy(values, (float *)vid_tex_data(haloBufferCapture->parameters) + first / 72 * 32, sizeof(values));
+        values[3][1] = 1;
+        memcpy(values[4], normal, sizeof(normal));values[4][3] = distance;
+        values[5][0] = width / (2 * view->projection) * (view->mirror ? -1 : 1);
+        values[5][1] = height / (2 * view->projection * (56320.0f / 65536));
+        hd_halo_buffer_write(haloBufferCapture, first / 72, values);
+        return;
+    }
     for (uint32 i = first; i < count; ++i)
     {
         VID_VERTEX2D *vertex = vertices + i;
@@ -6203,13 +7329,15 @@ static bool hd_track_halo_order(const PreparedTrackHalo *source, const HdViewPos
 
 static void hd_track_halos_view(sint32 player, float phase, const MATRIXF *camera, const HdViewPose *view, VID_RECT viewport, float logicalHeight)
 {
-    if (hd_track_halos_enabled == 0 || trackHaloMeshes[player] == 0)
+    if (hd_track_halos_enabled == 0 || trackHaloGpu[player].mesh == 0)
         return;
-    VID_VERTEX2D *vertices = vid_mesh_data_2d(trackHaloMeshes[player]);
+    VID_VERTEX2D *vertices = 0;
+    haloBufferCapture = trackHaloGpu + player;
     HdTrackHaloCommand *commands = trackHaloCommands[player];
     uint32 used = 0, count = 0;
     for (uint32 i = 0; i < trackHaloStates[player].count; ++i)
     {
+        used = i * 72;
         uint32 first = used;
         sint32 bucket = hd_track_halo_geometry(vertices, &used, trackHaloStates[player].entries + i, phase, camera, view, logicalHeight * viewport.w / viewport.h, logicalHeight);
         if (bucket >= 0 && used != first)
@@ -6221,9 +7349,11 @@ static void hd_track_halos_view(sint32 player, float phase, const MATRIXF *camer
             ++count;
         }
     }
-    if (used != 0)
+    haloBufferCapture = 0;
+    float uniforms[18][4];
+    hd_effect_uniforms(trackHaloGpu[player].material, uniforms);
+    if (count != 0)
     {
-        vid_mesh_commit(trackHaloMeshes[player]);
         qsortPSX(commands, count, sizeof(*commands), hd_track_halo_compare);
         for (uint32 i = 0; i < count; ++i)
         {
@@ -6234,7 +7364,7 @@ static void hd_track_halos_view(sint32 player, float phase, const MATRIXF *camer
                 worldSubmissionValid = false;
                 break;
             }
-            hd_order_draw(&order, trackHaloMaterial, trackHaloMeshes[player], 0, draw->first, draw->count);
+            hd_order_draw(&order, trackHaloGpu[player].material, trackHaloGpu[player].mesh, 0, draw->first, draw->count, &uniforms[0][0], 18);
         }
     }
     hd_track_halo_vertices += used;
@@ -6242,10 +7372,13 @@ static void hd_track_halos_view(sint32 player, float phase, const MATRIXF *camer
 
 static void hd_car_halos_view(sint32 player, float phase, const MATRIXF *camera, const HdViewPose *view, VID_RECT viewport, float logicalHeight, const HdCarOrder orders[9])
 {
-    if (hd_car_halos_enabled == 0 || carHaloMeshes[player] == 0)
+    if (hd_car_halos_enabled == 0 || carHaloGpu[player].mesh == 0)
         return;
     uint32 used = 0;
-    VID_VERTEX2D *vertices = vid_mesh_data_2d(carHaloMeshes[player]);
+    VID_VERTEX2D *vertices = 0;
+    haloBufferCapture = carHaloGpu + player;
+    float uniforms[18][4];
+    hd_effect_uniforms(carHaloGpu[player].material, uniforms);
     for (sint32 slot = 0; slot < 9; ++slot)
     {
         const HdCarModel *car = carModels + slot;
@@ -6297,28 +7430,27 @@ static void hd_car_halos_view(sint32 player, float phase, const MATRIXF *camera,
                 sint32 bucket = hd_car_facet_bucket(object, facet, &orderModel, camera, order->bias + pose->orderOffset);
                 if (bucket < 0 || bucket >= order->size)
                     continue;
+                used = (used + 71) / 72 * 72;
                 uint32 first = used;
                 hd_car_halo_geometry(vertices, &used, points, facet->flag, type, false, car->environment.reflectOffset, &model, camera, view, logicalHeight * viewport.w / viewport.h, logicalHeight);
                 uint32 mainCount = used - first;
                 HdOrderKey key = {order->bucket, HD_ORDER_CARS, (uint32)order->group, (uint32)bucket, (uint32)(slot * 57 + index), (uint32)(object->numFacet - 1 - face), 1};
                 if (mainCount != 0)
-                    hd_order_draw(&key, carHaloMaterial, carHaloMeshes[player], 0, first, mainCount);
+                    hd_order_draw(&key, carHaloGpu[player].material, carHaloGpu[player].mesh, 0, first, mainCount, &uniforms[0][0], 18);
                 sint32 reflect = car->haloReflection;
                 if (hd_car_halo_reflections_enabled != 0 && (reflect > 0 || (reflect == -1 && type == 5) || (reflect == -2 && type != 5)))
                 {
+                    used = (used + 71) / 72 * 72;
                     first = used;
                     hd_car_halo_geometry(vertices, &used, points, facet->flag, type, true, car->environment.reflectOffset, &model, camera, view, logicalHeight * viewport.w / viewport.h, logicalHeight);
                     key.pass = 0;
                     if (used != first)
-                        hd_order_draw(&key, carHaloMaterial, carHaloMeshes[player], 0, first, used - first);
+                        hd_order_draw(&key, carHaloGpu[player].material, carHaloGpu[player].mesh, 0, first, used - first, &uniforms[0][0], 18);
                 }
             }
         }
     }
-    if (used != 0)
-    {
-        vid_mesh_commit(carHaloMeshes[player]);
-    }
+    haloBufferCapture = 0;
     hd_car_halo_vertices += used;
 }
 
@@ -6368,87 +7500,66 @@ struct HdWeatherCommand
     sint32 blend;
 };
 
+static void hd_weather_param_pass(sint32 player, VID_MATERIAL *source, uint32 first, uint32 count, const MATRIXF *camera, const HdViewPose *view, VID_RECT viewport, float height, float phase, float particlePhase)
+{
+    HdParamQuads *owner = weatherGpu + player;
+    VID_MATERIAL *material = hd_param_material(owner, source);
+    if (material == 0)
+    {
+        worldSubmissionValid = false;
+        return;
+    }
+    float uniforms[18][4];
+    hd_param_uniforms(material, camera, view, viewport, height, particlePhase, uniforms);
+    uniforms[4][2] = (float)weatherStates[player].source.gameTick;
+    uniforms[5][0] = phase;
+    vid_uniforms(&uniforms[0][0], 18);
+    vid_pass(material);
+    hd_submit(owner->mesh, owner->indices, first, count);
+}
+
 static void hd_weather_view(sint32 player, float phase, const MATRIXF *camera, const HdViewPose *view, VID_RECT viewport, float logicalHeight)
 {
     const HdWeatherState *state = weatherStates + player;
-    if (!state->valid || weatherMeshes[player] == 0 || hd_weather_enabled == 0)
+    if (!state->valid || weatherGpu[player].mesh == 0 || hd_weather_enabled == 0)
         return;
     if (!(phase >= 0))
         phase = 0;
     if (phase > 1)
         phase = 1;
     float particlePhase = weatherReset[player] || weatherSnapToCurrent[player] ? 1.0f : hd_weather_phase(state, phase);
-    float logicalWidth = logicalHeight * viewport.w / viewport.h;
-    VID_VERTEX2D *vertices = vid_mesh_data_2d(weatherMeshes[player]);
     HdWeatherCommand commands[HD_WEATHER_PARTICLES + HD_WEATHER_SPLATS];
-    uint32 commandCount = 0, used = 0;
+    uint32 commandCount = 0;
     for (sint32 slot = state->source.count - 1; slot >= 0; --slot)
     {
         const HdWeatherParticle *particle = state->particles + slot;
-        VEC3F position;
-        position.x = particle->previous.x + (particle->current.x - particle->previous.x) * particlePhase;
-        position.y = particle->previous.y + (particle->current.y - particle->previous.y) * particlePhase;
-        position.z = particle->previous.z + (particle->current.z - particle->previous.z) * particlePhase;
-        HdSkyPoint point = hd_weather_project(&position, camera, view, logicalWidth, logicalHeight);
-        if (point.w <= 1)
-            continue;
-        HdSkyPoint points[4] = {point, point, point, point};
-        CVECTOR colors[4];
-        memset(colors, 0, sizeof(colors));
-        const Draw::tPixMap *pixmap = 0;
-        sint32 blend = -1;
-        if (state->source.type == Weather::kSnow)
+        HdParamQuad value = {};
+        const Draw::tPixMap *pixmap = state->source.type == Weather::kSnow ? state->source.pixmaps + state->source.snowMap : 0;
+        hd_param_texture(&value, pixmap);
+        memcpy(value.values[0], &particle->previous, sizeof(VEC3F));
+        memcpy(value.values[4], &particle->current, sizeof(VEC3F));
+        value.values[12][2] = pixmap != 0 ? 2.0f : 3.0f;
+        value.values[14][0] = particle->trail ? 1.0f : 0.0f;
+        for (sint32 corner = 0; corner < 4; ++corner)
         {
-            points[1].x += 20 * view->projection / logicalWidth;
-            points[2].y -= 20 * view->projection / logicalHeight;
-            points[3].x = points[1].x;
-            points[3].y = points[2].y;
-            for (sint32 corner = 0; corner < 4; ++corner)
-                colors[corner].r = colors[corner].g = colors[corner].b = 32;
-            pixmap = state->source.pixmaps + state->source.snowMap;
-            blend = (pixmap->tpage >> 5) & 3;
-            ++hd_weather_snow_quads;
-        }
-        else
-        {
-            float endX = point.x / point.w, endY = point.y / point.w;
-            float oldX = endX, oldY = endY;
-            if (particle->trail)
+            CVECTOR color = {0, 0, 0, 0};
+            if (pixmap != 0)
+                color.r = color.g = color.b = 32;
+            else if (corner >= 2)
             {
-                VEC3F tail = hd_weather_tail(particle, &position);
-                HdSkyPoint previous = hd_weather_project(&tail, camera, view, logicalWidth, logicalHeight);
-                if (previous.w > 1)
-                {
-                    oldX = previous.x / previous.w;
-                    oldY = previous.y / previous.w;
-                }
+                color.r = color.g = 32;
+                color.b = 64;
             }
-            float startX = (oldX + endX * 3) * 0.25f;
-            float startY = (oldY + endY) * 0.5f;
-            float dx = (endX - startX) * logicalWidth;
-            float dy = (endY - startY) * logicalHeight;
-            float length = sqrtf(dx * dx + dy * dy);
-            if (length < 0.0001f)
-                continue;
-            float x = -dy / (length * logicalWidth), y = dx / (length * logicalHeight);
-            points[0].x = startX - x;
-            points[0].y = startY - y;
-            points[1].x = startX + x;
-            points[1].y = startY + y;
-            points[2].x = endX - x;
-            points[2].y = endY - y;
-            points[3].x = endX + x;
-            points[3].y = endY + y;
-            for (sint32 corner = 0; corner < 4; ++corner)
-                points[corner].w = 1;
-            colors[2].r = colors[3].r = 32;
-            colors[2].g = colors[3].g = 32;
-            colors[2].b = colors[3].b = 64;
-            ++hd_weather_rain_lines;
+            value.values[8][corner] = value.values[9][corner] = hd_param_color(color);
         }
-        commands[commandCount].first = used;
-        commands[commandCount++].blend = blend;
-        hd_sky_quad(vertices, &used, points, colors, pixmap);
+        uint32 row = HD_WEATHER_PARTICLES - 1 - slot;
+        hd_param_write(weatherGpu + player, row, &value);
+        commands[commandCount].first = row * 6;
+        commands[commandCount++].blend = pixmap != 0 ? (pixmap->tpage >> 5) & 3 : -1;
+        if (pixmap != 0)
+            ++hd_weather_snow_quads;
+        else
+            ++hd_weather_rain_lines;
     }
     for (sint32 slot = state->source.splatCount - 1; slot >= 0; --slot)
     {
@@ -6458,40 +7569,40 @@ static void hd_weather_view(sint32 player, float phase, const MATRIXF *camera, c
         sint32 age = state->source.gameTick - splat->startTick;
         if (age < 0 || age > 32)
             continue;
-        sint32 previousAge = age > 0 ? age - 1 : 0;
-        float renderAge = hd_weather_splat_age(age, phase);
-        float expand = renderAge * 0.125f;
-        uint8 color = (uint8)(128 - previousAge * 4 - (age - previousAge) * 4 * phase);
-        float size = (splat->position.vx & 1) != 0 ? 12.0f : 18.0f;
-        float x = splat->position.vx * logicalWidth / 320;
-        float left = x - expand, right = x + size + expand;
-        float top = (float)splat->position.vy, bottom = top + size + expand * 3;
-        HdSkyPoint points[4] = {{2 * left / logicalWidth - 1, 1 - 2 * top / logicalHeight, 0, 1}, {2 * right / logicalWidth - 1, 1 - 2 * top / logicalHeight, 0, 1}, {2 * left / logicalWidth - 1, 1 - 2 * bottom / logicalHeight, 0, 1}, {2 * right / logicalWidth - 1, 1 - 2 * bottom / logicalHeight, 0, 1}};
-        CVECTOR value = {color, color, color, 0};
-        CVECTOR colors[4] = {value, value, value, value};
+        HdParamQuad value = {};
         const Draw::tPixMap *pixmap = state->source.pixmaps + 2;
-        commands[commandCount].first = used;
+        hd_param_texture(&value, pixmap);
+        value.values[12][2] = 4;
+        value.values[13][0] = (float)splat->position.vx;
+        value.values[13][1] = (float)splat->position.vy;
+        value.values[13][2] = (splat->position.vx & 1) != 0 ? 12.0f : 18.0f;
+        value.values[13][3] = (float)splat->startTick;
+        uint32 row = HD_WEATHER_PARTICLES + HD_WEATHER_SPLATS - 1 - slot;
+        hd_param_write(weatherGpu + player, row, &value);
+        commands[commandCount].first = row * 6;
         commands[commandCount++].blend = (pixmap->tpage >> 5) & 3;
-        hd_sky_quad(vertices, &used, points, colors, pixmap);
         ++hd_weather_splat_quads;
     }
-    if (used == 0)
-        return;
-    vid_mesh_commit(weatherMeshes[player]);
     for (uint32 command = 0; command < commandCount; ++command)
     {
         const HdWeatherCommand *draw = commands + command;
-        if (draw->blend < 0)
+        if (draw->blend == 2)
         {
-            hd_effect_pass(weatherMaterials[2]);
-            hd_submit(weatherMeshes[player], 0, draw->first, 6);
-        }
-        else
             for (sint32 pass = 0; pass < 2; ++pass)
             {
-                hd_effect_pass(weatherMaterials[pass == 0 ? 0 : draw->blend + 1]);
-                hd_submit(weatherMeshes[player], 0, draw->first, 6);
+                hd_weather_param_pass(player, weatherMaterials[pass == 0 ? 0 : 3], draw->first, 6, camera, view, viewport, logicalHeight, phase, particlePhase);
             }
+        }
+        else
+        {
+            uint32 first = draw->first, count = 6;
+            while (command + 1 < commandCount && commands[command + 1].blend != 2 && (commands[command + 1].blend < 0) == (draw->blend < 0) && commands[command + 1].first == first + count)
+            {
+                count += 6;
+                ++command;
+            }
+            hd_weather_param_pass(player, draw->blend < 0 ? weatherMaterials[2] : weatherCompositeMaterial, first, count, camera, view, viewport, logicalHeight, phase, particlePhase);
+        }
     }
 }
 
@@ -6522,13 +7633,11 @@ static bool hd_skid_resources(void)
             material->filter = VID_FILTER_NEAREST;
             vid_mat_commit(skidMaterials[pass]);
         }
+    if (!hd_effect_composite_resource(&skidCompositeMaterial, skidMaterials[0]))
+        return false;
     for (sint32 player = 0; player < 2; ++player)
-        if (skidMeshes[player] == 0)
-        {
-            skidMeshes[player] = vid_mesh_create_2d(HD_SKID_QUADS * 6);
-            if (skidMeshes[player] == 0)
-                return false;
-        }
+        if (!hd_param_prepare(skidGpu + player, HD_SKID_QUADS, weatherFragment))
+            return false;
     return true;
 }
 
@@ -6574,31 +7683,132 @@ static bool hd_skid_quad(const HdSkidState *state, uint32 index, float phase, co
     return true;
 }
 
+static void hd_skid_parameters(sint32 player)
+{
+    if (skidParamRevision[player] == skidCaptureRevision[player])
+        return;
+    const HdSkidState *state = skidStates + player;
+    bool touched[HD_SKID_QUADS] = {};
+    for (uint32 index = 0; index < state->current.count; ++index)
+    {
+        const HdSkidQuad *quad = state->current.quads + index;
+        skidGpuSlots[player][index] = HD_SKID_QUADS;
+        for (uint32 slot = 0; slot < HD_SKID_QUADS; ++slot)
+            if (skidGpuActive[player][slot] && !touched[slot] && skidGpuKeys[player][slot].owner == quad->owner && skidGpuKeys[player][slot].type == quad->type && memcmp(&skidGpuKeys[player][slot].center, &quad->center, sizeof(quad->center)) == 0)
+            {
+                skidGpuSlots[player][index] = slot;
+                touched[slot] = true;
+                break;
+            }
+    }
+    for (uint32 index = 0; index < state->current.count; ++index)
+    {
+        uint32 slot = skidGpuSlots[player][index];
+        if (slot == HD_SKID_QUADS)
+            for (slot = 0; slot < HD_SKID_QUADS; ++slot)
+                if (!touched[slot])
+                {
+                    touched[slot] = true;
+                    skidGpuSlots[player][index] = slot;
+                    break;
+                }
+        const HdSkidQuad *quad = state->current.quads + index, *before = quad;
+        for (uint32 old = 0; old < state->previous.count; ++old)
+            if (state->previous.quads[old].owner == quad->owner && state->previous.quads[old].type == quad->type && memcmp(&state->previous.quads[old].center, &quad->center, sizeof(quad->center)) == 0)
+            {
+                before = state->previous.quads + old;
+                break;
+            }
+        HdParamQuad value = {};
+        Draw::tPixMap pixmap = state->current.pixmaps[quad->type & 1];
+        if (pixmap.clut == 65535)
+            pixmap.clut = state->current.palettes[quad->type & 1][0];
+        hd_param_texture(&value, &pixmap);
+        for (sint32 corner = 0; corner < 4; ++corner)
+        {
+            memcpy(value.values[corner], &before->points[corner], sizeof(VEC3F));
+            memcpy(value.values[4 + corner], &quad->points[corner], sizeof(VEC3F));
+            value.values[8][corner] = hd_param_color(before->colors[corner]);
+            value.values[9][corner] = hd_param_color(quad->colors[corner]);
+        }
+        value.values[14][1] = 56320.0f / 65536;
+        value.values[14][2] = 1;
+        hd_param_write(skidGpu + player, slot, &value);
+        skidGpuKeys[player][slot] = *quad;
+    }
+    memcpy(skidGpuActive[player], touched, sizeof(touched));
+    skidParamRevision[player] = skidCaptureRevision[player];
+}
+
+static bool hd_skid_bucket(const HdParamQuad *record, float phase, const MATRIXF *camera, const HdViewPose *view, sint32 *bucket)
+{
+    if (!(phase >= 0))
+        phase = 0;
+    if (phase > 1)
+        phase = 1;
+    float sum = 0;
+    for (sint32 corner = 0; corner < 4; ++corner)
+    {
+        float depth = 0;
+        for (sint32 axis = 0; axis < 3; ++axis)
+        {
+            float point = record->values[corner][axis] + (record->values[4 + corner][axis] - record->values[corner][axis]) * phase;
+            depth += camera->m[axis][2] * (point - camera->t[axis]);
+        }
+        if (depth <= 0)
+            return false;
+        sum += depth;
+    }
+    *bucket = (sint32)floorf(sum / 32) + 50;
+    return *bucket > 0 && *bucket <= view->orderTableSize - 3;
+}
+
 static void hd_skids_view(sint32 player, float phase, const MATRIXF *camera, const HdViewPose *view, VID_RECT viewport, float logicalHeight)
 {
     const HdSkidState *state = skidStates + player;
-    if (!state->valid || skidMeshes[player] == 0 || hd_skids_enabled == 0)
+    if (!state->valid || skidGpu[player].mesh == 0 || hd_skids_enabled == 0)
         return;
+
+    static HdCarSurface coverageCache[2][2];
+    uint8 coverage[2];
+    for (sint32 type = 0; type < 2; ++type)
+    {
+        Draw::tPixMap pixmap = state->current.pixmaps[type];
+        if (pixmap.clut == 65535)
+            pixmap.clut = state->current.palettes[type][0];
+        Transformer::zFacet facet = {};
+        facet.uv0.u = pixmap.u0;
+        facet.uv0.v = pixmap.v0;
+        facet.uv1.u = pixmap.u1;
+        facet.uv1.v = pixmap.v1;
+        facet.uv2.u = pixmap.u3;
+        facet.uv2.v = pixmap.v3;
+        coverage[type] = hd_car_facet_coverage(&pixmap, &facet, 0, 0, &coverageCache[player][type]);
+    }
 
     struct Command
     {
         uint32 first;
         sint32 bucket;
         sint32 blend;
+        uint32 order;
+        uint8 coverage;
     } commands[HD_SKID_QUADS];
 
+    hd_skid_parameters(player);
     uint32 count = 0, used = 0;
-    VID_VERTEX2D *vertices = vid_mesh_data_2d(skidMeshes[player]);
     for (uint32 index = 0; index < state->current.count; ++index)
     {
-        HdSkyPoint points[4];
-        CVECTOR colors[4];
-        Draw::tPixMap pixmap;
+        uint32 slot = skidGpuSlots[player][index];
+        const HdParamQuad *record = (const HdParamQuad *)vid_tex_data(skidGpu[player].parameters) + slot;
         sint32 bucket;
-        if (!hd_skid_quad(state, index, phase, camera, view, logicalHeight * viewport.w / viewport.h, logicalHeight, points, colors, &pixmap, &bucket))
+        if (!hd_skid_bucket(record, phase, camera, view, &bucket))
             continue;
-        Command draw = {used, bucket, (pixmap.tpage >> 5) & 3};
-        hd_sky_quad(vertices, &used, points, colors, &pixmap);
+        uint8 classes = coverage[state->current.quads[index].type & 1];
+        if (classes == 0)
+            continue;
+        Command draw = {slot * 6, bucket, ((sint32)record->values[11][1] >> 5) & 3, count, classes};
+        ++used;
         uint32 position = count++;
         while (position > 0 && commands[position - 1].bucket <= bucket)
         {
@@ -6609,12 +7819,14 @@ static void hd_skids_view(sint32 player, float phase, const MATRIXF *camera, con
     }
     if (used == 0)
         return;
-    vid_mesh_commit(skidMeshes[player]);
     for (uint32 index = 0; index < count; ++index)
-        for (sint32 pass = 0; pass < 2; ++pass)
+        for (sint32 pass = 0; pass < (commands[index].blend == 2 ? 2 : 1); ++pass)
         {
-            HdOrderKey order = {commands[index].bucket, HD_ORDER_SKIDS, 0, 0, 0, commands[index].first / 6, (uint32)pass};
-            hd_order_draw(&order, skidMaterials[pass == 0 ? 0 : commands[index].blend + 1], skidMeshes[player], 0, commands[index].first, 6);
+            if (commands[index].blend == 2 && (commands[index].coverage & (1 << pass)) == 0)
+                continue;
+            HdOrderKey order = {commands[index].bucket, HD_ORDER_SKIDS, 0, 0, 0, commands[index].order, (uint32)pass};
+            VID_MATERIAL *material = commands[index].blend == 2 ? skidMaterials[pass == 0 ? 0 : 3] : skidCompositeMaterial;
+            hd_param_order(skidGpu + player, material, &order, commands[index].first, camera, view, viewport, logicalHeight, phase);
         }
     hd_skid_quads += count;
 }
@@ -6680,6 +7892,21 @@ static bool hd_road_build(void)
         return false;
     hd_road_line_total = 0;
     uint32 maximum = 0;
+    uint32 capacity = 0;
+    for (sint32 index = 0; index < roadChunkCount; ++index)
+    {
+        const Chunk *chunk = Track::chunkList + index;
+        uint32 faces = chunk->lineBuf != 0 && chunk->lineBuf->m_num_elements > 1 ? chunk->lineBuf->m_num_elements - 1 : 0;
+        if (faces > 0xffffffff / (4 * sizeof(VID_VERTEX3D)) - capacity)
+            return false;
+        capacity += faces;
+    }
+    roadBatch.mesh = vid_mesh_create_3d(capacity != 0 ? capacity * 4 : 4);
+    roadBatch.line = true;
+    roadBatch.quadTopology = true;
+    if (roadBatch.mesh == 0)
+        return false;
+    VID_VERTEX3D *batchVertices = vid_mesh_data_3d(roadBatch.mesh);
     for (sint32 index = 0; index < roadChunkCount; ++index)
     {
         const Chunk *chunk = Track::chunkList + index;
@@ -6709,16 +7936,39 @@ static bool hd_road_build(void)
             ++line->count;
         }
         line->geometry.count = line->count * 6;
+        line->first = roadBatch.count / 6 * 4;
+        for (uint32 vertex = 0; vertex < line->count * 4; ++vertex)
+        {
+            const VID_VERTEX16 *in = vertices + vertex;
+            VID_VERTEX3D *out = batchVertices + line->first + vertex;
+            memset(out, 0, sizeof(*out));
+            for (sint32 axis = 0; axis < 3; ++axis)
+            {
+                out->pos[axis] = in->pos[axis] + line->geometry.center.v[axis] - worldBatchOrigin.v[axis];
+                out->n[axis] = in->n[axis];
+                out->extra[axis] = in->extra[axis];
+                out->color[axis] = in->color[axis];
+            }
+            out->pos[3] = in->extra[3];
+            out->color[3] = in->color[3];
+            out->uv[0] = in->tex[0];
+            out->uv[1] = in->tex[1];
+            out->n[3] = in->tex[2];
+            out->extra[3] = in->tex[3];
+        }
+        roadBatch.count += line->geometry.count;
         if (hd_road_line_total > 0xffffffff - line->count - 16)
             return false;
         hd_road_line_total += line->count;
         if (line->count > maximum)
             maximum = line->count;
-        vid_mesh_commit(line->geometry.mesh);
-        vid_mesh_static(line->geometry.mesh);
-        vid_index_commit(line->geometry.indices, line->geometry.count);
-        vid_index_static(line->geometry.indices);
+        vid_mesh_free(line->geometry.mesh);
+        vid_index_free(line->geometry.indices);
+        line->geometry.mesh = 0;
+        line->geometry.indices = 0;
     }
+    vid_mesh_commit(roadBatch.mesh);
+    vid_mesh_static(roadBatch.mesh);
     if (maximum > (0xffffffff - 16) / 32)
         return false;
     roadDrawCapacity = maximum * 32 + 16;
@@ -6730,6 +7980,46 @@ static bool hd_road_build(void)
         if (roadDraws[player] == 0)
             return false;
     }
+    return true;
+}
+
+static bool hd_road_index_build(void)
+{
+    uint32 modes = 0;
+    for (sint32 type = 0; type < 10; ++type)
+        if (((roadCurrent.lines[type].tpage >> 5) & 3) == 2)
+            modes |= 1 << type;
+    if (roadBatchIndices[0] != 0 && roadBatchIndices[1] != 0 && modes == roadIndexModes)
+        return true;
+    const uint32 topology[6] = {0, 1, 2, 2, 1, 3};
+    for (sint32 mode = 0; mode < 2; ++mode)
+    {
+        vid_index_free(roadBatchIndices[mode]);
+        roadBatchIndices[mode] = vid_index_create(roadBatch.count != 0 ? roadBatch.count : 1);
+        if (roadBatchStarts[mode] == 0)
+            roadBatchStarts[mode] = (uint32 *)malloc((roadChunkCount + 1) * sizeof(uint32));
+        if (roadBatchIndices[mode] == 0 || roadBatchStarts[mode] == 0)
+            return false;
+        uint32 *indices = vid_index_data(roadBatchIndices[mode]);
+        uint32 used = 0;
+        for (sint32 chunk = 0; chunk < roadChunkCount; ++chunk)
+        {
+            const HdLineChunk *line = roadChunks + chunk;
+            roadBatchStarts[mode][chunk] = used;
+            for (uint32 face = 0; face < line->count; ++face)
+            {
+                uint32 type = line->faces[face].type;
+                if (type >= 10 || (sint32)((modes >> type) & 1) != mode)
+                    continue;
+                for (sint32 corner = 0; corner < 6; ++corner)
+                    indices[used++] = line->first + face * 4 + topology[corner];
+            }
+        }
+        roadBatchStarts[mode][roadChunkCount] = used;
+        vid_index_commit(roadBatchIndices[mode], used);
+        vid_index_static(roadBatchIndices[mode]);
+    }
+    roadIndexModes = modes;
     return true;
 }
 
@@ -6778,7 +8068,7 @@ static bool hd_spike_build(void)
 
 static bool hd_road_resources(void)
 {
-    if (!hd_road_build() || !hd_spike_build())
+    if (!hd_road_build() || !hd_road_index_build() || !hd_spike_build())
     {
         hd_road_release();
         return false;
@@ -6800,7 +8090,7 @@ static bool hd_road_resources(void)
         entry[4] = pmx->clut;
         entry[5] = pmx->tpage;
         entry[6] = pmx->pad2;
-        entry[7] = type < 10 ? 2 : (uint8)pmx->flag;
+        entry[7] = type < 10 ? 2 | (roadCurrent.lineValid[type] ? 0 : 4) : (uint8)pmx->flag;
         HdTextureRegion region = {0};
         if ((hd_texture_filtering_enabled & HD_FILTER_WORLD) != 0)
             hd_texture_region(pmx, &region);
@@ -6843,8 +8133,31 @@ static bool hd_road_resources(void)
                 return false;
             *vid_mat_data(roadCompositeMaterials[orientation]) = *vid_mat_read(roadMaterials[orientation][1]);
             vid_mat_data(roadCompositeMaterials[orientation])->params[7] = 1;
+            vid_mat_data(roadCompositeMaterials[orientation])->blend = VID_BLEND_PREMULTIPLIED;
             vid_mat_commit(roadCompositeMaterials[orientation]);
         }
+    for (sint32 orientation = 0; orientation < 2; ++orientation)
+    {
+        for (sint32 pass = 0; pass < 6; ++pass)
+            if (roadBatchMaterials[orientation][pass] == 0)
+            {
+                roadBatchMaterials[orientation][pass] = vid_mat_create();
+                if (roadBatchMaterials[orientation][pass] == 0)
+                    return false;
+                *vid_mat_data(roadBatchMaterials[orientation][pass]) = *vid_mat_read(roadMaterials[orientation][pass]);
+                vid_mat_data(roadBatchMaterials[orientation][pass])->shader = worldBatchShader;
+                vid_mat_commit(roadBatchMaterials[orientation][pass]);
+            }
+        if (roadBatchCompositeMaterials[orientation] == 0)
+        {
+            roadBatchCompositeMaterials[orientation] = vid_mat_create();
+            if (roadBatchCompositeMaterials[orientation] == 0)
+                return false;
+            *vid_mat_data(roadBatchCompositeMaterials[orientation]) = *vid_mat_read(roadCompositeMaterials[orientation]);
+            vid_mat_data(roadBatchCompositeMaterials[orientation])->shader = worldBatchShader;
+            vid_mat_commit(roadBatchCompositeMaterials[orientation]);
+        }
+    }
     return true;
 }
 
@@ -6888,27 +8201,39 @@ static void hd_road_view(sint32 player, float phase, const MATRIXF *camera, cons
     if (commands == 0)
         return;
     uint32 count = 0;
-    if (hd_road_lines_enabled != 0 && view->world.chunk >= 0 && view->world.chunk < worldChunkCount && Track::gInViewList != 0 && Track::gInViewCount != 0 && Track::gInViewCount[view->world.chunk] <= 36)
-        for (sint32 index = 0; index < Track::gInViewCount[view->world.chunk]; ++index)
+    sint32 segmentFirst = 0, segmentCount = 0;
+    if (hd_road_lines_enabled != 0 && !view->world.skipRoadLines && hd_chunk_range(view, 0x800, &segmentFirst, &segmentCount))
+    {
+        MATRIXF model;
+        IdentityMatrixf(&model);
+        memcpy(model.t, &worldBatchOrigin, sizeof(model.t));
+        sint32 orientation = view->mirror != 0 ? 1 : 0;
+        for (sint32 mode = 0; mode < 2; ++mode)
         {
-            sint32 chunk = (uint16)((const sint16 *)Track::gInViewList)[view->world.chunk * 32 + index] & 1023;
-            if (!hd_road_chunk_visible(view, chunk, true))
-                continue;
-            const HdLineChunk *line = roadChunks + chunk;
-            for (uint32 face = 0; face < line->count; ++face)
+            sint32 first = segmentFirst, remaining = segmentCount;
+            for (sint32 part = 0; remaining > 0 && part < 2; ++part)
             {
-                const HdLineFace *source = line->faces + face;
-                float depth = 0;
-                for (sint32 axis = 0; axis < 3; ++axis)
-                    depth += camera->m[axis][2] * (line->geometry.center.v[axis] + source->center.v[axis] - camera->t[axis]);
-                sint32 bucket = (sint32)floorf(depth / 8) + 75;
-                if (!roadCurrent.lineValid[source->type] || bucket <= 0 || bucket > view->orderTableSize - 3)
-                    continue;
-                HdLineDraw draw = {chunk, bucket, face, count};
-                commands[count++] = draw;
-                ++hd_road_line_quads;
+                sint32 end = first + remaining;
+                if (end > roadChunkCount)
+                    end = roadChunkCount;
+                HdWorldChunk mesh = roadBatch;
+                mesh.indices = roadBatchIndices[mode];
+                mesh.quadTopology = false;
+                mesh.count = roadBatchStarts[mode][end] - roadBatchStarts[mode][first];
+                if (mesh.count != 0)
+                    for (sint32 pass = 0; pass < (mode == 0 ? 1 : 2); ++pass)
+                    {
+                        VID_MATERIAL *material = mode == 0 ? roadBatchCompositeMaterials[orientation] : roadBatchMaterials[orientation][pass == 0 ? 0 : 3];
+                        vid_pass(material);
+                        hd_world_submit(&mesh, &model, camera, view, viewport, logicalHeight, -1, -1, 0, -1, 1, 0, roadBatchStarts[mode][first], 0, 1, 0, material);
+                        ++hd_road_line_submits;
+                    }
+                hd_road_line_quads += mesh.count / 6;
+                remaining -= end - first;
+                first = 0;
             }
         }
+    }
     MATRIXF spike;
     if (hd_spike_enabled != 0 && roadCurrent.spikeActive && hd_road_chunk_visible(view, roadCurrent.chunk, false))
     {
@@ -6940,12 +8265,14 @@ static void hd_road_view(sint32 player, float phase, const MATRIXF *camera, cons
         HdWorldChunk mesh;
         sint32 type;
         sint32 rgb = -1;
+        uint32 first = draw->face * 6;
         if (draw->chunk >= 0)
         {
-            mesh = roadChunks[draw->chunk].geometry;
+            mesh = roadBatch;
             IdentityMatrixf(&model);
-            memcpy(model.t, &mesh.center, sizeof(mesh.center));
+            memcpy(model.t, &worldBatchOrigin, sizeof(model.t));
             type = roadChunks[draw->chunk].faces[draw->face].type;
+            first += roadChunks[draw->chunk].first / 4 * 6;
         }
         else
         {
@@ -6958,17 +8285,19 @@ static void hd_road_view(sint32 player, float phase, const MATRIXF *camera, cons
         const Draw::tPixMap *pmx = type < 10 ? roadCurrent.lines + type : &roadCurrent.spike;
         sint32 blend = (pmx->tpage >> 5) & 3;
         bool semi = type < 10 || (pmx->flag & 2) != 0;
-        if (semi && blend == 0)
+        VID_MATERIAL **materials = draw->chunk >= 0 ? roadBatchMaterials[view->mirror != 0 ? 1 : 0] : roadMaterials[view->mirror != 0 ? 1 : 0];
+        VID_MATERIAL *composite = draw->chunk >= 0 ? roadBatchCompositeMaterials[view->mirror != 0 ? 1 : 0] : roadCompositeMaterials[view->mirror != 0 ? 1 : 0];
+        if (semi && blend != 2)
         {
             HdOrderKey order = {draw->bucket, draw->chunk >= 0 ? HD_ORDER_LINES : HD_ORDER_SPIKE, 0, 0, 0, draw->order, 0};
-            hd_world_submit(&mesh, &model, camera, view, viewport, logicalHeight, -1, rgb, 0, -1, 1, 0, draw->face * 6, 0, 1, &order, roadCompositeMaterials[view->mirror != 0 ? 1 : 0]);
+            hd_world_submit(&mesh, &model, camera, view, viewport, logicalHeight, -1, rgb, 0, -1, 1, 0, first, 0, 1, &order, composite);
             ++hd_road_line_submits;
             continue;
         }
         for (sint32 pass = 0; pass < (semi ? 2 : 1); ++pass)
         {
             HdOrderKey order = {draw->bucket, draw->chunk >= 0 ? HD_ORDER_LINES : HD_ORDER_SPIKE, 0, 0, 0, draw->order, (uint32)pass};
-            hd_world_submit(&mesh, &model, camera, view, viewport, logicalHeight, -1, rgb, 0, -1, 1, 0, draw->face * 6, 0, 1, &order, roadMaterials[view->mirror != 0 ? 1 : 0][!semi ? 5 : pass == 0 ? 0 : blend + 1]);
+            hd_world_submit(&mesh, &model, camera, view, viewport, logicalHeight, -1, rgb, 0, -1, 1, 0, first, 0, 1, &order, materials[!semi ? 5 : pass == 0 ? 0 : blend + 1]);
             ++hd_road_line_submits;
         }
     }
@@ -7017,6 +8346,22 @@ static void hd_feedback_quad(VID_VERTEX *vertices, float offset, VID_RECT viewpo
     }
 }
 
+static const char screenVertex[] = "layout(location=0)in vec4 aPos;layout(location=1)in vec2 aUV;layout(location=2)in vec4 aColor;uniform vec4 uDraw[2];out vec2 vUV;out vec4 vColor;out float vDepth;out vec2 vFog;void main(){gl_Position=vec4(aPos.xy*uDraw[0].xy+vec2(gl_VertexID<6?uDraw[0].z:uDraw[0].w,0.0),0.0,1.0);vUV=aUV*uDraw[1].xy+uDraw[1].zw;vColor=aColor;vDepth=1.0;vFog=vec2(0.0);}";
+
+static VID_GEOMETRY *hd_screen_mesh(uint32 quads)
+{
+    VID_GEOMETRY *mesh = vid_mesh_create(quads * 6);
+    if (mesh == 0)
+        return 0;
+    VID_RECT viewport = {0, 0, 1, 1};
+    VID_VERTEX *vertices = vid_mesh_data(mesh);
+    for (uint32 quad = 0; quad < quads; ++quad)
+        hd_feedback_quad(vertices + quad * 6, 0, viewport, 1, 1, 1);
+    vid_mesh_commit(mesh);
+    vid_mesh_static(mesh);
+    return mesh;
+}
+
 static bool hd_feedback_prepare(sint32 width, sint32 height, bool ui = false)
 {
     float offsets[2];
@@ -7048,7 +8393,7 @@ static bool hd_feedback_prepare(sint32 width, sint32 height, bool ui = false)
     if (feedbackState.history == 0)
         feedbackState.history = vid_target_create_scene_ldr();
     if (feedbackShader == 0)
-        feedbackShader = vid_shader_create(0, "uniform sampler2D uAux0;void main(){vec3 rgb=texture(uTex,vUV).rgb;float stp=texture(uAux0,vUV).r;if(stp<0.5&&all(equal(rgb,vec3(0.0))))discard;outColor=vec4(rgb,stp>=0.5?0.5:1.0);}");
+        feedbackShader = vid_shader_create(screenVertex, "uniform sampler2D uAux0;void main(){vec3 rgb=texture(uTex,vUV).rgb;float stp=texture(uAux0,vUV).r;if(stp<0.5&&all(equal(rgb,vec3(0.0))))discard;outColor=vec4(rgb,stp>=0.5?0.5:1.0);}");
     if (feedbackState.output == 0 || feedbackState.history == 0 || feedbackShader == 0)
         return false;
     if (feedbackState.material == 0)
@@ -7083,12 +8428,9 @@ static bool hd_feedback_prepare(sint32 width, sint32 height, bool ui = false)
         vid_mat_commit(feedbackState.maskMaterial);
     }
     if (feedbackState.maskMesh == 0)
-        feedbackState.maskMesh = vid_mesh_create(6);
+        feedbackState.maskMesh = hd_screen_mesh(1);
     if (feedbackState.maskMesh == 0)
         return false;
-    VID_RECT full = {0, 0, width, height};
-    hd_feedback_quad(vid_mesh_data(feedbackState.maskMesh), 0, full, width, height, 240);
-    vid_mesh_commit(feedbackState.maskMesh);
     if (feedbackState.outputReady && feedbackState.completedGeneration != feedbackSource.generation && (!feedbackState.historyReady || feedbackState.capturedGeneration != feedbackSource.generation))
     {
         if (!vid_target_copy(feedbackState.history, feedbackState.output))
@@ -7102,14 +8444,10 @@ static bool hd_feedback_prepare(sint32 width, sint32 height, bool ui = false)
     for (sint32 player = 0; player < current.viewCount; ++player)
     {
         if (feedbackState.meshes[player] == 0)
-            feedbackState.meshes[player] = vid_mesh_create(12);
+            feedbackState.meshes[player] = hd_screen_mesh(2);
         if (feedbackState.meshes[player] == 0)
             return false;
-        VID_RECT viewport = {0, height * player / current.viewCount, width, height * (player + 1) / current.viewCount - height * player / current.viewCount};
-        VID_VERTEX *vertices = vid_mesh_data(feedbackState.meshes[player]);
-        for (sint32 pass = 0; pass < stamps; ++pass)
-            hd_feedback_quad(vertices + pass * 6, offsets[pass], viewport, width, height, current.viewCount == 2 ? 120.0f : 240.0f);
-        vid_mesh_commit(feedbackState.meshes[player]);
+
     }
     return true;
 }
@@ -7141,6 +8479,12 @@ static void hd_feedback_view(sint32 player)
         return;
     float offsets[2];
     sint32 stamps = hd_feedback_stamps(feedbackSource.mode, offsets);
+    float width = (float)feedbackState.width, height = (float)feedbackState.height;
+    VID_RECT viewport = {0, feedbackState.height * player / feedbackState.views, feedbackState.width, feedbackState.height * (player + 1) / feedbackState.views - feedbackState.height * player / feedbackState.views};
+    float logicalHeight = feedbackState.views == 2 ? 120.0f : 240.0f;
+    float logicalWidth = logicalHeight * viewport.w / viewport.h;
+    float uniforms[2][4] = {{1, 1, offsets[0] * 2 / logicalWidth, stamps > 1 ? offsets[1] * 2 / logicalWidth : 0}, {viewport.w / width, viewport.h / height, viewport.x / width, 1 - (viewport.y + viewport.h) / height}};
+    vid_uniforms(&uniforms[0][0], 2);
     vid_pass(feedbackState.material);
     hd_submit(feedbackState.meshes[player], 0, 0, stamps * 6);
     hd_feedback_draws += stamps;
@@ -7209,6 +8553,7 @@ static bool hd_lighting_depth_resources(void)
         VID_MATERIAL_DATA *material = vid_mat_data(carDepthMaterial);
         *material = *vid_mat_read(carMaterial[0]);
         material->shader = carDepthShader;
+        material->params[4] = 1;
         material->aux[5] = material->aux[6] = 0;
         material->cull = 0;
         material->blend = VID_BLEND_NONE;
@@ -7220,41 +8565,131 @@ static bool hd_lighting_depth_resources(void)
     return true;
 }
 
-static bool hd_lighting_caster_visible(const HdWorldChunk *mesh, const MATRIXF *model, const HdLightingProjection *projection)
+static bool hd_lighting_caster_bounds(const HdWorldChunk *mesh, const MATRIXF *model, const HdLightingProjection *projection, float margin, bool *contained)
 {
-    float scale = 0;
+    VEC3F center;
+    float half[3] = {0};
+    float fallback = 0;
     for (sint32 row = 0; row < 3; ++row)
+    {
+        center.v[row] = model->t[row];
         for (sint32 axis = 0; axis < 3; ++axis)
-            scale += model->m[row][axis] * model->m[row][axis];
-    float radius = (mesh->radius > 0 ? mesh->radius : 1024) * sqrtf(scale);
+            if (mesh->boundsValid)
+            {
+                center.v[row] += model->m[row][axis] * (mesh->boundsMin.v[axis] + mesh->boundsMax.v[axis]) * 0.5f;
+                half[axis] = (mesh->boundsMax.v[axis] - mesh->boundsMin.v[axis]) * 0.5f;
+            }
+            else
+                fallback += model->m[row][axis] * model->m[row][axis];
+    }
+    fallback = mesh->boundsValid ? 0 : (mesh->radius > 0 ? mesh->radius : 1024) * sqrtf(fallback);
+    bool inside = true;
     for (sint32 plane = 0; plane < 3; ++plane)
         for (sint32 sign = -1; sign <= 1; sign += 2)
         {
-            float distance = projection->rows[3][3] + sign * projection->rows[plane][3];
-            float normalLength = 0;
+            float normal[3];
+            float distance = margin * projection->rows[3][3] + sign * projection->rows[plane][3];
+            float normalLength = 0, support = 0;
             for (sint32 axis = 0; axis < 3; ++axis)
             {
-                float normal = projection->rows[3][axis] + sign * projection->rows[plane][axis];
-                distance += normal * model->t[axis];
-                normalLength += normal * normal;
+                normal[axis] = margin * projection->rows[3][axis] + sign * projection->rows[plane][axis];
+                distance += normal[axis] * center.v[axis];
+                normalLength += normal[axis] * normal[axis];
             }
-            if (distance < -radius * sqrtf(normalLength))
+            for (sint32 axis = 0; axis < 3; ++axis)
+            {
+                float along = 0;
+                for (sint32 row = 0; row < 3; ++row)
+                    along += normal[row] * model->m[row][axis];
+                support += fabsf(along) * half[axis];
+            }
+            support += fallback * sqrtf(normalLength);
+            if (distance + support < 0)
                 return false;
+            if (distance - support < 0)
+                inside = false;
         }
+    if (contained != 0)
+        *contained = inside;
     return true;
 }
 
-static void hd_lighting_caster(const HdWorldChunk *geometry, const MATRIXF *model, const HdLightingScene *scene, sint32 slot, uint32 first = 0)
+static bool hd_lighting_caster_visible(const HdWorldChunk *mesh, const MATRIXF *model, const HdLightingProjection *projection)
 {
-    if (geometry->count == 0 || !hd_lighting_caster_visible(geometry, model, lightingCapture))
-        return;
-    HdWorldChunk mesh = *geometry;
-    mesh.noNight = true;
-    VID_MATERIAL *material = carDepthMaterial;
-    vid_pass(material);
-    VID_RECT viewport = {0, 0, HD_LIGHTING_MAP_SIZE, HD_LIGHTING_MAP_SIZE};
-    hd_world_submit(&mesh, model, &scene->camera, &scene->view, viewport, 240, -1, -1, slot, 0, 1, 0, first, 0, 1, 0, material);
-    ++hd_lighting_caster_draws;
+    if (!hd_lighting_caster_bounds(mesh, model, projection, 1, 0))
+        return false;
+    bool covered = false;
+    if (projection->covered != 0)
+        hd_lighting_caster_bounds(mesh, model, projection->covered, 0.76f, &covered);
+    return !covered;
+}
+
+static bool hd_car_caster_prepare(HdCarModel *car, float phase)
+{
+    if (car->casterGeneration == renderGeneration)
+        return true;
+    uint64 mask = 0;
+    bool changed = !car->casterReady;
+    car->casterBounds.boundsValid = false;
+    for (sint32 index = 0; index < 57; ++index)
+    {
+        HdCarPart *part = car->parts + index;
+        const HdCarPartPose *pose = part->poses;
+        if (pose->visible == 0 || pose->visible >= 17 || part->geometry.count == 0 || (car->type < 28 && (index == 45 || index == 46)))
+            continue;
+        const HdCarSurface *surfaces = hd_car_surfaces(car, index, 0);
+        if (surfaces == 0)
+            return false;
+        mask |= (uint64)1 << index;
+        if (car->casterRevisions[index] != part->surfaceRevision[0])
+            changed = true;
+        MATRIXF model;
+        hd_car_part_model(part, 0, phase, &model);
+        VEC3F low, high;
+        for (sint32 row = 0; row < 3; ++row)
+        {
+            float center = model.t[row], radius = 0;
+            for (sint32 axis = 0; axis < 3; ++axis)
+            {
+                center += model.m[row][axis] * (part->geometry.boundsMin.v[axis] + part->geometry.boundsMax.v[axis]) * 0.5f;
+                radius += fabsf(model.m[row][axis]) * (part->geometry.boundsMax.v[axis] - part->geometry.boundsMin.v[axis]) * 0.5f;
+            }
+            low.v[row] = center - radius;
+            high.v[row] = center + radius;
+            if (!car->casterBounds.boundsValid || low.v[row] < car->casterBounds.boundsMin.v[row])
+                car->casterBounds.boundsMin.v[row] = low.v[row];
+            if (!car->casterBounds.boundsValid || high.v[row] > car->casterBounds.boundsMax.v[row])
+                car->casterBounds.boundsMax.v[row] = high.v[row];
+        }
+        car->casterBounds.boundsValid = true;
+    }
+    changed = changed || mask != car->casterMask;
+    if (changed)
+    {
+        if (car->casterIndices == 0)
+            car->casterIndices = vid_index_create(car->batchCapacity);
+        uint32 *indices = vid_index_data(car->casterIndices);
+        if (indices == 0)
+            return false;
+        uint32 used = 0;
+        for (sint32 index = 0; index < 57; ++index)
+            if ((mask & ((uint64)1 << index)) != 0)
+            {
+                const HdCarPart *part = car->parts + index;
+                for (uint32 face = 0; face < part->geometry.count / 3; ++face)
+                    if (part->renderSurfaces[0][face].valid && part->renderSurfaces[0][face].castsShadow)
+                        for (uint32 corner = 0; corner < 3; ++corner)
+                            indices[used++] = part->batchFirst + face * 3 + corner;
+            }
+        vid_index_commit(car->casterIndices, used);
+        car->casterCount = used;
+        car->casterMask = mask;
+        for (sint32 index = 0; index < 57; ++index)
+            car->casterRevisions[index] = car->parts[index].surfaceRevision[0];
+        car->casterReady = true;
+    }
+    car->casterGeneration = renderGeneration;
+    return true;
 }
 
 static bool hd_lighting_scene(void *context, const HdLightingProjection *projection)
@@ -7266,57 +8701,30 @@ static bool hd_lighting_scene(void *context, const HdLightingProjection *project
     lightingCapture = projection;
     for (sint32 slot = 0; slot < 9 && worldSubmissionValid; ++slot)
     {
-        const HdCarModel *car = carModels + slot;
-        if (!car->active)
+        HdCarModel *car = carModels + slot;
+        if (!car->active || car->batchMesh == 0)
             continue;
-        for (sint32 partIndex = 0; partIndex < 57; ++partIndex)
+        if (!hd_car_caster_prepare(car, scene->phase))
         {
-            const HdCarPart *part = car->parts + partIndex;
-            const HdCarPartPose *pose = part->poses;
-            if (pose->visible == 0 || pose->visible >= 17 || part->geometry.count == 0 || (car->type < 28 && (partIndex == 45 || partIndex == 46)))
-                continue;
+            worldSubmissionValid = false;
+            break;
+        }
+        MATRIXF boundsModel;
+        IdentityMatrixf(&boundsModel);
+        if (car->casterCount != 0 && hd_lighting_caster_visible(&car->casterBounds, &boundsModel, projection))
+        {
+            HdWorldChunk mesh = {};
+            mesh.mesh = car->batchMesh;
+            mesh.indices = car->casterIndices;
+            mesh.count = car->casterCount;
+            mesh.noNight = true;
             MATRIXF model;
-            hd_car_part_model(carModels[slot].parts + partIndex, 0, scene->phase, &model);
-            const HdCarSurface *surfaces = hd_car_surfaces(carModels + slot, partIndex, 0);
-            if (surfaces == 0)
-            {
-                worldSubmissionValid = false;
-                break;
-            }
-            HdCarPart *cached = carModels[slot].parts + partIndex;
-            if (cached->shadowIndices == 0)
-                cached->shadowIndices = vid_index_create(part->geometry.count);
-            if (cached->shadowIndices == 0)
-            {
-                worldSubmissionValid = false;
-                break;
-            }
-            if (cached->shadowGeneration != renderGeneration)
-            {
-                uint32 *indices = vid_index_data(cached->shadowIndices);
-                uint32 used = 0;
-                bool changed = false;
-                for (uint32 face = 0; face < part->geometry.count / 3; ++face)
-                    if (surfaces[face].valid && surfaces[face].castsShadow)
-                        for (uint32 corner = 0; corner < 3; ++corner)
-                        {
-                            uint32 value = face * 3 + corner;
-                            if (indices[used] != value)
-                                changed = true;
-                            indices[used++] = value;
-                        }
-                if (used != 0 && (changed || used != cached->shadowCount))
-                    vid_index_commit(cached->shadowIndices, used);
-                cached->shadowCount = used;
-                cached->shadowGeneration = renderGeneration;
-            }
-            if (cached->shadowCount != 0)
-            {
-                HdWorldChunk mesh = part->geometry;
-                mesh.indices = cached->shadowIndices;
-                mesh.count = cached->shadowCount;
-                hd_lighting_caster(&mesh, &model, scene, slot);
-            }
+            IdentityMatrixf(&model);
+            memcpy(model.t, &worldBatchOrigin, sizeof(model.t));
+            vid_pass(carDepthMaterial);
+            VID_RECT viewport = {0, 0, HD_LIGHTING_MAP_SIZE, HD_LIGHTING_MAP_SIZE};
+            hd_world_submit(&mesh, &model, &scene->camera, &scene->view, viewport, 240, -1, -1, slot, 0, 1, 0, 0, 0, 1, 0, carDepthMaterial);
+            ++hd_lighting_caster_draws;
         }
     }
     lightingCapture = 0;
@@ -7452,6 +8860,8 @@ static bool hd_world_view(sint32 player, float phase, VID_RECT viewport)
         if (!hd_world_geometry(world, &model, &camera, &view, viewport, logicalHeight, -1, 0, hd_world_group(&view, chunk), 0, 0, true, false))
             return false;
     }
+    sint32 objectFirst = 0, objectCount = 0;
+    hd_chunk_range(&view, 0x4800, &objectFirst, &objectCount);
     for (uint32 i = 0; i < worldObjectCount; ++i)
     {
         const HdObjectEntry *entry = worldObjects + i;
@@ -7466,7 +8876,9 @@ static bool hd_world_view(sint32 player, float phase, VID_RECT viewport)
                     return false;
                 ++hd_destruction_draws;
             }
-        if (!hd_object_visible(entry, &view))
+        if (!hd_object_visible(entry, &view, objectFirst, objectCount))
+            continue;
+        if (hd_fixed_billboard_match(i) && worldDefinitions[entry->current.definition].semiRevision == worldSemiRevision && worldDefinitions[entry->current.definition].semiCount == 0)
             continue;
         MATRIXF model;
         hd_object_matrix(entry, phase, &camera, &model);
@@ -7519,7 +8931,8 @@ static sint32 hd_player_cube_face(void *context, const VID_CUBE_FACE *face)
     VID_GEOMETRY *originalSkids = skidMeshes[0];
     skyMeshes[0] = cubeSkyMeshes[face->index];
     skidMeshes[0] = cubeSkidMeshes[face->index];
-    hd_sky_view(0, scene->phase, &camera, &view, viewport, (float)face->size);
+    if (face->index != 3)
+        hd_sky_view(0, scene->phase, &camera, &view, viewport, (float)face->size);
     skyMeshes[0] = originalSky;
     worldSemiCount = 0;
     orderedCount = 0;
@@ -7538,6 +8951,8 @@ static sint32 hd_player_cube_face(void *context, const VID_CUBE_FACE *face)
         if (!hd_world_geometry(world, &model, &camera, &view, viewport, (float)face->size, -1, 0, chunk, 0, 0, true, false))
             worldSubmissionValid = false;
     }
+    sint32 objectFirst = 0, objectCount = 0;
+    hd_chunk_range(&view, 0x4800, &objectFirst, &objectCount);
     for (uint32 index = 0; index < worldObjectCount && worldSubmissionValid; ++index)
     {
         const HdObjectEntry *entry = worldObjects + index;
@@ -7550,15 +8965,20 @@ static sint32 hd_player_cube_face(void *context, const VID_CUBE_FACE *face)
             if (!hd_world_geometry(worldDefinitions + piece->definition, &model, &camera, &view, viewport, (float)face->size, piece->light, entry->current.orderOffset, group, entry->ordinal, pieceIndex))
                 worldSubmissionValid = false;
         }
-        if (!hd_object_visible(entry, &view))
+        if (!hd_object_visible(entry, &view, objectFirst, objectCount))
+            continue;
+        if (hd_fixed_billboard_match(index) && worldDefinitions[entry->current.definition].semiRevision == worldSemiRevision && worldDefinitions[entry->current.definition].semiCount == 0)
             continue;
         MATRIXF model;
-        hd_object_matrix(entry, scene->phase, &scene->sourceCamera, &model);
+        hd_object_matrix(entry, scene->phase, &camera, &model);
         if (!hd_world_geometry(worldDefinitions + entry->current.definition, &model, &camera, &view, viewport, (float)face->size, entry->current.light, entry->current.orderOffset, group, entry->ordinal, entry->pieceCount, !entry->current.billboard, !(hd_static_world_match(index, &model) || hd_billboard_match(index, 0, &model))))
             worldSubmissionValid = false;
     }
-    hd_road_view(0, scene->phase, &camera, &view, viewport, (float)face->size);
-    hd_skids_view(0, scene->phase, &camera, &view, viewport, (float)face->size);
+    if (face->index != 2)
+    {
+        hd_road_view(0, scene->phase, &camera, &view, viewport, (float)face->size);
+        hd_skids_view(0, scene->phase, &camera, &view, viewport, (float)face->size);
+    }
     skidMeshes[0] = originalSkids;
     HdCarOrder orders[9] = {};
     for (sint32 slot = 0; slot < 9; ++slot)
@@ -7608,7 +9028,7 @@ static bool hd_player_cube_prepare(float phase)
             material->aux[2] = vid_target_depth_texture(playerCube);
             material->shader = carCubeShader;
             material->aux_filter[1] = VID_FILTER_TRILINEAR;
-            material->blend = VID_BLEND_NONE;
+            material->blend = VID_BLEND_PREMULTIPLIED;
             material->depth_write = 1;
             material->depth_bias_slope = 0;
             material->depth_bias_units = 0;
@@ -7629,22 +9049,6 @@ static bool hd_player_cube_prepare(float phase)
                 material->shader = carCubeShader;
                 vid_mat_commit(carCubeSemiMaterials[blend][orientation]);
             }
-    if (cubeSkyCapacity < skyCapacities[0])
-    {
-        cubeSkyCapacity = skyCapacities[0];
-        for (sint32 face = 0; face < 6; ++face)
-        {
-            vid_mesh_free(cubeSkyMeshes[face]);
-            cubeSkyMeshes[face] = vid_mesh_create_2d(cubeSkyCapacity);
-        }
-    }
-    for (sint32 face = 0; face < 6; ++face)
-    {
-        if (cubeSkidMeshes[face] == 0)
-            cubeSkidMeshes[face] = vid_mesh_create_2d(HD_SKID_QUADS * 6);
-        if (cubeSkyMeshes[face] == 0 || cubeSkidMeshes[face] == 0)
-            return false;
-    }
     MATRIXF root;
     if (!hd_render_car_pose(owner, phase, &root))
         return false;
@@ -7748,7 +9152,7 @@ static bool hd_world_frame(float phase, bool diagnostic, bool ui, bool capture =
             return false;
     sint32 width, height;
     vid_resize(&width, &height);
-    if (width <= 0 || height <= 0 || !hd_world_resources() || !hd_world_textures() || !hd_world_build() || !hd_world_batch_build() || !hd_sky_resources() || !hd_car_resources() || !hd_shadow_build(phase) || !hd_weather_resources() || !hd_souffle_resources() || !hd_celestial_resources() || !hd_lens_resources() || !hd_car_halo_resources() || !hd_track_halo_resources() || !hd_skid_resources() || !hd_road_resources())
+    if (width <= 0 || height <= 0 || !hd_world_resources() || !hd_world_textures() || !hd_world_build() || !hd_world_batch_build() || !hd_sky_resources() || !hd_car_resources() || !hd_weather_resources() || !hd_souffle_resources() || !hd_celestial_resources() || !hd_lens_resources() || !hd_car_halo_resources() || !hd_track_halo_resources() || !hd_skid_resources() || !hd_road_resources())
         return false;
     lensGpuFrame = hd_lens_eligible() && hd_lens_enabled != 0 && hd_celestial_enabled != 0;
     vid_stats_read(&renderStatsBegin);
@@ -8218,7 +9622,7 @@ static bool hd_pause_prepare(sint32 width, sint32 height)
     if (!sceneFrame.ready || sceneFrame.width <= 0 || sceneFrame.height <= 0 || !hd_ui_pause_ready() || !hd_ui_prepare(width, height))
         return false;
     if (sceneShader == 0)
-        sceneShader = vid_shader_create(0, "void main(){outColor=vec4(texture(uTex,vUV).rgb,1.0);}");
+        sceneShader = vid_shader_create(screenVertex, "void main(){outColor=vec4(texture(uTex,vUV).rgb,1.0);}");
     if (sceneShader == 0)
         return false;
     if (sceneFrame.material == 0)
@@ -8235,12 +9639,9 @@ static bool hd_pause_prepare(sint32 width, sint32 height)
         vid_mat_commit(sceneFrame.material);
     }
     if (sceneFrame.mesh == 0)
-        sceneFrame.mesh = vid_mesh_create(6);
+        sceneFrame.mesh = hd_screen_mesh(1);
     if (sceneFrame.mesh == 0)
         return false;
-    VID_RECT viewport = {0, 0, width, height};
-    VID_VERTEX *vertices = vid_mesh_data(sceneFrame.mesh);
-    hd_feedback_quad(vertices, 0, viewport, width, height, 240);
     float fitWidth = (float)width;
     float fitHeight = width * (float)sceneFrame.height / sceneFrame.width;
     if (fitHeight > height)
@@ -8248,12 +9649,10 @@ static bool hd_pause_prepare(sint32 width, sint32 height)
         fitHeight = (float)height;
         fitWidth = height * (float)sceneFrame.width / sceneFrame.height;
     }
-    for (sint32 i = 0; i < 6; ++i)
-    {
-        vertices[i].pos[0] *= fitWidth / width;
-        vertices[i].pos[1] *= fitHeight / height;
-    }
-    vid_mesh_commit(sceneFrame.mesh);
+    memset(sceneFrame.uniforms, 0, sizeof(sceneFrame.uniforms));
+    sceneFrame.uniforms[0][0] = fitWidth / width;
+    sceneFrame.uniforms[0][1] = fitHeight / height;
+    sceneFrame.uniforms[1][0] = sceneFrame.uniforms[1][1] = 1;
     return true;
 }
 
@@ -8275,6 +9674,7 @@ static bool hd_pause_frame(bool diagnostic)
     }
     VID_RECT viewport = {0, 0, width, height};
     vid_viewport(viewport);
+    vid_uniforms(&sceneFrame.uniforms[0][0], 2);
     vid_pass(sceneFrame.material);
     if (!vid_submit(sceneFrame.mesh, 0, 0, 6) || !hd_ui_render(false))
     {

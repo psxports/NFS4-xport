@@ -10,6 +10,8 @@ static VID_GEOMETRY *lensScreen;
 static VID_SHADER *lensCopyShader;
 static VID_SHADER *lensVisibilityShader;
 static VID_SHADER *lensDrawShader;
+static VID_SHADER *lensParamShader;
+static VID_MATERIAL *lensParamMaterials[6];
 static VID_MATERIAL *lensCopyMaterial;
 static VID_MATERIAL *lensVisibilityMaterials[2];
 static VID_MATERIAL *lensDrawMaterials[6];
@@ -23,6 +25,10 @@ static sint32 lensPreviousIndex;
 static sint32 lensPreviousTick;
 static bool lensPreviousValid;
 static bool lensPreviousHold;
+static float lensVisibilityMaximum;
+static float lensVisibilityOldMaximum;
+static float lensPreviousMaximum;
+static float lensPreviousOldMaximum;
 
 static const char lensVisibilityFragment[] = "uniform sampler2D uAux0;\n"
                                              "void main(){float old=uParams[0].w>0.5?texelFetch(uAux0,ivec2(0),0).r:0.0;"
@@ -37,17 +43,28 @@ static const char lensDrawVertex[] = "layout(location=0) in vec4 aPos;layout(loc
                                      "gl_Position=aPos;if((aTex.w&16384u)!=0u)gl_Position.xy=uDraw[0].yz+(aPos.xy-uDraw[0].yz)*vVisibility;"
                                      "vUV=aUV;vColor=aColor/255.0;if((aTex.w&8192u)==0u)vColor.rgb*=vVisibility;vDepth=aPos.w;vFog=vec2(0.0);vSkyTex=aTex;}\n";
 
-static const char lensDrawFragment[] = "flat in uvec4 vSkyTex;in float vVisibility;\n" VID_PSX_SAMPLING_GLSL HD_VRAM_WORD_GLSL "void main(){if(vVisibility<=0.0)discard;if(vSkyTex.z==0u){outColor=vec4(vColor.rgb,1.0);return;}"
-                                       "vec4 color=vidPsxColor(vidPsxDecode(vSkyTex.y,vSkyTex.x,ivec2(floor(vUV))),uint(uParams[0].x),false);"
+static const char lensDrawFragment[] = "flat in uvec4 vSkyTex;in float vVisibility;\n" VID_PSX_SAMPLING_GLSL HD_VRAM_WORD_GLSL HD_PSX_PREMULTIPLIED_GLSL "void main(){if(vVisibility<=0.0)discard;bool composite=uParams[1].w>0.5;if(vSkyTex.z==0u){outColor=vec4(vColor.rgb,composite?0.0:1.0);return;}"
+                                       "uint word=vidPsxDecode(vSkyTex.y,vSkyTex.x,ivec2(floor(vUV)));bool semi=(word&32768u)!=0u;vec4 color=vidPsxColor(word,composite?0u:uint(uParams[0].x),false);"
                                        "if(color.a==0.0)discard;vec3 rgb=(vSkyTex.z&2u)!=0u?color.rgb*vVisibility:color.rgb*vColor.rgb*(255.0/128.0);"
-                                       "outColor=vec4(clamp(rgb,0.0,1.0),uParams[0].y);}\n";
+                                       "outColor=composite?hdPsxPremultiplied(rgb,(vSkyTex.y>>5)&3u,semi):vec4(clamp(rgb,0.0,1.0),uParams[0].y); }\n";
+
+static const char lensParamVertex[] = "layout(location=0)in vec4 aPos;uniform vec4 uDraw[3];uniform sampler2D uAux0;uniform sampler2D uAux1;out vec2 vUV;out vec4 vColor;out float vDepth;out vec2 vFog;flat out uvec4 vSkyTex;out float vVisibility;"
+    "vec4 record(int i){return texelFetch(uAux1,ivec2(i,int(aPos.x)),0);}"
+    "void main(){int c=int(aPos.y);vec4 p=record(c),shape=record(13);uint flags=uint(record(14)[c]);float angle=(uDraw[2].x+uDraw[1].x*0.5+uDraw[1].y*0.5-uDraw[2].y)*shape.z*0.00153398078789;float s=sin(angle),k=cos(angle);"
+    "vec2 offset=vec2(p.x*k-p.y*s,p.x*s+p.y*k)*shape.xy;float coefficient=p.w;if(shape.z!=0.0){offset*=uDraw[1].z;if((flags&16384u)!=0u)coefficient=uDraw[1].z;}"
+    "gl_Position=vec4((uDraw[2].xy*coefficient+offset)*2.0/uDraw[1].xy,0.0,1.0);vec2 history=texelFetch(uAux0,ivec2(0),0).rg;vVisibility=mix(history.y,history.x,uDraw[0].x);"
+    "if((flags&16384u)!=0u)gl_Position.xy=uDraw[0].yz+(gl_Position.xy-uDraw[0].yz)*vVisibility;uint color=uint(record(9)[c]);vColor=vec4(vec3(color&255u,(color>>8)&255u,(color>>16)&255u)/255.0,1.0);if((flags&8192u)==0u)vColor.rgb*=vVisibility;"
+    "uint uv=uint(record(10)[c]);vUV=vec2(uv&255u,uv>>8)+vec2(0.5);vSkyTex=uvec4(record(11));vDepth=1.0;vFog=vec2(0.0);}";
 
 void hd_lens_gpu_reset(bool hold)
 {
     hd_lens_gpu_complete(false);
     lensVisibilityHold = hold;
     if (!hold)
+    {
         lensVisibilityValid = false;
+        lensVisibilityMaximum = lensVisibilityOldMaximum = 0;
+    }
 }
 
 void hd_lens_gpu_complete(bool success)
@@ -58,6 +75,8 @@ void hd_lens_gpu_complete(bool success)
         lensVisibilityTick = lensPreviousTick;
         lensVisibilityValid = lensPreviousValid;
         lensVisibilityHold = lensPreviousHold;
+        lensVisibilityMaximum = lensPreviousMaximum;
+        lensVisibilityOldMaximum = lensPreviousOldMaximum;
     }
     lensVisibilityPending = false;
 }
@@ -68,6 +87,8 @@ void hd_lens_gpu_release(void)
     {
         vid_mat_free(lensDrawMaterials[pass]);
         lensDrawMaterials[pass] = 0;
+        vid_mat_free(lensParamMaterials[pass]);
+        lensParamMaterials[pass] = 0;
     }
     for (sint32 index = 0; index < 2; ++index)
     {
@@ -82,6 +103,8 @@ void hd_lens_gpu_release(void)
     vid_shader_free(lensCopyShader);
     vid_shader_free(lensVisibilityShader);
     vid_shader_free(lensDrawShader);
+    vid_shader_free(lensParamShader);
+    lensParamShader = 0;
     lensCopyMaterial = 0;
     lensScene = 0;
     lensScreen = 0;
@@ -182,6 +205,11 @@ bool hd_lens_gpu_prepare(VID_TEXTURE *vram)
             material->params[1] = pass == 1 ? 0.5f : pass == 4 ? 0.25f : 1.0f;
             material->blend = pass == 0 ? VID_BLEND_NONE : pass == 1 ? VID_BLEND_ALPHA : pass == 3 ? VID_BLEND_SUBTRACT : VID_BLEND_ADD;
             material->filter = VID_FILTER_NEAREST;
+            if (pass == 5)
+            {
+                material->params[7] = 1;
+                material->blend = VID_BLEND_PREMULTIPLIED;
+            }
             vid_mat_commit(lensDrawMaterials[pass]);
         }
     return true;
@@ -226,6 +254,14 @@ bool hd_lens_gpu_resolve(VID_TARGET *destination, bool offscreen, VID_RECT viewp
         }
         if (!vid_end())
             return false;
+        lensPreviousMaximum = lensVisibilityMaximum;
+        lensPreviousOldMaximum = lensVisibilityOldMaximum;
+        lensVisibilityOldMaximum = lensVisibilityValid ? lensVisibilityMaximum : 0;
+        lensVisibilityMaximum = lensVisibilityOldMaximum + (material->params[4] > 0.5f ? material->params[2] : -material->params[2]);
+        if (lensVisibilityMaximum < 0)
+            lensVisibilityMaximum = 0;
+        if (lensVisibilityMaximum > 1)
+            lensVisibilityMaximum = 1;
         lensPreviousIndex = lensVisibilityIndex;
         lensPreviousTick = lensVisibilityTick;
         lensPreviousValid = lensVisibilityValid;
@@ -264,4 +300,37 @@ void hd_lens_gpu_pass(sint32 pass, float phase, float centerX, float centerY)
     float uniforms[4] = {lensVisibilityHold ? 1.0f : phase, centerX, centerY, 0};
     vid_pass(lensDrawMaterials[pass]);
     vid_uniforms(uniforms, 1);
+}
+
+bool hd_lens_gpu_param_pass(sint32 pass, float phase, float x, float y, float width, float height, float ratio, VID_TEXTURE *parameters)
+{
+    if (lensParamShader == 0)
+        lensParamShader = vid_shader_create(lensParamVertex, lensDrawFragment);
+    if (lensParamShader == 0)
+        return false;
+    if (lensParamMaterials[pass] == 0)
+        lensParamMaterials[pass] = vid_mat_create();
+    if (lensParamMaterials[pass] == 0)
+        return false;
+    VID_MATERIAL_DATA data = *vid_mat_read(lensDrawMaterials[pass]);
+    data.shader = lensParamShader;
+    data.aux[1] = parameters;
+    if (memcmp(vid_mat_read(lensParamMaterials[pass]), &data, sizeof(data)) != 0)
+    {
+        *vid_mat_data(lensParamMaterials[pass]) = data;
+        vid_mat_commit(lensParamMaterials[pass]);
+    }
+    float uniforms[3][4] = {{lensVisibilityHold ? 1.0f : phase, x * 2 * ratio / width, y * 2 * ratio / height, 0}, {width, height, ratio, 0}, {x, y, 0, 0}};
+    vid_pass(lensParamMaterials[pass]);
+    vid_uniforms(&uniforms[0][0], 3);
+    return true;
+}
+
+bool hd_lens_gpu_may_be_visible(float phase)
+{
+    if (!(phase >= 0))
+        phase = 0;
+    if (phase > 1 || lensVisibilityHold)
+        phase = 1;
+    return lensVisibilityValid && lensVisibilityOldMaximum + (lensVisibilityMaximum - lensVisibilityOldMaximum) * phase > 0;
 }

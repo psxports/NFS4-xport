@@ -97,6 +97,13 @@ struct HdUiCanvas
     float scaleY;
 };
 
+struct HdUiVertexCache
+{
+    HdUiCommand command;
+    VID_RECT viewport;
+    bool valid;
+};
+
 static HdUiFrame uiBuild;
 static HdUiFrame uiComplete;
 static sint32 uiView;
@@ -106,11 +113,14 @@ static uint8 uiAnchor;
 static HdTextureRegion uiImage;
 static uint16 uiImagePage;
 static VID_GEOMETRY *uiMesh;
+static VID_INDEX *uiIndices;
+static HdUiVertexCache *uiVertexCache;
 static uint32 uiCapacity;
 static VID_RECT *uiViewports;
 static VID_MATERIAL *uiMaterials[6];
 static VID_SHADER *uiShader;
 static VID_MATERIAL *uiSurfaceMaterial;
+static VID_MATERIAL *uiCompositeMaterials[2];
 static sint32 uiPreparedWidth;
 static sint32 uiPreparedHeight;
 uint32 hd_ui_frontend_models = 1;
@@ -1019,21 +1029,22 @@ static void hd_ui_frontend_mapping(sint32 width, sint32 height, const VID_RECT *
     mapping[3] = 1 - (2 * (originY - viewport->y) + fitHeight) / viewport->h;
 }
 
-static const char uiVertex[] = "layout(location=0)in vec4 aPos;layout(location=1)in vec2 aUV;layout(location=2)in vec4 aColor;\n"
+static const char uiVertex[] = "layout(location=0)in vec4 aPos;layout(location=1)in vec2 aUV;layout(location=2)in vec4 aColor;layout(location=4)in float aAlpha;flat out float vUiAlpha;\n"
                                "layout(location=5)in uvec4 aTex;layout(location=6)in uvec2 aRect;out vec2 vUV;out vec4 vColor;out float vDepth;out vec2 vFog;flat out uvec4 vUiTex;flat out ivec4 vRegion;\n"
-                               "void main(){gl_Position=aPos;vUV=aUV;vColor=aColor/255.0;vDepth=0.0;vFog=vec2(0.0);vUiTex=aTex;vRegion=ivec4(ivec2((aTex.z>>1)&255u,(aTex.w>>1)&255u),ivec2(aRect));}\n";
+                               "void main(){gl_Position=aPos;vUV=aUV;vColor=aColor/255.0;vUiAlpha=aAlpha;vDepth=0.0;vFog=vec2(0.0);vUiTex=aTex;vRegion=ivec4(ivec2((aTex.z>>1)&255u,(aTex.w>>1)&255u),ivec2(aRect));}\n";
 
-static const char uiFragment[] = "flat in uvec4 vUiTex;flat in ivec4 vRegion;layout(location=1)out vec4 outSurface;\n" VID_PSX_SAMPLING_GLSL HD_VRAM_WORD_GLSL HD_PSX_COLOR_GLSL "void main(){bool maskOnly=uParams[0].z>0.5;outSurface=vec4(0.0,0.0,0.0,1.0);"
-                                 "if((vUiTex.w&1u)!=0u){outColor=vec4(vColor.rgb,maskOnly?0.0:uParams[0].y);return;}"
+static const char uiFragment[] = "flat in float vUiAlpha;flat in uvec4 vUiTex;flat in ivec4 vRegion;layout(location=1)out vec4 outSurface;\n" VID_PSX_SAMPLING_GLSL HD_VRAM_WORD_GLSL HD_PSX_COLOR_GLSL HD_PSX_PREMULTIPLIED_GLSL "void main(){bool maskOnly=uParams[0].z>0.5;bool composite=uParams[0].w>0.5;outSurface=vec4(0.0,0.0,0.0,1.0);"
+                                 "if((vUiTex.w&1u)!=0u){outColor=composite?hdPsxPremultiplied(vColor.rgb,(vUiTex.x>>5)&3u,vUiAlpha<0.75):vec4(vColor.rgb,maskOnly?0.0:uParams[0].y);return;}"
                                  "uint word=vidPsxDecode(vUiTex.x,vUiTex.y,ivec2(floor(vUV)));"
-                                 "vec4 color=hdPsxColor(vUV,vUiTex.x,vUiTex.y,vRegion,uint(uParams[0].x),word);if(color.a==0.0)discard;"
+                                 "vec4 color=hdPsxColor(vUV,vUiTex.x,vUiTex.y,vRegion,composite?(vUiAlpha<0.75?((word&32768u)!=0u?2u:1u):0u):uint(uParams[0].x),word);if(color.a==0.0)discard;"
                                  "outSurface.r=(word&32768u)!=0u?1.0:0.0;vec3 rgb=(vUiTex.z&1u)!=0u?color.rgb:color.rgb*vColor.rgb*(255.0/128.0);"
-                                 "outColor=vec4(clamp(rgb,0.0,1.0),maskOnly?0.0:uParams[0].y);}";
+                                 "outColor=composite?hdPsxPremultiplied(clamp(rgb,0.0,1.0),(vUiTex.x>>5)&3u,vUiAlpha<0.75&&(word&32768u)!=0u):vec4(clamp(rgb,0.0,1.0),maskOnly?0.0:uParams[0].y);}";
 
 bool hd_ui_prepare(sint32 width, sint32 height, float phase)
 {
     if (!uiComplete.valid || width <= 0 || height <= 0)
         return false;
+    bool layoutChanged = uiPreparedWidth != width || uiPreparedHeight != height;
     uiPreparedWidth = width;
     uiPreparedHeight = height;
     if (uiComplete.count == 0)
@@ -1079,6 +1090,19 @@ bool hd_ui_prepare(sint32 width, sint32 height, float phase)
         material->depth_test = material->depth_write = 0;
         vid_mat_commit(uiSurfaceMaterial);
     }
+    for (sint32 surface = 0; surface < 2; ++surface)
+        if (uiCompositeMaterials[surface] == 0)
+        {
+            uiCompositeMaterials[surface] = vid_mat_create();
+            if (uiCompositeMaterials[surface] == 0)
+                return false;
+            VID_MATERIAL_DATA *material = vid_mat_data(uiCompositeMaterials[surface]);
+            *material = *vid_mat_read(uiMaterials[2]);
+            material->params[3] = 1;
+            material->blend = VID_BLEND_PREMULTIPLIED;
+            material->surface_write = surface;
+            vid_mat_commit(uiCompositeMaterials[surface]);
+        }
     if (uiCapacity < uiComplete.count)
     {
         VID_RECT *viewports = (VID_RECT *)realloc(uiViewports, uiComplete.count * sizeof(*viewports));
@@ -1086,16 +1110,27 @@ bool hd_ui_prepare(sint32 width, sint32 height, float phase)
             return false;
         uiViewports = viewports;
         vid_mesh_free(uiMesh);
-        uiMesh = vid_mesh_create_2d(uiComplete.count * 6);
+        vid_index_free(uiIndices);
+        uiIndices = 0;
+        free(uiVertexCache);
+        uiVertexCache = (HdUiVertexCache *)calloc(uiComplete.count, sizeof(*uiVertexCache));
+        uiMesh = vid_mesh_create_2d(uiComplete.count * 4);
+        uiIndices = vid_index_create(uiComplete.count * 6);
         uiCapacity = uiMesh != 0 ? uiComplete.count : 0;
-        if (uiMesh == 0)
+        if (uiMesh == 0 || uiIndices == 0 || uiVertexCache == 0)
             return false;
+        uint32 *indices = vid_index_data(uiIndices);
+        const uint32 order[6] = {0, 1, 2, 2, 1, 3};
+        for (uint32 i = 0; i < uiCapacity; ++i)
+            for (sint32 corner = 0; corner < 6; ++corner)
+                indices[i * 6 + corner] = i * 4 + order[corner];
+        vid_index_commit(uiIndices, uiCapacity * 6);
+        vid_index_static(uiIndices);
     }
     VID_VERTEX2D *vertices = vid_mesh_data_2d(uiMesh);
     HdUiCanvas canvases[4];
     for (sint32 i = 0; i < 4; ++i)
         canvases[i] = hd_ui_canvas(width, height, (uint8)i);
-    const uint8 order[6] = {0, 1, 2, 2, 1, 3};
     for (uint32 i = 0; i < uiComplete.count; ++i)
     {
         const HdUiCommand *command = uiComplete.commands + i;
@@ -1110,11 +1145,21 @@ bool hd_ui_prepare(sint32 width, sint32 height, float phase)
         VID_RECT *viewport = uiViewports + i;
         *viewport = hd_ui_clip(&command->clip, canvas);
         if (command->kind == 3)
-            continue;
-        for (sint32 vertex = 0; vertex < 6; ++vertex)
         {
-            sint32 corner = command->vertices == 3 ? vertex % 3 : order[vertex];
-            VID_VERTEX2D *out = vertices + i * 6 + vertex;
+            uiVertexCache[i].valid = false;
+            continue;
+        }
+        HdUiVertexCache *cached = uiVertexCache + i;
+        if (!layoutChanged && cached->valid && memcmp(&cached->command, command, sizeof(*command)) == 0 && memcmp(&cached->viewport, viewport, sizeof(*viewport)) == 0)
+            continue;
+        cached->command = *command;
+        cached->viewport = *viewport;
+        cached->valid = true;
+        VID_VERTEX2D updated[4];
+        for (sint32 vertex = 0; vertex < 4; ++vertex)
+        {
+            sint32 corner = command->vertices == 3 && vertex == 3 ? 1 : vertex;
+            VID_VERTEX2D *out = updated + vertex;
             memset(out, 0, sizeof(*out));
             if (viewport->w > 0 && viewport->h > 0)
             {
@@ -1128,7 +1173,7 @@ bool hd_ui_prepare(sint32 width, sint32 height, float phase)
             out->color[1] = (uint8)(command->color[corner] >> 8);
             out->color[2] = (uint8)(command->color[corner] >> 16);
             out->color[3] = 255;
-            out->alpha = 1;
+            out->alpha = command->semi ? 0.5f : 1.0f;
             out->tex[0] = command->page;
             out->tex[1] = command->clut;
             out->tex[2] = command->raw;
@@ -1141,8 +1186,12 @@ bool hd_ui_prepare(sint32 width, sint32 height, float phase)
                 out->rect[1] = command->image.height;
             }
         }
+        if (memcmp(vertices + i * 4, updated, sizeof(updated)) != 0)
+        {
+            memcpy(vertices + i * 4, updated, sizeof(updated));
+            vid_mesh_commit_range(uiMesh, i * 4, 4);
+        }
     }
-    vid_mesh_commit(uiMesh);
     return true;
 }
 
@@ -1180,21 +1229,42 @@ bool hd_ui_render(bool surface)
         if (command->vertices == 0)
             continue;
         vid_uniforms(0, 0);
+        if (!command->semi || ((command->page >> 5) & 3) != 2)
+        {
+            uint32 last = i;
+            uint32 views = 1 << command->view;
+            while (last + 1 < uiComplete.count)
+            {
+                const HdUiCommand *next = uiComplete.commands + last + 1;
+                if (next->kind == 3 || next->vertices == 0 || (hd_ui_view_mask & (1 << next->view)) == 0 || uiViewports[last + 1].w <= 0 || uiViewports[last + 1].h <= 0 || (next->semi && ((next->page >> 5) & 3) == 2) || memcmp(uiViewports + i, uiViewports + last + 1, sizeof(VID_RECT)) != 0)
+                    break;
+                ++last;
+                views |= 1 << next->view;
+            }
+            vid_pass(uiCompositeMaterials[surface ? 1 : 0]);
+            success = vid_submit(uiMesh, uiIndices, i * 6, (last - i + 1) * 6) != 0 && success;
+            ++hd_ui_draws;
+            for (sint32 view = 0; view < 10; ++view)
+                if ((views & (1 << view)) != 0)
+                    ++hd_ui_draws_by_view[view];
+            i = last;
+            continue;
+        }
         vid_pass(uiMaterials[!command->semi ? 0 : command->textured ? 1 : 2 + ((command->page >> 5) & 3)]);
-        success = vid_submit(uiMesh, 0, i * 6, command->vertices == 3 ? 3 : 6) != 0 && success;
+        success = vid_submit(uiMesh, uiIndices, i * 6, command->vertices == 3 ? 3 : 6) != 0 && success;
         ++hd_ui_draws;
         ++hd_ui_draws_by_view[command->view];
         if (command->semi && command->textured)
         {
             vid_pass(uiMaterials[2 + ((command->page >> 5) & 3)]);
-            success = vid_submit(uiMesh, 0, i * 6, command->vertices == 3 ? 3 : 6) != 0 && success;
+            success = vid_submit(uiMesh, uiIndices, i * 6, command->vertices == 3 ? 3 : 6) != 0 && success;
             ++hd_ui_draws;
             ++hd_ui_draws_by_view[command->view];
         }
         if (surface)
         {
             vid_pass(uiSurfaceMaterial);
-            success = vid_submit(uiMesh, 0, i * 6, command->vertices == 3 ? 3 : 6) != 0 && success;
+            success = vid_submit(uiMesh, uiIndices, i * 6, command->vertices == 3 ? 3 : 6) != 0 && success;
             ++hd_ui_draws;
             ++hd_ui_draws_by_view[command->view];
         }
@@ -1287,6 +1357,10 @@ void hd_ui_release(void)
     uiActive = false;
     vid_mesh_free(uiMesh);
     uiMesh = 0;
+    vid_index_free(uiIndices);
+    uiIndices = 0;
+    free(uiVertexCache);
+    uiVertexCache = 0;
     uiCapacity = 0;
     for (sint32 i = 0; i < 6; ++i)
     {
@@ -1294,6 +1368,11 @@ void hd_ui_release(void)
         uiMaterials[i] = 0;
     }
     vid_mat_free(uiSurfaceMaterial);
+    for (sint32 surface = 0; surface < 2; ++surface)
+    {
+        vid_mat_free(uiCompositeMaterials[surface]);
+        uiCompositeMaterials[surface] = 0;
+    }
     uiSurfaceMaterial = 0;
     vid_shader_free(uiShader);
     uiShader = 0;

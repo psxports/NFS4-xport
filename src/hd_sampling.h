@@ -43,4 +43,8 @@ void hd_texture_regions_free(void);
     "vec4 filtered=vidPsxFilter(uv-vec2(region.xy),page,clut,region,0u,stp,false);" \
     "if(filtered.a>0.0)color=filtered;}return color;}\n"
 
+#define HD_PSX_PREMULTIPLIED_GLSL \
+    "vec4 hdPsxPremultiplied(vec3 color,uint mode,bool blended){color=clamp(color,0.0,1.0);if(!blended)return vec4(color,1.0);" \
+    "if(mode==0u)return vec4(color*0.5,0.5);return vec4(color*(mode==3u?0.25:1.0),0.0);}\n"
+
 #endif
